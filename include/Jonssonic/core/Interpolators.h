@@ -1,4 +1,4 @@
-#pragma once
+
 // Jonssonic - A C++ audio DSP library
 // Interpolator structs for audio processing
 // Author: Jon Fagerström
@@ -10,6 +10,7 @@
  * @namespace Jonssonic::core
  */
 
+#pragma once
 
 namespace Jonssonic::core
 {

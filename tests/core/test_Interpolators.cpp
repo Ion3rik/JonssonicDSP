@@ -32,12 +32,12 @@ TEST_F(InterpolatorTest, NearestUp) {
 }
 
 // Tests for LinearInterpolator
-TEST_F(InterpolatorTest, BasicInterpolation) {
+TEST_F(InterpolatorTest, LinearFractionalIdx) {
     float result = LinearInterpolator<float>::interpolate(buffer, 1, 0.5f);
     EXPECT_NEAR(result, 15.0f, 1e-5);
 }
 
-TEST_F(InterpolatorTest, EdgeCase) {
+TEST_F(InterpolatorTest, LinearIntegerIdx) {
     float result = LinearInterpolator<float>::interpolate(buffer, 2, 0.0f);
     EXPECT_FLOAT_EQ(result, 20.0f);
 }
