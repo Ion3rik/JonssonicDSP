@@ -27,3 +27,6 @@
 .vscode/
 .idea/
 *.code-workspace
+
+# MacOS specific files
+.DS_Store
