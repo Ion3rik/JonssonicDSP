@@ -10,16 +10,10 @@
 namespace Jonssonic::core
 {
 /**
- * @brief Storage layout for multi-channel audio data.
- */
-enum class BufferLayout
-{
-    Interleaved,    // [L0, R0, L1, R1, ...] - better for I/O
-    Deinterleaved   // [L0, L1, ..., R0, R1, ...] - better for processing
-};
-
-/**
- * @brief A multi-channel audio buffer with efficient flat storage.
+ * @brief A multi-channel audio buffer with efficient deinterleaved flat storage.
+ * 
+ * Uses deinterleaved layout [L0, L1, L2..., R0, R1, R2...] for optimal DSP processing performance.
+ * Each channel's samples are stored contiguously for cache-friendly sequential access.
  * 
  * @tparam T Sample type (typically float or double)
  */
@@ -31,12 +25,10 @@ public:
      * @brief Constructor.
      * @param numChannels Number of audio channels
      * @param numSamples Number of samples per channel
-     * @param layout Storage layout (interleaved or deinterleaved)
      */
-    MultiChannelBuffer(size_t numChannels, size_t numSamples, BufferLayout layout = BufferLayout::Deinterleaved)
+    MultiChannelBuffer(size_t numChannels, size_t numSamples)
         : m_numChannels(numChannels)
         , m_numSamples(numSamples)
-        , m_layout(layout)
         , m_data(numChannels * numSamples, T(0))
     {
         assert(numChannels > 0 && "Number of channels must be greater than 0");
@@ -51,15 +43,7 @@ public:
     T* getChannelPointer(size_t channel)
     {
         assert(channel < m_numChannels && "Channel index out of bounds");
-        
-        if (m_layout == BufferLayout::Deinterleaved)
-        {
-            return m_data.data() + (channel * m_numSamples);
-        }
-        else
-        {
-            return m_data.data() + channel;
-        }
+        return m_data.data() + (channel * m_numSamples);
     }
 
     /**
@@ -70,15 +54,7 @@ public:
     const T* getChannelPointer(size_t channel) const
     {
         assert(channel < m_numChannels && "Channel index out of bounds");
-        
-        if (m_layout == BufferLayout::Deinterleaved)
-        {
-            return m_data.data() + (channel * m_numSamples);
-        }
-        else
-        {
-            return m_data.data() + channel;
-        }
+        return m_data.data() + (channel * m_numSamples);
     }
 
     /**
@@ -91,15 +67,7 @@ public:
     {
         assert(channel < m_numChannels && "Channel index out of bounds");
         assert(sampleIndex < m_numSamples && "Sample index out of bounds");
-        
-        if (m_layout == BufferLayout::Deinterleaved)
-        {
-            return m_data[channel * m_numSamples + sampleIndex];
-        }
-        else
-        {
-            return m_data[sampleIndex * m_numChannels + channel];
-        }
+        return m_data[channel * m_numSamples + sampleIndex];
     }
 
     /**
@@ -112,15 +80,7 @@ public:
     {
         assert(channel < m_numChannels && "Channel index out of bounds");
         assert(sampleIndex < m_numSamples && "Sample index out of bounds");
-        
-        if (m_layout == BufferLayout::Deinterleaved)
-        {
-            return m_data[channel * m_numSamples + sampleIndex];
-        }
-        else
-        {
-            return m_data[sampleIndex * m_numChannels + channel];
-        }
+        return m_data[channel * m_numSamples + sampleIndex];
     }
 
     /**
@@ -153,18 +113,13 @@ public:
     size_t getNumSamples() const { return m_numSamples; }
 
     /**
-     * @brief Get the buffer layout.
-     */
-    BufferLayout getLayout() const { return m_layout; }
-
-    /**
      * @brief Get the total size of the flat buffer.
      */
     size_t getTotalSize() const { return m_data.size(); }
 
     /**
      * @brief Get direct access to the underlying flat buffer.
-     * Use with caution - you need to know the layout to interpret the data correctly.
+     * @note Data is stored deinterleaved: [Ch0_Sample0, Ch0_Sample1, ..., Ch1_Sample0, Ch1_Sample1, ...]
      */
     T* data() { return m_data.data(); }
     const T* data() const { return m_data.data(); }
@@ -184,8 +139,7 @@ public:
 private:
     size_t m_numChannels;
     size_t m_numSamples;
-    BufferLayout m_layout;
-    std::vector<T> m_data;  // Flat storage for all channels
+    std::vector<T> m_data;  // Flat deinterleaved storage for all channels
 };
 
 } // namespace Jonssonic::core
