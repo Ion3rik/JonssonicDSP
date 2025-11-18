@@ -34,7 +34,7 @@ protected:
                                  size_t numSamples, size_t numInputChannels = 2) {
         for (size_t i = 0; i < numSamples; ++i) {
             const float* inputPtrs[2] = { &left[i], &right[i] };
-            delayLine.process(inputPtrs, outputPtrs, numInputChannels);
+            delayLine.processSample(inputPtrs, outputPtrs, numInputChannels);
             EXPECT_FLOAT_EQ(output[0], expectedLeft[i]) << "Sample " << i << " left channel";
             EXPECT_FLOAT_EQ(output[1], expectedRight[i]) << "Sample " << i << " right channel";
         }
@@ -50,7 +50,7 @@ protected:
         
         for (size_t i = 0; i < numSamples; ++i) {
             const float* inputPtrs[2] = { &left[i], &right[i] };
-            delayLine.processModulated(inputPtrs, outputPtrs, modulation, 2);
+            delayLine.processSample(inputPtrs, outputPtrs, modulation, 2);
             EXPECT_FLOAT_EQ(output[0], expectedLeft[i]) << "Sample " << i << " left channel";
             EXPECT_FLOAT_EQ(output[1], expectedRight[i]) << "Sample " << i << " right channel";
         }
@@ -95,7 +95,7 @@ TEST_F(DelayLineTest, ProcessSingleSampleFixedDelaySteroToStereo) {
 TEST_F(DelayLineTest, ProcessSingleSampleFixedMonoToStereo) {
     for (int i = 0; i < 4; ++i) {
         const float* monoInput[1] = { &leftChannel[i] };
-        delayLine.process(monoInput, outputPtrs, 1);
+        delayLine.processSample(monoInput, outputPtrs, 1);
         EXPECT_FLOAT_EQ(output[0], expectedLeft[i]) << "Sample " << i << " left";
         EXPECT_FLOAT_EQ(output[1], expectedLeft[i]) << "Sample " << i << " right (dup)";
     }
@@ -114,7 +114,7 @@ TEST_F(DelayLineTest, ProcessSingleSampleModulatedDelayPositiveModulation) {
 
     for (int i = 0; i < 5; ++i) {
         const float* inputPtrs[2] = { &leftChannel[i % 4], &rightChannel[i % 4] };
-        delayLine.processModulated(inputPtrs, outputPtrs, modulation, 2);
+        delayLine.processSample(inputPtrs, outputPtrs, modulation, 2);
         EXPECT_FLOAT_EQ(output[0], expected3Left[i]) << "Sample " << i << " left";
         EXPECT_FLOAT_EQ(output[1], expected3Right[i]) << "Sample " << i << " right";
     }
@@ -134,7 +134,7 @@ TEST_F(DelayLineTest, ProcessSingleSampleModulatedDelayFractionalModulation) {
 
     for (int i = 0; i < 4; ++i) {
         const float* inputPtrs[2] = { &leftChannel[i], &rightChannel[i] };
-        delayLine.processModulated(inputPtrs, outputPtrs, modulation, 2);
+        delayLine.processSample(inputPtrs, outputPtrs, modulation, 2);
         EXPECT_GE(output[0], 0.0f) << "Sample " << i << " left channel should be non-negative";
         EXPECT_GE(output[1], 0.0f) << "Sample " << i << " right channel should be non-negative";
     }
@@ -146,7 +146,7 @@ TEST_F(DelayLineTest, ProcessSingleSampleModulatedDelayMonoToStereo) {
 
     for (int i = 0; i < 4; ++i) {
         const float* monoInput[1] = { &leftChannel[i] };
-        delayLine.processModulated(monoInput, outputPtrs, monoModulation, 1);
+        delayLine.processSample(monoInput, outputPtrs, monoModulation, 1);
         EXPECT_FLOAT_EQ(output[0], expectedLeft[i]) << "Sample " << i << " left";
         EXPECT_FLOAT_EQ(output[1], expectedLeft[i]) << "Sample " << i << " right (dup)";
     }
@@ -162,7 +162,7 @@ TEST_F(DelayLineTest, ProcessSingleSampleModulatedDelayVaryingModulation) {
         const float* modulation[2] = { modLeft, modRight };
         const float* inputPtrs[2] = { &leftChannel[i], &rightChannel[i] };
         
-        delayLine.processModulated(inputPtrs, outputPtrs, modulation, 2);
+        delayLine.processSample(inputPtrs, outputPtrs, modulation, 2);
         EXPECT_FALSE(std::isnan(output[0])) << "Sample " << i << " left should not be NaN";
         EXPECT_FALSE(std::isnan(output[1])) << "Sample " << i << " right should not be NaN";
         EXPECT_TRUE(std::isfinite(output[0])) << "Sample " << i << " left should be finite";
@@ -215,7 +215,7 @@ TEST_F(DelayLineTest, ProcessBlockMatchesSampleBySample) {
     {
         const float* inputPtrs[2] = { &testInputLeft[i], &testInputRight[i] };
         float* outputPtrs[2] = { &sampleOutputLeft[i], &sampleOutputRight[i] };
-        sampleDelayLine.process(inputPtrs, outputPtrs, 2);
+        sampleDelayLine.processSample(inputPtrs, outputPtrs, 2);
     }
     
     // Process as block
@@ -245,7 +245,7 @@ TEST_F(DelayLineTest, ProcessBlockModulatedDelay) {
     const float* modulation[2] = { modLeft, modRight };
     
     // Process entire block at once
-    blockDelayLine.processBlockModulated(stereoInput, outputPtrs, modulation, 2, 4);
+    blockDelayLine.processBlock(stereoInput, outputPtrs, modulation, 2, 4);
     
     // Expected outputs with 3-sample delay (base 2 + modulation 1)
     float expectedLeft[4] = {0.0f, 0.0f, 0.0f, 0.0f};  // Need more samples to see output
@@ -267,7 +267,7 @@ TEST_F(DelayLineTest, BufferWraparound) {
     {
         float input[1] = {static_cast<float>(i)};
         const float* inputPtr[1] = { input };
-        smallDelayLine.process(inputPtr, outputPtr, 1);
+        smallDelayLine.processSample(inputPtr, outputPtr, 1);
         
         if (i >= 4)
         {
@@ -281,7 +281,7 @@ TEST_F(DelayLineTest, BufferWraparound) {
 TEST_F(DelayLineTest, ZeroDelay) {
     for (int i = 0; i < 4; ++i) {
         const float* inputPtrs[2] = { &leftChannel[i], &rightChannel[i] };
-        zeroDelayLine.process(inputPtrs, outputPtrs, 2);
+        zeroDelayLine.processSample(inputPtrs, outputPtrs, 2);
         EXPECT_FLOAT_EQ(output[0], leftChannel[i]) << "Sample " << i << " left should pass through";
         EXPECT_FLOAT_EQ(output[1], rightChannel[i]) << "Sample " << i << " right should pass through";
     }
@@ -297,7 +297,7 @@ TEST_F(DelayLineTest, MaximumDelay) {
     for (int i = 0; i < 10; ++i)
     {
         const float* inputPtr[1] = { &testSamples[i] };
-        maxDelayLine.process(inputPtr, outputPtr, 1);
+        maxDelayLine.processSample(inputPtr, outputPtr, 1);
         
         if (i >= 7)
         {
@@ -322,7 +322,7 @@ TEST_F(DelayLineTest, DelayExceedsBufferSize) {
     for (int i = 0; i < 12; ++i)
     {
         const float* inputPtr[1] = { &testSamples[i] };
-        oversizeDelayLine.process(inputPtr, outputPtr, 1);
+        oversizeDelayLine.processSample(inputPtr, outputPtr, 1);
         
         EXPECT_FLOAT_EQ(localOutput[0], testSamples[i]) 
             << "Sample " << i << " should have 0 delay (clamped to buffer size wraps around)";
@@ -348,7 +348,7 @@ TEST_F(DelayLineTest, QuadChannelProcessing) {
     
     for (int i = 0; i < 4; ++i) {
         const float* inputPtrs[4] = { &channel1[i], &channel2[i], &channel3[i], &channel4[i] };
-        quadDelayLine.process(inputPtrs, outputPtrs, 4);
+        quadDelayLine.processSample(inputPtrs, outputPtrs, 4);
         
         EXPECT_FLOAT_EQ(output[0], expectedCh1[i]) << "Sample " << i << " channel 1";
         EXPECT_FLOAT_EQ(output[1], expectedCh2[i]) << "Sample " << i << " channel 2";
@@ -367,7 +367,7 @@ TEST_F(DelayLineTest, MonoToQuadChannelDuplication) {
     
     for (int i = 0; i < 4; ++i) {
         const float* monoInput[1] = { &leftChannel[i] };
-        quadDelayLine.process(monoInput, outputPtrs, 1);
+        quadDelayLine.processSample(monoInput, outputPtrs, 1);
         
         // All 4 output channels should receive the same duplicated mono signal
         EXPECT_FLOAT_EQ(output[0], expectedOutputs[i]) << "Sample " << i << " channel 1";
@@ -426,7 +426,7 @@ TEST_F(DelayLineTest, ModulatedDelayClampedToZero) {
     
     for (int i = 0; i < 4; ++i) {
         const float* inputPtrs[2] = { &leftChannel[i], &rightChannel[i] };
-        clampDelayLine.processModulated(inputPtrs, outputPtrs, modulation, 2);
+        clampDelayLine.processSample(inputPtrs, outputPtrs, modulation, 2);
         EXPECT_FLOAT_EQ(output[0], leftChannel[i]) << "Sample " << i << " left (clamped)";
         EXPECT_FLOAT_EQ(output[1], rightChannel[i]) << "Sample " << i << " right (clamped)";
     }
@@ -445,7 +445,7 @@ TEST_F(DelayLineTest, ModulatedDelayClampedToBufferSize) {
     
     for (int i = 0; i < 12; ++i) {
         const float* inputPtr[1] = { &testSamples[i] };
-        clampLargeDelayLine.processModulated(inputPtr, outputPtr, modulation, 1);
+        clampLargeDelayLine.processSample(inputPtr, outputPtr, modulation, 1);
         if (i >= 7) {
             EXPECT_FLOAT_EQ(localOutput[0], testSamples[i - 7]) 
                 << "Sample " << i << " delayed by 7 (clamped)";

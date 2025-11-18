@@ -56,7 +56,7 @@ public:
      *       - If numInputChannels > delay line channels: extra input channels are ignored
      *       - Output always matches the delay line's channel count
      */
-    void process(const T* const* input, T* const* output, size_t numInputChannels)
+    void processSample(const T* const* input, T* const* output, size_t numInputChannels)
     {
         for (size_t ch = 0; ch < numChannels; ++ch)
         {
@@ -92,8 +92,8 @@ public:
      *       - If numInputChannels > delay line channels: extra input channels are ignored
      *       - Output always matches the delay line's channel count
      */
-    void processModulated(const T* const* input, T* const* output, 
-                         const T* const* modulation, size_t numInputChannels)
+    void processSample(const T* const* input, T* const* output, 
+                      const T* const* modulation, size_t numInputChannels)
     {
         for (size_t ch = 0; ch < numChannels; ++ch)
         {
@@ -183,8 +183,8 @@ public:
      *       - If numInputChannels > delay line channels: extra input channels are ignored
      *       - Output always matches the delay line's channel count
      */
-    void processBlockModulated(const T* const* input, T* const* output, 
-                              const T* const* modulation, size_t numInputChannels, size_t numSamples)
+    void processBlock(const T* const* input, T* const* output, 
+                     const T* const* modulation, size_t numInputChannels, size_t numSamples)
     {
         for (size_t ch = 0; ch < numChannels; ++ch)
         {
