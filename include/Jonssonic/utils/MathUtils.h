@@ -6,7 +6,7 @@
 #pragma once
 #include <cstddef>
 
-namespace Jonssonic::utils
+namespace Jonssonic
 {
 /**
  * @brief Calculate the next power of two greater than or equal to n.
@@ -26,4 +26,4 @@ inline size_t nextPowerOfTwo(size_t n)
     return n + 1;
 }
 
-} // namespace Jonssonic::utils
+} // namespace Jonssonic

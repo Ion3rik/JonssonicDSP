@@ -4,10 +4,10 @@
 // Update: 18.11.2025
 
 #pragma once
-#include "MultiChannelBuffer.h"
-#include "../utils/MathUtils.h"
+#include "../common/MultiChannelBuffer.h"
+#include "../../utils/MathUtils.h"
 
-namespace Jonssonic::core
+namespace Jonssonic
 {
 /**
  * @brief A delay line class for audio processing.
@@ -18,9 +18,9 @@ class DelayLine
 {
 public:
     DelayLine(size_t numChannels, size_t maxDelaySamples)
-        : buffer(numChannels, utils::nextPowerOfTwo(maxDelaySamples)),
+        : buffer(numChannels, nextPowerOfTwo(maxDelaySamples)),
           writeIndex(0),
-          bufferSize(utils::nextPowerOfTwo(maxDelaySamples)),
+          bufferSize(nextPowerOfTwo(maxDelaySamples)),
           numChannels(numChannels)
     {}
     ~DelayLine() = default;
@@ -39,7 +39,7 @@ public:
     void prepare(size_t newNumChannels, size_t maxDelaySamples)
     {
         numChannels = newNumChannels;
-        bufferSize = utils::nextPowerOfTwo(maxDelaySamples);
+        bufferSize = nextPowerOfTwo(maxDelaySamples);
         buffer.resize(numChannels, bufferSize);
         buffer.clear();
         writeIndex = 0;
@@ -233,5 +233,5 @@ private:
     size_t numChannels;            // Number of audio channels
 
 };
-} // namespace Jonssonic::core
+} // namespace Jonssonic
 

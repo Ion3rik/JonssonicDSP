@@ -1,7 +1,7 @@
 #pragma once
 #include <cstddef>
 
-namespace Jonssonic::core
+namespace Jonssonic
 {
 class DSPProcessor
 {
@@ -20,4 +20,4 @@ public:
     virtual void process(const float* const* input, float* const* output, size_t numOutChannels, size_t numInChannels, size_t numSamples) = 0;
 
 };
-} // namespace Jonssonic::Core
+} // namespace Jonssonic

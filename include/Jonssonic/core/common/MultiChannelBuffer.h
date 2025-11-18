@@ -7,7 +7,7 @@
 #include <vector>
 #include <cassert>
 
-namespace Jonssonic::core
+namespace Jonssonic
 {
 /**
  * @brief A multi-channel audio buffer with efficient deinterleaved flat storage.

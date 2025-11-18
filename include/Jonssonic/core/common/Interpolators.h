@@ -7,12 +7,12 @@
 /**
  * @file Interpolators.h
  * @brief This file contains various interpolation methods used in audio processing.
- * @namespace Jonssonic::core
+ * @namespace Jonssonic
  */
 
 #pragma once
 
-namespace Jonssonic::core
+namespace Jonssonic
 {
 /**
  * @brief Nearest neighbor interpolator.

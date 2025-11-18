@@ -4,9 +4,9 @@
 // Update: 18.11.2025
 
 #include <gtest/gtest.h>
-#include "Jonssonic/core/Interpolators.h"
+#include "Jonssonic/core/common/Interpolators.h"
 
-namespace Jonssonic::core {
+namespace Jonssonic {
 
 class InterpolatorTest : public ::testing::Test {
 protected:
@@ -42,4 +42,4 @@ TEST_F(InterpolatorTest, LinearIntegerIdx) {
     EXPECT_FLOAT_EQ(result, 20.0f);
 }
 
-} // namespace Jonssonic::core
+} // namespace Jonssonic
