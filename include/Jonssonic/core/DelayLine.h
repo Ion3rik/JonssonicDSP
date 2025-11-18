@@ -125,6 +125,106 @@ public:
         writeIndex = (writeIndex + 1) & (bufferSize - 1);
     }
 
+    /**
+     * @brief Process a block of samples for all channels with fixed delay.
+     * @param input Input sample pointers (one per input channel)
+     * @param output Output sample pointers (one per output channel)
+     * @param numInputChannels Number of input channels
+     * @param numSamples Number of samples to process
+     * 
+     * @note Channel handling:
+     *       - If numInputChannels < delay line channels: input[0] is duplicated to remaining channels
+     *       - If numInputChannels > delay line channels: extra input channels are ignored
+     *       - Output always matches the delay line's channel count
+     */
+    void processBlock(const T* const* input, T* const* output, size_t numInputChannels, size_t numSamples)
+    {
+        for (size_t ch = 0; ch < numChannels; ++ch)
+        {
+            const T* inChannel = input[ch < numInputChannels ? ch : 0];
+            T* outChannel = output[ch];
+            T* delayBuffer = buffer.getChannelPointer(ch);
+            
+            size_t workingWriteIndex = writeIndex;  // Local copy for this channel
+            
+            for (size_t i = 0; i < numSamples; ++i)
+            {
+                // Write input sample to buffer
+                delayBuffer[workingWriteIndex] = inChannel[i];
+
+                // Calculate read index with wrap-around (fixed delay)
+                size_t readIndex = (workingWriteIndex + bufferSize - delaySamples) & (bufferSize - 1);
+
+                // Read output sample directly (no interpolation needed for fixed integer delay)
+                outChannel[i] = delayBuffer[readIndex];
+                
+                // Increment and wrap write index
+                workingWriteIndex = (workingWriteIndex + 1) & (bufferSize - 1);
+            }
+        }
+        
+        // Update global write index after processing all channels
+        writeIndex = (writeIndex + numSamples) & (bufferSize - 1);
+    }
+
+    /**
+     * @brief Process a block of samples for all channels with modulated delay.
+     * @param input Input sample pointers (one per input channel)
+     * @param output Output sample pointers (one per output channel)
+     * @param modulation Modulation signal pointers (one per channel, in samples)
+     * @param numInputChannels Number of input channels
+     * @param numSamples Number of samples to process
+     * 
+     * @note The modulation signal is added to the base delay time. 
+     *       Modulation values should be in samples and will be clamped to valid range [0, bufferSize-1].
+     * 
+     * @note Channel handling:
+     *       - If numInputChannels < delay line channels: input[0] and modulation[0] are duplicated
+     *       - If numInputChannels > delay line channels: extra input channels are ignored
+     *       - Output always matches the delay line's channel count
+     */
+    void processBlockModulated(const T* const* input, T* const* output, 
+                              const T* const* modulation, size_t numInputChannels, size_t numSamples)
+    {
+        for (size_t ch = 0; ch < numChannels; ++ch)
+        {
+            const T* inChannel = input[ch < numInputChannels ? ch : 0];
+            T* outChannel = output[ch];
+            const T* modChannel = modulation[ch < numInputChannels ? ch : 0];
+            T* delayBuffer = buffer.getChannelPointer(ch);
+            
+            size_t workingWriteIndex = writeIndex;  // Local copy for this channel
+            
+            for (size_t i = 0; i < numSamples; ++i)
+            {
+                // Write input sample to buffer
+                delayBuffer[workingWriteIndex] = inChannel[i];
+
+                // Calculate modulated delay time (base delay + modulation)
+                T modulatedDelay = static_cast<T>(delaySamples) + modChannel[i];
+                
+                // Clamp modulated delay to valid range
+                modulatedDelay = std::max(T(0), std::min(modulatedDelay, static_cast<T>(bufferSize - 1)));
+                
+                // Split into integer and fractional parts for interpolation
+                size_t delayInt = static_cast<size_t>(modulatedDelay);
+                T delayFrac = modulatedDelay - static_cast<T>(delayInt);
+                
+                // Calculate read index with wrap-around
+                size_t readIndex = (workingWriteIndex + bufferSize - delayInt) & (bufferSize - 1);
+
+                // Interpolate output sample
+                outChannel[i] = Interpolator::interpolate(delayBuffer, readIndex, delayFrac);
+                
+                // Increment and wrap write index
+                workingWriteIndex = (workingWriteIndex + 1) & (bufferSize - 1);
+            }
+        }
+        
+        // Update global write index after processing all channels
+        writeIndex = (writeIndex + numSamples) & (bufferSize - 1);
+    }
+
 private:
     MultiChannelBuffer<T> buffer;  // Multi-channel circular buffer
     size_t writeIndex;             // Current write index in the buffer
