@@ -1,7 +1,7 @@
 #pragma once
 #include <cstddef>
 
-namespace Jonssonic::Core
+namespace Jonssonic::core
 {
 class DSPProcessor
 {
