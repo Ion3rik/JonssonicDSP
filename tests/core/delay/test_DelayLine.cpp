@@ -6,7 +6,7 @@
 #include <gtest/gtest.h>
 #include <cmath>
 #include "Jonssonic/core/common/Interpolators.h"
-#include "Jonssonic/core/delay/DelayLine.h"
+#include "Jonssonic/core/delays/DelayLine.h"
 
 namespace Jonssonic {
 
