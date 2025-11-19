@@ -70,11 +70,11 @@ TEST_F(OscillatorTest, PrepareResetsState) {
     osc.prepare(2, 44100.0f);
     osc.setFrequency(440.0f);
     
-    allocateBuffers(2, 1);
-    osc.processSample(output.data());
+    float outputSample[2];
+    osc.processSample(outputSample);
     
     // First sample after prepare should be at phase 0 (sine = 0.0)
-    EXPECT_NEAR(output[0][0], 0.0f, 0.001f);
+    EXPECT_NEAR(outputSample[0], 0.0f, 0.001f);
 }
 
 // ============================================================================
@@ -113,44 +113,44 @@ TEST_F(OscillatorTest, SineWaveform) {
     osc.setFrequency(440.0f);
     osc.reset();
     
-    allocateBuffers(2, 1);
-    osc.processSample(output.data());
+    float outputSample[2];
+    osc.processSample(outputSample);
     
     // Sine at phase 0 should be 0
-    EXPECT_NEAR(output[0][0], 0.0f, 0.001f);
+    EXPECT_NEAR(outputSample[0], 0.0f, 0.001f);
 }
 
 TEST_F(OscillatorTest, SawWaveform) {
     osc.setWaveform(Waveform::Saw);
     osc.reset();
     
-    allocateBuffers(2, 1);
-    osc.processSample(output.data());
+    float outputSample[2];
+    osc.processSample(outputSample);
     
     // Saw at phase 0: 2*0 - 1 = -1
-    EXPECT_NEAR(output[0][0], -1.0f, 0.001f);
+    EXPECT_NEAR(outputSample[0], -1.0f, 0.001f);
 }
 
 TEST_F(OscillatorTest, SquareWaveform) {
     osc.setWaveform(Waveform::Square);
     osc.reset();
     
-    allocateBuffers(2, 1);
-    osc.processSample(output.data());
+    float outputSample[2];
+    osc.processSample(outputSample);
     
     // Square at phase 0 (< 0.5): -1
-    EXPECT_NEAR(output[0][0], -1.0f, 0.001f);
+    EXPECT_NEAR(outputSample[0], -1.0f, 0.001f);
 }
 
 TEST_F(OscillatorTest, TriangleWaveform) {
     osc.setWaveform(Waveform::Triangle);
     osc.reset();
     
-    allocateBuffers(2, 1);
-    osc.processSample(output.data());
+    float outputSample[2];
+    osc.processSample(outputSample);
     
     // Triangle at phase 0: 4*0 - 1 = -1
-    EXPECT_NEAR(output[0][0], -1.0f, 0.001f);
+    EXPECT_NEAR(outputSample[0], -1.0f, 0.001f);
 }
 
 TEST_F(OscillatorTest, SineWaveSymmetry) {
@@ -202,11 +202,11 @@ TEST_F(OscillatorTest, ResetAllChannels) {
     // Reset
     osc.reset();
     
-    allocateBuffers(2, 1);
-    osc.processSample(output.data());
+    float outputSample[2];
+    osc.processSample(outputSample);
     
     // Should be back at phase 0
-    EXPECT_NEAR(output[0][0], 0.0f, 0.001f);
+    EXPECT_NEAR(outputSample[0], 0.0f, 0.001f);
 }
 
 TEST_F(OscillatorTest, ResetSingleChannel) {
@@ -219,13 +219,13 @@ TEST_F(OscillatorTest, ResetSingleChannel) {
     // Reset only channel 0
     osc.reset(0);
     
-    allocateBuffers(2, 1);
-    osc.processSample(output.data());
+    float outputSample[2];
+    osc.processSample(outputSample);
     
     // Channel 0 should be at phase 0
-    EXPECT_NEAR(output[0][0], 0.0f, 0.001f);
+    EXPECT_NEAR(outputSample[0], 0.0f, 0.001f);
     // Channel 1 should not be at phase 0 (continued from before)
-    EXPECT_GT(std::abs(output[1][0]), 0.001f);
+    EXPECT_GT(std::abs(outputSample[1]), 0.001f);
 }
 
 // ============================================================================
@@ -236,17 +236,17 @@ TEST_F(OscillatorTest, ProcessSampleNoModulation) {
     osc.setFrequency(440.0f);
     osc.reset();
     
-    allocateBuffers(2, 1);
+    float outputSample[2];
     
     // Process multiple single samples
     for (int i = 0; i < 10; ++i) {
-        osc.processSample(output.data());
+        osc.processSample(outputSample);
         
         // Output should be in valid range [-1, 1]
-        EXPECT_GE(output[0][0], -1.0f);
-        EXPECT_LE(output[0][0], 1.0f);
-        EXPECT_GE(output[1][0], -1.0f);
-        EXPECT_LE(output[1][0], 1.0f);
+        EXPECT_GE(outputSample[0], -1.0f);
+        EXPECT_LE(outputSample[0], 1.0f);
+        EXPECT_GE(outputSample[1], -1.0f);
+        EXPECT_LE(outputSample[1], 1.0f);
     }
 }
 
@@ -254,13 +254,13 @@ TEST_F(OscillatorTest, ProcessSampleWithModulation) {
     osc.setFrequency(440.0f);
     osc.reset();
     
-    allocateBuffers(2, 1);
-    allocatePhaseModBuffers(2, 1, 0.25f); // 90° phase shift
+    float outputSample[2];
+    float phaseMod[2] = {0.25f, 0.25f}; // 90° phase shift
     
-    osc.processSample(output.data(), phaseMod.data());
+    osc.processSample(outputSample, phaseMod);
     
     // With 0.25 phase offset, sine should be at peak (≈1.0)
-    EXPECT_NEAR(output[0][0], 1.0f, 0.001f);
+    EXPECT_NEAR(outputSample[0], 1.0f, 0.001f);
 }
 
 // ============================================================================
@@ -364,30 +364,30 @@ TEST_F(OscillatorTest, LargePhaseModulationWraps) {
     osc.setFrequency(440.0f);
     osc.reset();
     
-    allocateBuffers(2, 1);
-    allocatePhaseModBuffers(2, 1, 5.7f); // Large modulation value
+    float outputSample[2];
+    float phaseMod[2] = {5.7f, 5.7f}; // Large modulation value
     
-    osc.processSample(output.data(), phaseMod.data());
+    osc.processSample(outputSample, phaseMod);
     
     // Should wrap correctly and produce valid output
-    EXPECT_GE(output[0][0], -1.0f);
-    EXPECT_LE(output[0][0], 1.0f);
-    EXPECT_FALSE(std::isnan(output[0][0]));
+    EXPECT_GE(outputSample[0], -1.0f);
+    EXPECT_LE(outputSample[0], 1.0f);
+    EXPECT_FALSE(std::isnan(outputSample[0]));
 }
 
 TEST_F(OscillatorTest, NegativePhaseModulationWraps) {
     osc.setFrequency(440.0f);
     osc.reset();
     
-    allocateBuffers(2, 1);
-    allocatePhaseModBuffers(2, 1, -2.3f); // Negative modulation
+    float outputSample[2];
+    float phaseMod[2] = {-2.3f, -2.3f}; // Negative modulation
     
-    osc.processSample(output.data(), phaseMod.data());
+    osc.processSample(outputSample, phaseMod);
     
     // Should wrap correctly and produce valid output
-    EXPECT_GE(output[0][0], -1.0f);
-    EXPECT_LE(output[0][0], 1.0f);
-    EXPECT_FALSE(std::isnan(output[0][0]));
+    EXPECT_GE(outputSample[0], -1.0f);
+    EXPECT_LE(outputSample[0], 1.0f);
+    EXPECT_FALSE(std::isnan(outputSample[0]));
 }
 
 // ============================================================================
@@ -455,8 +455,7 @@ TEST_F(OscillatorTest, ProcessSampleMatchesProcessBlock) {
     
     for (size_t i = 0; i < 10; ++i) {
         float temp[2];
-        float* tempPtrs[2] = {&temp[0], &temp[1]};
-        osc1.processSample(tempPtrs);
+        osc1.processSample(temp);
         output1[0][i] = temp[0];
         output1[1][i] = temp[1];
     }

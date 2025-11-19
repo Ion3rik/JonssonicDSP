@@ -102,24 +102,30 @@ public:
     {
         for (size_t n = 0; n < numSamples; ++n)
         {
-            // Pre-process all channels: mix input with feedback and generate LFO
+            // Pre-process all channels: mix input with feedback
             for (size_t ch = 0; ch < numChannels; ++ch)
             {
-                // Mix input with feedback
                 processBuffer[ch] = input[ch][n] + feedback * feedbackBuffer[ch];
-
-                // Process LFO for this channel
-                lfo.processSample(lfoBuffer[ch], phaseOffsets[ch]);
+            }
+            
+            // Generate LFO for all channels with phase offsets for stereo spread
+            lfo.processSample(lfoBuffer.data(), phaseOffsets.data());
+            
+            // Scale LFO output by depth
+            for (size_t ch = 0; ch < numChannels; ++ch)
+            {
                 lfoBuffer[ch] *= depthInSamples;
             }
             
             // Process all channels through delay line (single sample per channel)
-            delayLine.processSample(processBuffer.data(), &output[0][n], lfoBuffer.data());
+            std::vector<T> outputSample(numChannels);
+            delayLine.processSample(processBuffer.data(), outputSample.data(), lfoBuffer.data());
             
-            // Post-process: update feedback from delayed output
+            // Copy to output and update feedback
             for (size_t ch = 0; ch < numChannels; ++ch)
             {
-                feedbackBuffer[ch] = output[ch][n];
+                output[ch][n] = outputSample[ch];
+                feedbackBuffer[ch] = outputSample[ch];
             }
         }
     }

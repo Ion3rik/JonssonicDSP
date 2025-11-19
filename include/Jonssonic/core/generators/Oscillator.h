@@ -88,11 +88,11 @@ class Oscillator
     }
 
     // Process single sample for all channels 
-    void processSample(T* const* output)
+    void processSample(T* output)
     {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             // Generate waveform at current phase
-            output[ch][0] = generateWaveform(phase[ch]);
+            output[ch] = generateWaveform(phase[ch]);
             
             // Advance phase
             phase[ch] += phaseIncrement[ch];
@@ -102,18 +102,18 @@ class Oscillator
     }
 
     // Process single sample for all channels (with phase modulation)
-    void processSample(T* const* output, const T* const* phaseMod)
+    void processSample(T* output, const T* phaseMod)
     {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             // Calculate modulated phase
-            T modulatedPhase = phase[ch] + phaseMod[ch][0];
+            T modulatedPhase = phase[ch] + phaseMod[ch];
             
             // Wrap phase to [0, 1)
             while (modulatedPhase >= T(1.0)) modulatedPhase -= T(1.0);
             while (modulatedPhase < T(0.0)) modulatedPhase += T(1.0);
             
             // Generate waveform at modulated phase
-            output[ch][0] = generateWaveform(modulatedPhase);
+            output[ch] = generateWaveform(modulatedPhase);
             
             // Advance phase
             phase[ch] += phaseIncrement[ch];
