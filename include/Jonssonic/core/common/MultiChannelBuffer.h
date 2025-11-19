@@ -22,6 +22,16 @@ class MultiChannelBuffer
 {
 public:
     /**
+     * @brief Default constructor - creates an uninitialized buffer.
+     */
+    MultiChannelBuffer()
+        : m_numChannels(0)
+        , m_numSamples(0)
+        , m_data()
+    {
+    }
+
+    /**
      * @brief Constructor.
      * @param numChannels Number of audio channels
      * @param numSamples Number of samples per channel
@@ -31,8 +41,6 @@ public:
         , m_numSamples(numSamples)
         , m_data(numChannels * numSamples, T(0))
     {
-        assert(numChannels > 0 && "Number of channels must be greater than 0");
-        assert(numSamples > 0 && "Number of samples must be greater than 0");
     }
 
     /**

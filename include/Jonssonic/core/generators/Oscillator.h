@@ -26,9 +26,10 @@ template<typename T>
 class Oscillator
 {
     public:
-    Oscillator(size_t numChannels, T sampleRate)
-        : numChannels(numChannels)
-    {}
+    Oscillator()
+        : numChannels(0), sampleRate(T(0))
+    {
+    }
     ~Oscillator() = default;
     // No copy semantics nor move semantics
     Oscillator(const Oscillator&) = delete;

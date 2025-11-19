@@ -41,7 +41,7 @@ protected:
         }
     }
 
-    Oscillator<float> osc{2, 44100.0f};
+    Oscillator<float> osc;
     std::vector<float*> output;
     std::vector<float> outputData;
     std::vector<const float*> phaseMod;
@@ -53,7 +53,8 @@ protected:
 // ============================================================================
 
 TEST_F(OscillatorTest, ConstructorInitialization) {
-    Oscillator<float> newOsc(2, 48000.0f);
+    Oscillator<float> newOsc;
+    newOsc.prepare(2, 48000.0f);
     // Should construct without errors
     SUCCEED();
 }
@@ -315,7 +316,7 @@ TEST_F(OscillatorTest, ProcessBlockWithModulation) {
 // ============================================================================
 
 TEST_F(OscillatorTest, MultiChannelIndependence) {
-    Oscillator<float> quadOsc(4, 44100.0f);
+    Oscillator<float> quadOsc;
     quadOsc.prepare(4, 44100.0f);
     
     // Set different frequencies for each channel
@@ -441,7 +442,7 @@ TEST_F(OscillatorTest, ProcessSampleMatchesProcessBlock) {
     osc.setWaveform(Waveform::Sine);
     
     // Process with processSample
-    Oscillator<float> osc1(2, 44100.0f);
+    Oscillator<float> osc1;
     osc1.prepare(2, 44100.0f);
     osc1.setFrequency(440.0f);
     osc1.setWaveform(Waveform::Sine);
@@ -461,7 +462,7 @@ TEST_F(OscillatorTest, ProcessSampleMatchesProcessBlock) {
     }
     
     // Process with processBlock
-    Oscillator<float> osc2(2, 44100.0f);
+    Oscillator<float> osc2;
     osc2.prepare(2, 44100.0f);
     osc2.setFrequency(440.0f);
     osc2.setWaveform(Waveform::Sine);

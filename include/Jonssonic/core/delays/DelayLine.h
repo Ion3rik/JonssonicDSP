@@ -17,11 +17,11 @@ template<typename T, typename Interpolator>
 class DelayLine
 {
 public:
-    DelayLine(size_t numChannels, size_t maxDelaySamples)
-        : buffer(numChannels, nextPowerOfTwo(maxDelaySamples)),
+    DelayLine()
+        : buffer(),
           writeIndex(0),
-          bufferSize(nextPowerOfTwo(maxDelaySamples)),
-          numChannels(numChannels)
+          bufferSize(0),
+          numChannels(0)
     {}
     ~DelayLine() = default;
 

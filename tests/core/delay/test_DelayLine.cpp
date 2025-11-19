@@ -13,6 +13,16 @@ namespace Jonssonic {
 class DelayLineTest : public ::testing::Test {
 protected:
     void SetUp() override {
+        delayLine.prepare(2, 1024);
+        blockDelayLine.prepare(2, 1024);
+        zeroDelayLine.prepare(2, 1024);
+        maxDelayLine.prepare(1, 8);
+        smallDelayLine.prepare(1, 8);
+        clampDelayLine.prepare(2, 1024);
+        oversizeDelayLine.prepare(1, 8);
+        quadDelayLine.prepare(4, 1024);
+        surroundDelayLine.prepare(6, 1024);
+        
         delayLine.setDelay(2);
         blockDelayLine.setDelay(2);
         zeroDelayLine.setDelay(0);
@@ -57,15 +67,15 @@ protected:
     }
     
     // Test fixture members - DelayLine instances
-    DelayLine<float, NearestInterpolator<float>> delayLine{2, 1024};          // Standard stereo
-    DelayLine<float, NearestInterpolator<float>> blockDelayLine{2, 1024};     // For block processing tests
-    DelayLine<float, NearestInterpolator<float>> zeroDelayLine{2, 1024};      // Zero delay test
-    DelayLine<float, NearestInterpolator<float>> maxDelayLine{1, 8};          // Maximum delay test
-    DelayLine<float, NearestInterpolator<float>> smallDelayLine{1, 8};        // Wraparound test
-    DelayLine<float, NearestInterpolator<float>> clampDelayLine{2, 1024};     // Modulation clamping test
-    DelayLine<float, NearestInterpolator<float>> oversizeDelayLine{1, 8};     // Delay exceeds buffer test
-    DelayLine<float, NearestInterpolator<float>> quadDelayLine{4, 1024};      // Quad (4-channel)
-    DelayLine<float, NearestInterpolator<float>> surroundDelayLine{6, 1024};  // 5.1 surround (6-channel)
+    DelayLine<float, NearestInterpolator<float>> delayLine;          // Standard stereo
+    DelayLine<float, NearestInterpolator<float>> blockDelayLine;     // For block processing tests
+    DelayLine<float, NearestInterpolator<float>> zeroDelayLine;      // Zero delay test
+    DelayLine<float, NearestInterpolator<float>> maxDelayLine;       // Maximum delay test
+    DelayLine<float, NearestInterpolator<float>> smallDelayLine;     // Wraparound test
+    DelayLine<float, NearestInterpolator<float>> clampDelayLine;     // Modulation clamping test
+    DelayLine<float, NearestInterpolator<float>> oversizeDelayLine;  // Delay exceeds buffer test
+    DelayLine<float, NearestInterpolator<float>> quadDelayLine;      // Quad (4-channel)
+    DelayLine<float, NearestInterpolator<float>> surroundDelayLine;  // 5.1 surround (6-channel)
     
     // Common input buffers
     float leftChannel[4] = {0.0f, 10.0f, 20.0f, 30.0f};
@@ -194,8 +204,10 @@ TEST_F(DelayLineTest, ProcessBlockFixedDelay) {
 // Test block processing matches sample-by-sample processing
 TEST_F(DelayLineTest, ProcessBlockMatchesSampleBySample) {
     // Create two identical delay lines for this comparison test
-    DelayLine<float, NearestInterpolator<float>> sampleDelayLine{2, 1024};
-    DelayLine<float, NearestInterpolator<float>> blockCompareDelayLine{2, 1024};
+    DelayLine<float, NearestInterpolator<float>> sampleDelayLine;
+    DelayLine<float, NearestInterpolator<float>> blockCompareDelayLine;
+    sampleDelayLine.prepare(2, 1024);
+    blockCompareDelayLine.prepare(2, 1024);
     sampleDelayLine.setDelay(3);
     blockCompareDelayLine.setDelay(3);
     
@@ -434,7 +446,8 @@ TEST_F(DelayLineTest, ModulatedDelayClampedToZero) {
 
 // Edge case: Modulated delay with extreme positive modulation (clamped to buffer size)
 TEST_F(DelayLineTest, ModulatedDelayClampedToBufferSize) {
-    DelayLine<float, NearestInterpolator<float>> clampLargeDelayLine{1, 8};
+    DelayLine<float, NearestInterpolator<float>> clampLargeDelayLine;
+    clampLargeDelayLine.prepare(1, 8);
     clampLargeDelayLine.setDelay(2);
     
     float localOutput[1] = {0.0f};
