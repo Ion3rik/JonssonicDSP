@@ -87,39 +87,39 @@ class Oscillator
         useAntiAliasing = enable;
     }
 
-    // Process single sample for all channels 
-    void processSample(T* output)
+    // Process single sample for a specific channel (no phase modulation)
+    T processSample(size_t ch)
     {
-        for (size_t ch = 0; ch < numChannels; ++ch) {
-            // Generate waveform at current phase
-            output[ch] = generateWaveform(phase[ch]);
-            
-            // Advance phase
-            phase[ch] += phaseIncrement[ch];
-            if (phase[ch] >= T(1.0)) 
-                phase[ch] -= T(1.0);
-        }
+        // Generate waveform at current phase
+        T output = generateWaveform(phase[ch]);
+        
+        // Advance phase
+        phase[ch] += phaseIncrement[ch];
+        if (phase[ch] >= T(1.0)) 
+            phase[ch] -= T(1.0);
+        
+        return output;
     }
 
-    // Process single sample for all channels (with phase modulation)
-    void processSample(T* output, const T* phaseMod)
+    // Process single sample for a specific channel (with phase modulation)
+    T processSample(size_t ch, T phaseMod)
     {
-        for (size_t ch = 0; ch < numChannels; ++ch) {
-            // Calculate modulated phase
-            T modulatedPhase = phase[ch] + phaseMod[ch];
-            
-            // Wrap phase to [0, 1)
-            while (modulatedPhase >= T(1.0)) modulatedPhase -= T(1.0);
-            while (modulatedPhase < T(0.0)) modulatedPhase += T(1.0);
-            
-            // Generate waveform at modulated phase
-            output[ch] = generateWaveform(modulatedPhase);
-            
-            // Advance phase
-            phase[ch] += phaseIncrement[ch];
-            if (phase[ch] >= T(1.0)) 
-                phase[ch] -= T(1.0);
-        }
+        // Calculate modulated phase
+        T modulatedPhase = phase[ch] + phaseMod;
+        
+        // Wrap phase to [0, 1)
+        while (modulatedPhase >= T(1.0)) modulatedPhase -= T(1.0);
+        while (modulatedPhase < T(0.0)) modulatedPhase += T(1.0);
+        
+        // Generate waveform at modulated phase
+        T output = generateWaveform(modulatedPhase);
+        
+        // Advance phase
+        phase[ch] += phaseIncrement[ch];
+        if (phase[ch] >= T(1.0)) 
+            phase[ch] -= T(1.0);
+        
+        return output;
     }
 
     // Process block for all channels (no phase modulation)

@@ -45,63 +45,63 @@ public:
     }
 
     /**
-     * @brief Get a pointer to a specific channel's data.
-     * @param channel Channel index
-     * @return Pointer to the first sample of the channel
+     * @brief Get array of const pointers to each channel's data (for read-only access).
      */
-    T* getChannelPointer(size_t channel)
-    {
+    std::vector<const T*> readPtrs() const {
+        std::vector<const T*> ptrs(m_numChannels);
+        for (size_t ch = 0; ch < m_numChannels; ++ch)
+            ptrs[ch] = m_data.data() + (ch * m_numSamples);
+        return ptrs;
+    }
+
+    /**
+     * @brief Get array of pointers to each channel's data (for write access).
+     */
+    std::vector<T*> writePtrs() {
+        std::vector<T*> ptrs(m_numChannels);
+        for (size_t ch = 0; ch < m_numChannels; ++ch)
+            ptrs[ch] = m_data.data() + (ch * m_numSamples);
+        return ptrs;
+    }
+
+    /**
+     * @brief Get a pointer to the start of a channel's data (for write access).
+     */
+    T* writeChannelPtr(size_t channel) {
         assert(channel < m_numChannels && "Channel index out of bounds");
         return m_data.data() + (channel * m_numSamples);
     }
 
     /**
-     * @brief Get a const pointer to a specific channel's data.
-     * @param channel Channel index
-     * @return Const pointer to the first sample of the channel
+     * @brief Get a pointer to the start of a channel's data (for read-only access).
      */
-    const T* getChannelPointer(size_t channel) const
-    {
+    const T* readChannelPtr(size_t channel) const {
         assert(channel < m_numChannels && "Channel index out of bounds");
         return m_data.data() + (channel * m_numSamples);
     }
 
     /**
-     * @brief Access a sample at a specific channel and index.
-     * @param channel Channel index
-     * @param sampleIndex Sample index within the channel
-     * @return Reference to the sample
+     * @brief Get pointers to a single sample index across all channels (for write access).
      */
-    T& getSample(size_t channel, size_t sampleIndex)
-    {
-        assert(channel < m_numChannels && "Channel index out of bounds");
-        assert(sampleIndex < m_numSamples && "Sample index out of bounds");
-        return m_data[channel * m_numSamples + sampleIndex];
+    std::vector<T*> writeSamplePtr(size_t sampleIdx) {
+        assert(sampleIdx < m_numSamples && "Sample index out of bounds");
+        std::vector<T*> ptrs(m_numChannels);
+        for (size_t ch = 0; ch < m_numChannels; ++ch)
+            ptrs[ch] = m_data.data() + (ch * m_numSamples) + sampleIdx;
+        return ptrs;
     }
 
     /**
-     * @brief Access a sample at a specific channel and index (const version).
-     * @param channel Channel index
-     * @param sampleIndex Sample index within the channel
-     * @return Const reference to the sample
+     * @brief Get pointers to a single sample index across all channels (for read-only access).
      */
-    const T& getSample(size_t channel, size_t sampleIndex) const
-    {
-        assert(channel < m_numChannels && "Channel index out of bounds");
-        assert(sampleIndex < m_numSamples && "Sample index out of bounds");
-        return m_data[channel * m_numSamples + sampleIndex];
+    std::vector<const T*> readSamplePtr(size_t sampleIdx) const {
+        assert(sampleIdx < m_numSamples && "Sample index out of bounds");
+        std::vector<const T*> ptrs(m_numChannels);
+        for (size_t ch = 0; ch < m_numChannels; ++ch)
+            ptrs[ch] = m_data.data() + (ch * m_numSamples) + sampleIdx;
+        return ptrs;
     }
 
-    /**
-     * @brief Set a sample at a specific channel and index.
-     * @param channel Channel index
-     * @param sampleIndex Sample index within the channel
-     * @param value The value to set
-     */
-    void setSample(size_t channel, size_t sampleIndex, T value)
-    {
-        getSample(channel, sampleIndex) = value;
-    }
 
     /**
      * @brief Clear all samples in the buffer (set to zero).
@@ -146,9 +146,54 @@ public:
     }
 
     // ========================================================================
-    // Operator Overloads for Mathematical Operations
+    // Proxy classes for channel access
     // ========================================================================
 
+    // Proxy class for channel access
+    class ChannelProxy {
+    public:
+        ChannelProxy(T* channelData, size_t numSamples) : m_channelData(channelData), m_numSamples(numSamples) {}
+        T& operator[](size_t sample) {
+            assert(sample < m_numSamples && "Sample index out of bounds");
+            return m_channelData[sample];
+        }
+        const T& operator[](size_t sample) const {
+            assert(sample < m_numSamples && "Sample index out of bounds");
+            return m_channelData[sample];
+        }
+    private:
+        T* m_channelData;
+        size_t m_numSamples;
+    };
+
+    // Const proxy for channel access
+    class ConstChannelProxy {
+    public:
+        ConstChannelProxy(const T* channelData, size_t numSamples) : m_channelData(channelData), m_numSamples(numSamples) {}
+        const T& operator[](size_t sample) const {
+            assert(sample < m_numSamples && "Sample index out of bounds");
+            return m_channelData[sample];
+        }
+    private:
+        const T* m_channelData;
+        size_t m_numSamples;
+    };
+    
+    // ========================================================================
+    // Operator Overloads
+    // ========================================================================
+    /**
+    * @brief Get a proxy to access a specific channel.
+    * @param channel Channel index 
+     */
+    ChannelProxy operator[](size_t channel) {
+        assert(channel < m_numChannels && "Channel index out of bounds");
+        return ChannelProxy(m_data.data() + (channel * m_numSamples), m_numSamples);
+    }
+    ConstChannelProxy operator[](size_t channel) const {
+        assert(channel < m_numChannels && "Channel index out of bounds");
+        return ConstChannelProxy(m_data.data() + (channel * m_numSamples), m_numSamples);
+    }
     /**
      * @brief Add two buffers element-wise
      */
@@ -252,9 +297,10 @@ public:
     }
 
 private:
-    size_t m_numChannels;
     size_t m_numSamples;
+    size_t m_numChannels;
     std::vector<T> m_data;  // Flat deinterleaved storage for all channels
+
 };
 
 // ============================================================================

@@ -63,11 +63,9 @@ public:
         delayLine.prepare(newNumChannels, maxDelaySamples);
         lfo.prepare(newNumChannels, newSampleRate);
 
-        // Allocate buffers - single sample per channel (not blocks)
-        feedbackBuffer.resize(numChannels, 1);
-        processBuffer.resize(numChannels, 1);
-    lfoBuffer.resize(numChannels, 1);
-        phaseOffsets.resize(numChannels, T(0));
+        // Initialize states
+        feedbackState.resize(numChannels, T(0));
+        phaseOffset.resize(numChannels, T(0));
         
         // Configure LFO
         lfo.setWaveform(Waveform::Sine);
@@ -84,10 +82,7 @@ public:
     void clear()
     {
         delayLine.clear();
-        feedbackBuffer.clear();
-        processBuffer.clear();
-    lfoBuffer.clear();
-        std::fill(phaseOffsets.begin(), phaseOffsets.end(), T(0));
+        std::fill(phaseOffset.begin(), phaseOffset.end(), T(0));
     }
 
     /**
@@ -101,28 +96,27 @@ public:
      */
     void processBlock(const T* const* input, T* const* output, size_t numSamples)
     {
-        for (size_t n = 0; n < numSamples; ++n)
+        for (size_t ch = 0; ch < numChannels; ++ch) 
         {
-            // Copy input sample for all channels
-            //processBuffer.copyFrom(input, n);
-            // Mix with feedback
-            processBuffer += feedbackBuffer * feedback;
-            
-            // Generate LFO for all channels with phase offsets
-            lfo.processSample(lfoBuffer.getChannelPointer(0), phaseOffsets.data());
-            
-            // Scale LFO by modulation depth
-            lfoBuffer *= depthInSamples;
-            
-            // Process through delay line
-            delayLine.processSample(processBuffer.getChannelPointer(0), 
-                                   processBuffer.getChannelPointer(0), 
-                                   lfoBuffer.getChannelPointer(0));
-            
-            // Copy to output and update feedback
-            //processBuffer.copyTo(output, n);
-            feedbackBuffer = processBuffer;
+            for (size_t n = 0; n < numSamples; ++n)
+            {
+                // Mix input with feedback
+                T inputWithFeedback = input[ch][n] + feedbackState[ch] * feedback;
+                
+                // process LFO with phase offset
+                T lfoValue = lfo.processSample(ch, phaseOffset[ch]);
+                
+                // Scale LFO by modulation depth
+                lfoValue *= depthInSamples;
+                
+                // Process through delay line
+                T delayedSample = delayLine.processSample(ch, inputWithFeedback, lfoValue);
+        
+                // Copy to output and update feedback state
+                output[ch][n] = delayedSample;
+                feedbackState[ch] = delayedSample;
 
+            }
         }
     }
 
@@ -181,7 +175,7 @@ public:
         // Update phase offsets based on spread
         for (size_t ch = 0; ch < numChannels; ++ch)
         {
-            phaseOffsets[ch] = (spread * T(2) * M_PI * ch) / T(numChannels);
+            phaseOffset[ch] = (spread * T(2) * M_PI * ch) / T(numChannels);
         }
     }
 
@@ -210,12 +204,6 @@ private:
     DelayLine<T, LinearInterpolator<T>> delayLine;
     Oscillator<T> lfo;
 
-    // Buffers (single sample per channel)
-    AudioBuffer<T> feedbackBuffer;
-    AudioBuffer<T> processBuffer;
-    AudioBuffer<T> lfoBuffer;
-    std::vector<T> phaseOffsets;
-
     // User parameters 
     T lfoRate = T(0.5);           // LFO rate in Hz
     T depth = T(0.7);             // Modulation depth 0-1 (70% default)
@@ -226,6 +214,8 @@ private:
     // Internal parameters
     T baseDelaySamples = T(0);
     T depthInSamples = T(0);
+    std::vector<T> phaseOffset;
+    std::vector<T> feedbackState;
 };
 
 } // namespace Jonssonic
