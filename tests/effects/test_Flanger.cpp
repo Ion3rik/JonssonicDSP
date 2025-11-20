@@ -32,7 +32,7 @@ TEST(FlangerTest, BasicMonoProcess)
     for (float v : output) {
         if (std::abs(v) > 1e-6f) nonZero = true;
     }
-    EXPECT_TRUE(nonZero);
+    EXPECT_TRUE(nonZero) << "Output should not be all zeros after processing an impulse";
 }
 
 TEST(FlangerTest, StereoImpulseResponse)

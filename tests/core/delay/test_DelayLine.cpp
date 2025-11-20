@@ -102,6 +102,54 @@ protected:
     float modNegative[1] = {-1.0f};
 };
 
+    // Test: Different integer delay times per channel
+    TEST_F(DelayLineTest, PerChannelIntegerDelay)
+    {
+        DelayLine<float, NearestInterpolator<float>> dl;
+        dl.prepare(2, 16);
+        // Set different delays for each channel
+        std::vector<size_t> delays = {2, 4};
+        // Simulate per-channel delay setting
+        dl.setDelay(delays[0], 0u); // left
+        dl.setDelay(delays[1], 1u); // right
+        float leftInput[6] = {1,2,3,4,5,6};
+        float rightInput[6] = {10,20,30,40,50,60};
+        float leftExpected[6] = {0,0,1,2,3,4};
+        float rightExpected[6] = {0,0,0,0,10,20};
+        // Process left with delay 2, right with delay 4
+        for (size_t i = 0; i < 6; ++i) {
+            float outL = dl.processSample(leftInput[i], 0u);
+            float outR = dl.processSample(rightInput[i], 1u);
+            EXPECT_FLOAT_EQ(outL, leftExpected[i]) << "Left sample " << i;
+            EXPECT_FLOAT_EQ(outR, rightExpected[i]) << "Right sample " << i;
+        }
+    }
+
+    // Test: Different modulated delay times per channel
+    TEST_F(DelayLineTest, PerChannelModulatedDelay)
+    {
+        DelayLine<float, NearestInterpolator<float>> dl;
+        dl.prepare(2, 16);
+        std::vector<size_t> delays = {2, 4};
+        dl.setDelay(delays[0], 0u); // left
+        dl.setDelay(delays[1], 1u); // right
+        float leftInput[6] = {1,2,3,4,5,6};
+        float rightInput[6] = {10,20,30,40,50,60};
+        float leftExpected[6] = {0,0,1,2,3,4};
+        float rightExpected[6] = {0,0,0,0,10,20};
+        float leftMod[6] = {0,0,0,0,0,0};
+        float rightMod[6] = {0,0,0,0,0,0};
+
+        for (size_t i = 0; i < 6; ++i) {
+            float outL = dl.processSample(leftInput[i], leftMod[i], 0u);
+            float outR = dl.processSample(rightInput[i], rightMod[i], 1u);
+    
+            // For simplicity, just check output is close to expected (interpolated)
+            EXPECT_NEAR(outL, leftExpected[i], 1e-5) << "Left sample " << i;
+            EXPECT_NEAR(outR, rightExpected[i], 1e-5) << "Right sample " << i;
+        }
+    }
+
 // Tests for simple sample processing
 TEST_F(DelayLineTest, ProcessSingleSampleFixedDelaySteroToStereo) {
     processSamplesAndVerify(leftChannel, rightChannel, expectedLeft, expectedRight, 4);

@@ -71,7 +71,7 @@ class Oscillator
         }
     }
     
-        // Set specific channel frequency
+    // Set specific channel frequency
     void setFrequency(T freq, size_t channel) {
         frequency[channel] = freq;
         phaseIncrement[channel] = freq / sampleRate;

@@ -33,6 +33,7 @@ public:
         buffer.resize(numChannels, bufferSize);
         buffer.clear();
         writeIndex.resize(numChannels, 0);
+        delaySamples.resize(numChannels, 0);
     }
 
     void clear()
@@ -53,7 +54,7 @@ public:
         buffer[ch][writeIndex[ch]] = input;
 
         // Calculate read index with wrap-around (fixed delay)
-        size_t readIndex = (writeIndex[ch] + bufferSize - delaySamples) & (bufferSize - 1);
+        size_t readIndex = (writeIndex[ch] + bufferSize - delaySamples[ch]) & (bufferSize - 1);
 
         // Increment and wrap with bitwise AND for power-of-two buffer size
         writeIndex[ch] = (writeIndex[ch] + 1) & (bufferSize - 1);
@@ -78,7 +79,7 @@ public:
         buffer[ch][writeIndex[ch]] = input;
 
         // Calculate modulated delay time (base delay + modulation)
-        T modulatedDelay = static_cast<T>(delaySamples) + modulation;
+        T modulatedDelay = static_cast<T>(delaySamples[ch]) + modulation;
         
         // Clamp modulated delay to valid range
         modulatedDelay = std::max(T(0), std::min(modulatedDelay, static_cast<T>(bufferSize - 1)));
@@ -117,7 +118,7 @@ public:
                 buffer[ch][writeIndex[ch]] = input[ch][i];
 
                 // Calculate read index with wrap-around (fixed delay)
-                size_t readIndex = (writeIndex[ch] + bufferSize - delaySamples) & (bufferSize - 1);
+                size_t readIndex = (writeIndex[ch] + bufferSize - delaySamples[ch]) & (bufferSize - 1);
 
                 // Read output sample directly (no interpolation needed for fixed integer delay)
                 output[ch][i] = buffer[ch][readIndex];
@@ -150,7 +151,7 @@ public:
                 buffer[ch][writeIndex[ch]] = input[ch][i];
 
                 // Calculate modulated delay time (base delay + modulation)
-                T modulatedDelay = static_cast<T>(delaySamples) + modulation[ch][i];
+                T modulatedDelay = static_cast<T>(delaySamples[ch]) + modulation[ch][i];
                 
                 // Clamp modulated delay to valid range
                 modulatedDelay = std::max(T(0), std::min(modulatedDelay, static_cast<T>(bufferSize - 1)));
@@ -171,16 +172,33 @@ public:
         }
     }
 
+    /**
+     * @brief Set a constant delay time in samples for all channels.
+     * @param newDelaySamples Delay time in samples
+     */
     void setDelay(size_t newDelaySamples)
     {
-        delaySamples = std::min(newDelaySamples, bufferSize); // Clamp to buffer size
+        for (size_t ch = 0; ch < numChannels; ++ch)
+        {
+            delaySamples[ch] = std::min(newDelaySamples, bufferSize); // Clamp to buffer size
+        }
+    }
+
+    /**
+     * @brief Set a constant delay time in samples for a specific channel.
+     * @param newDelaySamples Delay time in samples
+     * @param ch Channel index
+     */
+    void setDelay(size_t newDelaySamples, size_t ch)
+    {
+        delaySamples[ch] = std::min(newDelaySamples, bufferSize); // Clamp to buffer size
     }
 
 private:
     AudioBuffer<T> buffer;              // Multi-channel circular buffer
     std::vector<size_t> writeIndex;     // Current write index in the buffer per channel
     size_t bufferSize;                  // Maximum delay in samples (always power of two)
-    size_t delaySamples = 0;            // Current delay time in samples
+    std::vector<size_t> delaySamples;   // Delay time in samples per channel
     size_t numChannels;                 // Number of audio channels
 
 };
