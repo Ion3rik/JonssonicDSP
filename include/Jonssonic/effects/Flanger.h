@@ -8,6 +8,7 @@
 #include "../core/delays/DelayLine.h"
 #include "../core/generators/Oscillator.h"
 #include "../core/common/Interpolators.h"
+#include "../core/common/AudioBuffer.h"
 #include "../utils/MathUtils.h"
 #include <vector>
 #include <algorithm>
@@ -60,18 +61,18 @@ public:
         
         // Prepare components
         delayLine.prepare(newNumChannels, maxDelaySamples);
-        lfo.prepare(newNumChannels, newSampleRate);  // Multi-channel LFO for stereo width
+        lfo.prepare(newNumChannels, newSampleRate);
 
-        // Allocate buffers
-        feedbackBuffer.resize(numChannels, T(0));
-        processBuffer.resize(numChannels, T(0));
-        lfoBuffer.resize(numChannels, T(0));
+        // Allocate buffers - single sample per channel (not blocks)
+        feedbackBuffer.resize(numChannels, 1);
+        processBuffer.resize(numChannels, 1);
+    lfoBuffer.resize(numChannels, 1);
         phaseOffsets.resize(numChannels, T(0));
         
         // Configure LFO
-        lfo.setWaveform(Waveform::Sine); // sine wave
-        lfo.setAntiAliasing(false);  // no anti-aliasing
-        lfo.setFrequency(lfoRate);  // set default frequency
+        lfo.setWaveform(Waveform::Sine);
+        lfo.setAntiAliasing(false);
+        lfo.setFrequency(lfoRate);
         
         // Update delay parameters
         updateDelayParameters();
@@ -83,9 +84,9 @@ public:
     void clear()
     {
         delayLine.clear();
-        std::fill(feedbackBuffer.begin(), feedbackBuffer.end(), T(0));
-        std::fill(processBuffer.begin(), processBuffer.end(), T(0));
-        std::fill(lfoBuffer.begin(), lfoBuffer.end(), T(0));
+        feedbackBuffer.clear();
+        processBuffer.clear();
+    lfoBuffer.clear();
         std::fill(phaseOffsets.begin(), phaseOffsets.end(), T(0));
     }
 
@@ -102,31 +103,26 @@ public:
     {
         for (size_t n = 0; n < numSamples; ++n)
         {
-            // Pre-process all channels: mix input with feedback
-            for (size_t ch = 0; ch < numChannels; ++ch)
-            {
-                processBuffer[ch] = input[ch][n] + feedback * feedbackBuffer[ch];
-            }
+            // Copy input sample for all channels
+            //processBuffer.copyFrom(input, n);
+            // Mix with feedback
+            processBuffer += feedbackBuffer * feedback;
             
-            // Generate LFO for all channels with phase offsets for stereo spread
-            lfo.processSample(lfoBuffer.data(), phaseOffsets.data());
+            // Generate LFO for all channels with phase offsets
+            lfo.processSample(lfoBuffer.getChannelPointer(0), phaseOffsets.data());
             
-            // Scale LFO output by depth
-            for (size_t ch = 0; ch < numChannels; ++ch)
-            {
-                lfoBuffer[ch] *= depthInSamples;
-            }
+            // Scale LFO by modulation depth
+            lfoBuffer *= depthInSamples;
             
-            // Process all channels through delay line (single sample per channel)
-            std::vector<T> outputSample(numChannels);
-            delayLine.processSample(processBuffer.data(), outputSample.data(), lfoBuffer.data());
+            // Process through delay line
+            delayLine.processSample(processBuffer.getChannelPointer(0), 
+                                   processBuffer.getChannelPointer(0), 
+                                   lfoBuffer.getChannelPointer(0));
             
             // Copy to output and update feedback
-            for (size_t ch = 0; ch < numChannels; ++ch)
-            {
-                output[ch][n] = outputSample[ch];
-                feedbackBuffer[ch] = outputSample[ch];
-            }
+            //processBuffer.copyTo(output, n);
+            feedbackBuffer = processBuffer;
+
         }
     }
 
@@ -211,14 +207,14 @@ private:
     size_t maxDelaySamples = 0;
 
     // Core processors
-    DelayLine<T, LinearInterpolator> delayLine;
+    DelayLine<T, LinearInterpolator<T>> delayLine;
     Oscillator<T> lfo;
 
-    // Buffers
-    std::vector<T> feedbackBuffer;  // Feedback buffer per channel
-    std::vector<T> processBuffer;   // Processing buffer per channel
-    std::vector<T> lfoBuffer;       // LFO buffer per channel
-    std::vector<T> phaseOffsets;    // Phase offsets for stereo width
+    // Buffers (single sample per channel)
+    AudioBuffer<T> feedbackBuffer;
+    AudioBuffer<T> processBuffer;
+    AudioBuffer<T> lfoBuffer;
+    std::vector<T> phaseOffsets;
 
     // User parameters 
     T lfoRate = T(0.5);           // LFO rate in Hz

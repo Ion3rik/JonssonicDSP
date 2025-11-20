@@ -4,7 +4,7 @@
 // Update: 18.11.2025
 
 #pragma once
-#include "../common/MultiChannelBuffer.h"
+#include "../common/AudioBuffer.h"
 #include "../../utils/MathUtils.h"
 
 namespace Jonssonic
@@ -200,7 +200,7 @@ public:
     }
 
 private:
-    MultiChannelBuffer<T> buffer;  // Multi-channel circular buffer
+    AudioBuffer<T> buffer;  // Multi-channel circular buffer
     size_t writeIndex;             // Current write index in the buffer
     size_t bufferSize;             // Maximum delay in samples (always power of two)
     size_t delaySamples = 0;       // Current delay time in samples
