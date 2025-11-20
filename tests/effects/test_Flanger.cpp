@@ -63,11 +63,11 @@ TEST(FlangerTest, StereoImpulseResponse)
     for (float v : outputL) {
         if (std::abs(v) > 1e-6f) nonZeroL = true;
     }
-    EXPECT_TRUE(nonZeroL);
+    EXPECT_TRUE(nonZeroL) << "Left channel output should not be all zeros";
     // Check right output is zero (no input, no feedback)
     bool nonZeroR = false;
     for (float v : outputR) {
         if (std::abs(v) > 1e-6f) nonZeroR = true;
     }
-    EXPECT_FALSE(nonZeroR);
+    EXPECT_FALSE(nonZeroR) << "Right channel output should be all zeros";
 }

@@ -110,7 +110,7 @@ public:
                 lfoValue *= depthInSamples;
                 
                 // Process through delay line
-                T delayedSample = delayLine.processSample(ch, inputWithFeedback, lfoValue);
+                T delayedSample = delayLine.processSample(inputWithFeedback, lfoValue, ch);
         
                 // Copy to output and update feedback state
                 output[ch][n] = delayedSample;
