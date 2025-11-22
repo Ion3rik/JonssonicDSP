@@ -1,9 +1,10 @@
-// Maximum allowed order for cascaded smoothing filters
-constexpr int SmoothedValueMaxOrder = 8;
 // Jonssonic - A C++ audio DSP library
 // Smoothed value class for parameter and control signal smoothing
 // Author: Jon Fagerström
 // Update: 22.11.2025
+
+
+constexpr int SmoothedValueMaxOrder = 8; // Maximum allowed order for cascaded smoothing filters
 
 #pragma once
 #include <cmath>
@@ -160,3 +161,5 @@ private:
     T rampStep = 0;
     int rampSamples = 0;
 };
+
+} // namespace Jonssonic
