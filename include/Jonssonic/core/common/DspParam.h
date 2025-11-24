@@ -27,67 +27,57 @@ public:
     DspParam(DspParam&&) = delete;
     const DspParam& operator=(DspParam&&) = delete;
 
-    void prepare(T sampleRate, T timeMs, T modTimeMs = 0) {
-        baseSmoother.prepare(sampleRate, timeMs);
-        modSmoother.prepare(sampleRate, modTimeMs);
+    void prepare(size_t newNumChannels, T timeMs, T sampleRate, T modTimeMs = 0) {
+        baseSmoother.prepare(newNumChannels, timeMs, sampleRate);
+        modSmoother.prepare(newNumChannels, modTimeMs, sampleRate);
     }
 
-    void reset(T baseValue = 0, T modValue = 0)
+    void reset()
     {
-        baseSmoother.reset(baseValue);
-        modSmoother.reset(modValue);
+        baseSmoother.reset();
+        modSmoother.reset();
     }
     // Modulation helpers
 
     // Additive modulation: base + mod
-    T applyAdditiveMod(T mod, bool smoothed = false) {
-        T m = mod;
-        if (smoothed) {
-            modSmoother.setTarget(mod);
-            m = modSmoother.getNextValue();
-        }
-        return getNextValue() + m;
+    T applyAdditiveMod(T mod, size_t ch) {
+        T m = modSmoother.process(mod, ch);
+       return getNextValue(ch) + m;
     }
-
 
     // Multiplicative modulation: base * mod
-    T applyMultiplicativeMod(T mod, bool smoothed = false) {
-        T m = mod;
-        if (smoothed) {
-            modSmoother.setTarget(mod);
-            m = modSmoother.getNextValue();
-        }
-        return getNextValue() * m;
+    T applyMultiplicativeMod(T mod, size_t ch) {
+        T m = modSmoother.process(mod, ch);
+        return getNextValue(ch) * m;
     }
 
-    // Set the modulation target (for smoothed modulation)
-    void setModTarget(T value) {
-        modSmoother.setTarget(value);
+    // Force set current value on all channels
+    DspParam& operator=(const T& value) {
+        baseSmoother = value;
+        return *this;
     }
 
-    void setSampleRate(T newSampleRate) {
-        baseSmoother.setSampleRate(newSampleRate);
-    }
-
-    void setSmoothingTimeMs(T newTimeMs) {
-        baseSmoother.setTimeMs(newTimeMs);
-    }
-
+    // Set target value for all channels
     void setTarget(T value) {
         baseSmoother.setTarget(value);
     }
-
-    T getNextValue() {
-        return baseSmoother.getNextValue();
+    // Set target value for specific channel
+    void setTarget(T value, size_t ch) {
+        baseSmoother.setTarget(value, ch);
     }
 
-    T getCurrentValue() const {
-        return baseSmoother.getCurrentValue();
+    T getNextValue(size_t ch) {
+        return baseSmoother.getNextValue(ch);
     }
 
-    T getTargetValue() const {
-        return baseSmoother.getTargetValue();
+    T getCurrentValue(size_t ch) const {
+        return baseSmoother.getCurrentValue(ch);
     }
+
+    T getTargetValue(size_t ch) const {
+        return baseSmoother.getTargetValue(ch);
+    }
+
 private:
     SmoothedValue<T, BaseType, BaseOrder> baseSmoother;
     SmoothedValue<T, ModType, ModOrder> modSmoother;
