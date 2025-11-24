@@ -1,7 +1,6 @@
 // Jonssonic - A C++ audio DSP library
 // Smoothed value class for parameter and control signal smoothing
-// Author: Jon Fagerström
-// Update: 22.11.2025
+// SPDX-License-Identifier: MIT
 
 
 constexpr int SmoothedValueMaxOrder = 8; // Maximum allowed order for cascaded smoothing filters
@@ -15,6 +14,7 @@ namespace Jonssonic {
  * @brief Types of smoothing algorithms.
  */
 enum class SmootherType {
+    None,
     OnePole,
     Linear
 };
@@ -42,7 +42,29 @@ template<typename T, SmootherType Type, int Order = 1>
 class SmoothedValue;
 
 
-
+// =============================================================
+// None specialization (passthrough)
+// =============================================================
+/**
+ * @brief No smoothing, passthrough implementation.
+ */
+template<typename T, int Order>
+class SmoothedValue<T, SmootherType::None, Order> {
+    static_assert(Order == 1, "None smoothing only supports Order == 1");
+public:
+    SmoothedValue() = default;
+    void prepare(T, T) {}
+    void setSampleRate(T) {}
+    void setTimeMs(T) {}
+    void reset(T value = T(0)) { current = target = value; }
+    void setTarget(T value) { target = value; }
+    T getNextValue() { current = target; return current; }
+    T getCurrentValue() const { return current; }
+    T getTargetValue() const { return target; }
+private:
+    T current = T(0);
+    T target = T(0);
+};
 // =============================================================
 // OnePole specialization (arbitrary order)
 // =============================================================
@@ -53,8 +75,19 @@ template<typename T, int Order>
 class SmoothedValue<T, SmootherType::OnePole, Order> {
     static_assert(Order >= 1 && Order <= SmoothedValueMaxOrder, "Order must be between 1 and SmoothedValueMaxOrder (8)");
 public:
-    SmoothedValue(T sampleRate = 44100, T timeMs = 10)
-        : data(sampleRate, timeMs) {
+    // default constructor and destructor
+    SmoothedValue() = default;
+    ~SmoothedValue() = default;
+
+    // no copy semantics nor move semantics
+    SmoothedValue(const SmoothedValue&) = delete;
+    const SmoothedValue& operator=(const SmoothedValue&) = delete;
+    SmoothedValue(SmoothedValue&&) = delete;
+    const SmoothedValue& operator=(SmoothedValue&&) = delete;
+
+    void prepare(T sampleRate, T timeMs) {
+        data.sampleRate = sampleRate;
+        data.timeMs = timeMs;
         updateSmoothingParams();
     }
 
@@ -113,8 +146,19 @@ template<typename T, int Order>
 class SmoothedValue<T, SmootherType::Linear, Order> {
     static_assert(Order == 1, "Linear smoothing only supports Order == 1");
 public:
-    SmoothedValue(T sampleRate = 44100, T timeMs = 10)
-        : data(sampleRate, timeMs) {
+    // default constructor and destructor
+    SmoothedValue() = default;
+    ~SmoothedValue() = default;
+
+    // no copy semantics nor move semantics
+    SmoothedValue(const SmoothedValue&) = delete;
+    const SmoothedValue& operator=(const SmoothedValue&) = delete;
+    SmoothedValue(SmoothedValue&&) = delete;
+    const SmoothedValue& operator=(SmoothedValue&&) = delete;
+
+    void prepare(T sampleRate, T timeMs) {
+        data.sampleRate = sampleRate;
+        data.timeMs = timeMs;
         updateSmoothingParams();
     }
 
