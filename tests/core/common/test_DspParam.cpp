@@ -15,12 +15,11 @@ protected:
     void TearDown() override {}
     float sampleRate = 1000.0f;
     float timeMs = 10.0f;
-    float modTimeMs = 10.0f;
 };
 
 TEST_F(DspParamTest, OnePoleBaseSmoothing) {
     DspParam<float> param;
-    param.prepare(1, timeMs, sampleRate);
+    param.prepare(1, sampleRate, timeMs);
     param.reset();
     param.setTarget(1.0f, 0);
     float last = 0.0f;
@@ -32,7 +31,7 @@ TEST_F(DspParamTest, OnePoleBaseSmoothing) {
 
 TEST_F(DspParamTest, LinearBaseSmoothing) {
     DspParam<float, SmootherType::Linear> param;
-    param.prepare(1, timeMs, sampleRate);
+    param.prepare(1, sampleRate, timeMs);
     param.reset();
     param.setTarget(1.0f, 0);
     float val = 0.0f;
@@ -43,43 +42,43 @@ TEST_F(DspParamTest, LinearBaseSmoothing) {
 }
 
 TEST_F(DspParamTest, AdditiveModRaw) {
-    DspParam<float, SmootherType::None, 1, SmootherType::None, 1> param;
-    param.prepare(1, timeMs, sampleRate);
+    DspParam<float, SmootherType::None> param;
+    param.prepare(1, sampleRate, timeMs);
     param.reset();
     param = 0.5f; // set current value forcibly
-    float result = param.applyAdditiveMod(0.25f, 0);
+    float result = param.getNextValue(0) + 0.25f;
     EXPECT_NEAR(result, 0.5f + 0.25f, 1e-6f);
 }
 
 TEST_F(DspParamTest, AdditiveModSmoothed) {
-    DspParam<float, SmootherType::OnePole, 1, SmootherType::OnePole, 1> param;
-    param.prepare(1, timeMs, sampleRate, modTimeMs);
+    DspParam<float, SmootherType::OnePole> param;
+    param.prepare(1, sampleRate, timeMs);
     param.reset();
     param.setTarget(0.5f, 0);
     float result = 0.0f;
     for (int i = 0; i < 100; ++i) {
-        result = param.applyAdditiveMod(0.25f, 0);
+        result = param.getNextValue(0) + 0.25f;
     }
     EXPECT_TRUE(result > 0.74f);
 }
 
 TEST_F(DspParamTest, MultiplicativeModRaw) {
-    DspParam<float, SmootherType::None, 1, SmootherType::None, 1> param;
-    param.prepare(1, timeMs, sampleRate);
+    DspParam<float, SmootherType::None> param;
+    param.prepare(1, sampleRate, timeMs);
     param.reset();
     param = 0.5f; // set current value forcibly
-    float result = param.applyMultiplicativeMod(2.0f, 0);
+    float result = param.getNextValue(0) * 2.0f;
     EXPECT_NEAR(result, 1.0f, 1e-6f);
 }
 
 TEST_F(DspParamTest, MultiplicativeModSmoothed) {
-    DspParam<float, SmootherType::OnePole, 1, SmootherType::OnePole, 1> param;
-    param.prepare(1, timeMs, sampleRate, modTimeMs);
+    DspParam<float, SmootherType::OnePole> param;
+    param.prepare(1, sampleRate, timeMs);
     param.reset();
     param.setTarget(0.5f, 0);
     float result = 0.0f;
     for (int i = 0; i < 100; ++i) {
-        result = param.applyMultiplicativeMod(2.0f, 0);
+        result = param.getNextValue(0) * 2.0f;
     }
     EXPECT_TRUE(result > 0.99f);
 }
@@ -88,7 +87,7 @@ TEST_F(DspParamTest, MultiplicativeModSmoothed) {
 TEST_F(DspParamTest, OnePoleBaseSmoothingMultiChannel) {
     constexpr size_t numChannels = 4;
     DspParam<float> param;
-    param.prepare(numChannels, timeMs, sampleRate);
+    param.prepare(numChannels, sampleRate, timeMs);
     param.reset();
     for (size_t ch = 0; ch < numChannels; ++ch) {
         param.setTarget(static_cast<float>(ch + 1), ch);
@@ -106,8 +105,8 @@ TEST_F(DspParamTest, OnePoleBaseSmoothingMultiChannel) {
 
 TEST_F(DspParamTest, AdditiveModMultiChannel) {
     constexpr size_t numChannels = 3;
-    DspParam<float, SmootherType::OnePole, 1, SmootherType::OnePole, 1> param;
-    param.prepare(numChannels, timeMs, sampleRate, modTimeMs);
+    DspParam<float, SmootherType::OnePole> param;
+    param.prepare(numChannels, sampleRate, timeMs);
     param.reset();
     for (size_t ch = 0; ch < numChannels; ++ch) {
         param.setTarget(1.0f, ch);
@@ -115,7 +114,7 @@ TEST_F(DspParamTest, AdditiveModMultiChannel) {
     float result[numChannels] = {0};
     for (int i = 0; i < 100; ++i) {
         for (size_t ch = 0; ch < numChannels; ++ch) {
-            result[ch] = param.applyAdditiveMod(static_cast<float>(ch), ch);
+            result[ch] = param.getNextValue(ch) + static_cast<float>(ch);
         }
     }
     for (size_t ch = 0; ch < numChannels; ++ch) {
@@ -125,8 +124,8 @@ TEST_F(DspParamTest, AdditiveModMultiChannel) {
 
 TEST_F(DspParamTest, MultiplicativeModMultiChannel) {
     constexpr size_t numChannels = 2;
-    DspParam<float, SmootherType::OnePole, 1, SmootherType::OnePole, 1> param;
-    param.prepare(numChannels, timeMs, sampleRate, modTimeMs);
+    DspParam<float, SmootherType::OnePole> param;
+    param.prepare(numChannels, sampleRate, timeMs);
     param.reset();
     for (size_t ch = 0; ch < numChannels; ++ch) {
         param.setTarget(2.0f, ch);
@@ -134,7 +133,7 @@ TEST_F(DspParamTest, MultiplicativeModMultiChannel) {
     float result[numChannels] = {0};
     for (int i = 0; i < 100; ++i) {
         for (size_t ch = 0; ch < numChannels; ++ch) {
-            result[ch] = param.applyMultiplicativeMod(2.0f, ch);
+            result[ch] = param.getNextValue(ch) * 2.0f;
         }
     }
     for (size_t ch = 0; ch < numChannels; ++ch) {

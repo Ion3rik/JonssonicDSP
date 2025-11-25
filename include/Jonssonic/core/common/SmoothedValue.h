@@ -121,7 +121,7 @@ public:
     SmoothedValue(SmoothedValue&&) = delete;
     const SmoothedValue& operator=(SmoothedValue&&) = delete;
 
-    void prepare(size_t newNumChannels, T newTimeMs,T newSampleRate) {
+    void prepare(size_t newNumChannels, T newSampleRate,  T newTimeMs = T(10)) {
         sampleRate = newSampleRate;
         timeMs = newTimeMs;
         current.resize(newNumChannels, T(0));
@@ -194,7 +194,7 @@ private:
     T sampleRate = 44100;
     std::vector<T> current;
     std::vector<T> target;
-    T timeMs = 0;
+    T timeMs = 10;
     T alpha = 0;
     std::vector<std::array<T, Order>> stage; // stage[channel][order]
 };
@@ -220,7 +220,7 @@ public:
     const SmoothedValue& operator=(SmoothedValue&&) = delete;
 
     // Prepare for a given number of channels, sample rate, and ramp time
-    void prepare(size_t newNumChannels, T newTimeMs, T newSampleRate) {
+    void prepare(size_t newNumChannels, T newSampleRate,  T newTimeMs = T(10)) {
         sampleRate = newSampleRate;
         timeMs = newTimeMs;
         current.resize(newNumChannels, T(0));
@@ -299,7 +299,7 @@ private:
     }
 
     T sampleRate = 44100;
-    T timeMs = 0;
+    T timeMs = 10;
     std::vector<T> current;
     std::vector<T> target;
     std::vector<T> rampStep;

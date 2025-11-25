@@ -5,16 +5,13 @@
 
 #pragma once
 #include "Jonssonic/core/common/SmoothedValue.h"
+#include <limits>
 
 namespace Jonssonic {
 /**
  * @brief DSP parameter class with smoothing and modulation capabilities.
  */
-template<
-    typename T,
-    SmootherType BaseType = SmootherType::OnePole, int BaseOrder = 1,
-    SmootherType ModType = SmootherType::None, int ModOrder = 1
->
+template<typename T, SmootherType Type = SmootherType::OnePole, int Order = 1>
 class DspParam {
 public:
 
@@ -27,60 +24,68 @@ public:
     DspParam(DspParam&&) = delete;
     const DspParam& operator=(DspParam&&) = delete;
 
-    void prepare(size_t newNumChannels, T timeMs, T sampleRate, T modTimeMs = 0) {
-        baseSmoother.prepare(newNumChannels, timeMs, sampleRate);
-        modSmoother.prepare(newNumChannels, modTimeMs, sampleRate);
+    void prepare(size_t newNumChannels, T newSampleRate, T newTimeMs = T(10)) {
+        smoother.prepare(newNumChannels, newSampleRate, newTimeMs);
     }
 
-    void reset()
-    {
-        baseSmoother.reset();
-        modSmoother.reset();
+    void reset() {
+        smoother.reset();
     }
-    // Modulation helpers
 
-    // Additive modulation: base + mod
+    void setBounds(T newMin, T newMax) {
+        min = newMin;
+        max = newMax;
+    }
+
+    // Additive modulation: base + mod (clamped)
     T applyAdditiveMod(T mod, size_t ch) {
-        T m = modSmoother.process(mod, ch);
-       return getNextValue(ch) + m;
+        return clamp(getNextValue(ch) + mod);
     }
 
-    // Multiplicative modulation: base * mod
+
+    // Multiplicative modulation: base * mod (clamped)
     T applyMultiplicativeMod(T mod, size_t ch) {
-        T m = modSmoother.process(mod, ch);
-        return getNextValue(ch) * m;
+        return clamp(getNextValue(ch) * mod);
     }
 
-    // Force set current value on all channels
+
+    // Force set current value on all channels (clamped)
     DspParam& operator=(const T& value) {
-        baseSmoother = value;
+        smoother = clamp(value);
         return *this;
     }
 
-    // Set target value for all channels
+
+    // Set target value for all channels (clamped)
     void setTarget(T value) {
-        baseSmoother.setTarget(value);
+        smoother.setTarget(clamp(value));
     }
-    // Set target value for specific channel
+    // Set target value for specific channel (clamped)
     void setTarget(T value, size_t ch) {
-        baseSmoother.setTarget(value, ch);
+        smoother.setTarget(clamp(value), ch);
     }
 
     T getNextValue(size_t ch) {
-        return baseSmoother.getNextValue(ch);
+        return smoother.getNextValue(ch);
     }
 
     T getCurrentValue(size_t ch) const {
-        return baseSmoother.getCurrentValue(ch);
+        return smoother.getCurrentValue(ch);
     }
 
     T getTargetValue(size_t ch) const {
-        return baseSmoother.getTargetValue(ch);
+        return smoother.getTargetValue(ch);
     }
 
 private:
-    SmoothedValue<T, BaseType, BaseOrder> baseSmoother;
-    SmoothedValue<T, ModType, ModOrder> modSmoother;
+    SmoothedValue<T, Type, Order> smoother;
+    T min = std::numeric_limits<T>::lowest();
+    T max = std::numeric_limits<T>::max();
+
+    // Clamp helper
+    T clamp(T value) const {
+        return std::clamp(value, min, max);
+    }
 };
 
 } // namespace Jonssonic

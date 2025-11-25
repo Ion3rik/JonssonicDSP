@@ -77,7 +77,7 @@ public:
     {
         // Write input sample to buffer
         buffer[ch][writeIndex[ch]] = input;
-
+        
         // Calculate modulated delay time (base delay + modulation)
         T modulatedDelay = static_cast<T>(delaySamples[ch]) + modulation;
         
