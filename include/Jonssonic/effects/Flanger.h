@@ -61,8 +61,8 @@ public:
         lfo.prepare(newNumChannels, newSampleRate);
 
         // Initialize states
-        feedbackState.resize(numChannels, T(0));
-        phaseOffset.resize(numChannels, T(0));
+        feedbackState.assign(numChannels, T(0));
+        phaseOffset.assign(numChannels, T(0));
         
         // Configure LFO
         lfo.setWaveform(Waveform::Sine);

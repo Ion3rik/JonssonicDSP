@@ -48,7 +48,7 @@ public:
 
     // Resize for number of channels
     void prepare(size_t newNumChannels, T /*newTimeMs*/,T /*newSampleRate*/) {
-        value.resize(newNumChannels, T(0));
+        value.assign(newNumChannels, T(0));
     }
 
     // Reset values to zero
