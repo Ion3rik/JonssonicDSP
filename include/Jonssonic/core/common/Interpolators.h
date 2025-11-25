@@ -22,7 +22,7 @@ namespace Jonssonic
 template<typename T>
 struct NoneInterpolator
 {
-    static T interpolate(const T* buffer, size_t idx, float /*frac*/)
+    static T interpolate(const T* buffer, size_t idx, float /*frac*/, size_t /*bufferSize*/)
     {
         return buffer[idx];
     }
@@ -36,9 +36,10 @@ struct NoneInterpolator
 template<typename T>
 struct NearestInterpolator
 {
-    static T interpolate(const T* buffer, size_t idx, float frac)
+    static T interpolate(const T* buffer, size_t idx, float frac, size_t bufferSize)
     {
-        return (frac < 0.5f) ? buffer[idx] : buffer[idx + 1];
+        size_t nextIdx = (idx + 1) & (bufferSize - 1);
+        return (frac < 0.5f) ? buffer[idx] : buffer[nextIdx];
     }
 };
 
@@ -51,9 +52,10 @@ struct NearestInterpolator
 template<typename T>
 struct LinearInterpolator
 {
-    static T interpolate(const T* buffer, size_t idx, float frac)
+    static T interpolate(const T* buffer, size_t idx, float frac, size_t bufferSize)
     {
-        return buffer[idx] * (1.0f - frac) + buffer[idx + 1] * frac;
+        size_t nextIdx = (idx + 1) & (bufferSize - 1);
+        return buffer[idx] * (1.0f - frac) + buffer[nextIdx] * frac;
     }
 };
 

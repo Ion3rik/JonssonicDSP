@@ -47,7 +47,7 @@ public:
         bufferSize = nextPowerOfTwo(maxDelaySamples); // ensure power-of-two size for efficient wrap-around
         buffer.resize(numChannels, bufferSize); // resize buffer to number of channels and buffer size
         buffer.clear(); // initialize buffer to zero
-        writeIndex.resize(numChannels, 0); // initialize write indices to zero
+        writeIndex.assign(numChannels, 0); // always reset write indices to zero
         delaySamples.prepare(numChannels, newSampleRate, SmoothingTimeMs); // prepare smoother for delay time
         delaySamples.setBounds(T(0), static_cast<T>(maxDelaySamples)); // set bounds to actual max delay requested
     }
@@ -76,7 +76,7 @@ public:
         writeIndex[ch] = (writeIndex[ch] + 1) & (bufferSize - 1);
 
         // Read output sample with interpolation
-        return Interpolator::interpolate(buffer.readChannelPtr(ch), readIndex, delayFrac);
+        return Interpolator::interpolate(buffer.readChannelPtr(ch), readIndex, delayFrac, bufferSize);
     }
 
     /**
@@ -104,7 +104,7 @@ public:
         writeIndex[ch] = (writeIndex[ch] + 1) & (bufferSize - 1);
 
         // Interpolate output sample
-        return Interpolator::interpolate(buffer.readChannelPtr(ch), readIndex, delayFrac);
+        return Interpolator::interpolate(buffer.readChannelPtr(ch), readIndex, delayFrac, bufferSize);
     
 
     }
@@ -130,7 +130,7 @@ public:
                 auto [readIndex, delayFrac] = computeReadIndexAndFrac(delaySamples.getNextValue(ch), writeIndex[ch]);
 
                 // Read output sample with interpolation
-                output[ch][i] = Interpolator::interpolate(buffer.readChannelPtr(ch), readIndex, delayFrac);
+                output[ch][i] = Interpolator::interpolate(buffer.readChannelPtr(ch), readIndex, delayFrac, bufferSize);
                 
                 // Increment and wrap write index with bitwise AND for power-of-two buffer size
                 writeIndex[ch] = (writeIndex[ch] + 1) & (bufferSize - 1);
@@ -166,7 +166,7 @@ public:
                 auto [readIndex, delayFrac] = computeReadIndexAndFrac(modulatedDelay, writeIndex[ch]);
 
                 // Interpolate output sample
-                output[ch][i] = Interpolator::interpolate(buffer.readChannelPtr(ch), readIndex, delayFrac);
+                output[ch][i] = Interpolator::interpolate(buffer.readChannelPtr(ch), readIndex, delayFrac, bufferSize);
                 
                 // Increment and wrap write index
                 writeIndex[ch] = (writeIndex[ch] + 1) & (bufferSize - 1);
