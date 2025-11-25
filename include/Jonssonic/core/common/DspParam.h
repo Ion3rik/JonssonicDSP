@@ -42,19 +42,16 @@ public:
         return clamp(getNextValue(ch) + mod);
     }
 
-
     // Multiplicative modulation: base * mod (clamped)
     T applyMultiplicativeMod(T mod, size_t ch) {
         return clamp(getNextValue(ch) * mod);
     }
-
 
     // Force set current value on all channels (clamped)
     DspParam& operator=(const T& value) {
         smoother = clamp(value);
         return *this;
     }
-
 
     // Set target value for all channels (clamped)
     void setTarget(T value) {

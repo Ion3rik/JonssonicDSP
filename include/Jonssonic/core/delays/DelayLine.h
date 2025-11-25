@@ -6,14 +6,27 @@
 #pragma once
 #include "../common/AudioBuffer.h"
 #include "../../utils/MathUtils.h"
+#include "../common/Interpolators.h"
+#include "../common/DspParam.h"
+
 
 namespace Jonssonic
 {
 /**
- * @brief A delay line class for audio processing.
- * This class implements a circular buffer to create delay effects with support for multiple channels.
+ * @brief A multichannel delay line class for audio processing with fractional delay support
+ * @param T Sample data type (e.g., float, double)
+ * @param Interpolator Interpolator type for fractional delay support (default: LinearInterpolator)
+ * @param SmootherType Type of smoother for delay time modulation (default: OnePole)
+ * @param SmootherOrder Order of the smoother for delay time modulation (default: 1)
+ * @param SmoothingTimeMs Smoothing time in milliseconds for delay time changes (default: 10ms)
  */
-template<typename T, typename Interpolator>
+template<
+    typename T,
+    typename Interpolator = LinearInterpolator<T>,
+    SmootherType SmootherType = SmootherType::OnePole,
+    int SmootherOrder = 1,
+    int SmoothingTimeMs = 10
+>
 class DelayLine
 {
 public:
@@ -26,14 +39,17 @@ public:
     DelayLine(DelayLine&&) = delete;
     const DelayLine& operator=(DelayLine&&) = delete;
 
-    void prepare(size_t newNumChannels, size_t maxDelaySamples)
+    void prepare(size_t newNumChannels, T newSampleRate, T newMaxDelayMs)
     {
         numChannels = newNumChannels;
-        bufferSize = nextPowerOfTwo(maxDelaySamples);
-        buffer.resize(numChannels, bufferSize);
-        buffer.clear();
-        writeIndex.resize(numChannels, 0);
-        delaySamples.resize(numChannels, 0);
+        sampleRate = newSampleRate;
+        size_t maxDelaySamples = msToSamples(newMaxDelayMs, sampleRate); // convert ms to samples
+        bufferSize = nextPowerOfTwo(maxDelaySamples); // ensure power-of-two size for efficient wrap-around
+        buffer.resize(numChannels, bufferSize); // resize buffer to number of channels and buffer size
+        buffer.clear(); // initialize buffer to zero
+        writeIndex.resize(numChannels, 0); // initialize write indices to zero
+        delaySamples.prepare(numChannels, newSampleRate, SmoothingTimeMs); // prepare smoother for delay time
+        delaySamples.setBounds(T(0), static_cast<T>(maxDelaySamples)); // set bounds to actual max delay requested
     }
 
     void clear()
@@ -53,14 +69,14 @@ public:
         // Write input sample to buffer
         buffer[ch][writeIndex[ch]] = input;
 
-        // Calculate read index with wrap-around (fixed delay)
-        size_t readIndex = (writeIndex[ch] + bufferSize - delaySamples[ch]) & (bufferSize - 1);
+        // Calculate read index and fractional part for interpolation
+        auto [readIndex, delayFrac] = computeReadIndexAndFrac(delaySamples.getNextValue(ch), writeIndex[ch]);
 
         // Increment and wrap with bitwise AND for power-of-two buffer size
         writeIndex[ch] = (writeIndex[ch] + 1) & (bufferSize - 1);
 
-        // Read output sample directly (no interpolation needed for fixed integer delay)
-        return buffer[ch][readIndex];
+        // Read output sample with interpolation
+        return Interpolator::interpolate(buffer.readChannelPtr(ch), readIndex, delayFrac);
     }
 
     /**
@@ -77,21 +93,14 @@ public:
     {
         // Write input sample to buffer
         buffer[ch][writeIndex[ch]] = input;
-        
-        // Calculate modulated delay time (base delay + modulation)
-        T modulatedDelay = static_cast<T>(delaySamples[ch]) + modulation;
-        
-        // Clamp modulated delay to valid range
-        modulatedDelay = std::max(T(0), std::min(modulatedDelay, static_cast<T>(bufferSize - 1)));
+
+        // Calculate modulated delay time with internal clamping (base delay + modulation)
+        T modulatedDelay = delaySamples.applyAdditiveMod(modulation, ch);
         
         // Split into integer and fractional parts for interpolation
-        size_t delayInt = static_cast<size_t>(modulatedDelay);
-        T delayFrac = modulatedDelay - static_cast<T>(delayInt);
-        
-        // Calculate read index with wrap-around
-        size_t readIndex = (writeIndex[ch] + bufferSize - delayInt) & (bufferSize - 1);
+        auto [readIndex, delayFrac] = computeReadIndexAndFrac(modulatedDelay, writeIndex[ch]);
 
-            // Increment and wrap write index
+        // Increment and wrap write index
         writeIndex[ch] = (writeIndex[ch] + 1) & (bufferSize - 1);
 
         // Interpolate output sample
@@ -101,7 +110,7 @@ public:
     }
 
     /**
-     * @brief Process a block of samples for all channels with fixed delay.
+     * @brief Process a block of samples for all channels.
      * @param input Input sample pointers (one per channel)
      * @param output Output sample pointers (one per channel)
      * @param numSamples Number of samples to process
@@ -117,13 +126,13 @@ public:
                 // Write input sample to buffer
                 buffer[ch][writeIndex[ch]] = input[ch][i];
 
-                // Calculate read index with wrap-around (fixed delay)
-                size_t readIndex = (writeIndex[ch] + bufferSize - delaySamples[ch]) & (bufferSize - 1);
+                // Calculate read and fractional part for interpolation
+                auto [readIndex, delayFrac] = computeReadIndexAndFrac(delaySamples.getNextValue(ch), writeIndex[ch]);
 
-                // Read output sample directly (no interpolation needed for fixed integer delay)
-                output[ch][i] = buffer[ch][readIndex];
+                // Read output sample with interpolation
+                output[ch][i] = Interpolator::interpolate(buffer.readChannelPtr(ch), readIndex, delayFrac);
                 
-                // Increment and wrap write index
+                // Increment and wrap write index with bitwise AND for power-of-two buffer size
                 writeIndex[ch] = (writeIndex[ch] + 1) & (bufferSize - 1);
             }
         }
@@ -150,18 +159,11 @@ public:
                 // Write input sample to buffer
                 buffer[ch][writeIndex[ch]] = input[ch][i];
 
-                // Calculate modulated delay time (base delay + modulation)
-                T modulatedDelay = static_cast<T>(delaySamples[ch]) + modulation[ch][i];
+                // Calculate modulated delay time with internal clamping (base delay + modulation)
+                T modulatedDelay = delaySamples.applyAdditiveMod(modulation[ch][i], ch);
                 
-                // Clamp modulated delay to valid range
-                modulatedDelay = std::max(T(0), std::min(modulatedDelay, static_cast<T>(bufferSize - 1)));
-                
-                // Split into integer and fractional parts for interpolation
-                size_t delayInt = static_cast<size_t>(modulatedDelay);
-                T delayFrac = modulatedDelay - static_cast<T>(delayInt);
-                
-                // Calculate read index with wrap-around
-                size_t readIndex = (writeIndex[ch] + bufferSize - delayInt) & (bufferSize - 1);
+                // Calculate read index and fractional part for interpolation
+                auto [readIndex, delayFrac] = computeReadIndexAndFrac(modulatedDelay, writeIndex[ch]);
 
                 // Interpolate output sample
                 output[ch][i] = Interpolator::interpolate(buffer.readChannelPtr(ch), readIndex, delayFrac);
@@ -173,15 +175,33 @@ public:
     }
 
     /**
+     * @brief Set a constant delay time in milliseconds for all channels.
+     * @param newDelayMs Delay time in milliseconds
+     */
+    void setDelayMs(T newDelayMs)
+    {
+        T newDelaySamples = msToSamples(newDelayMs, sampleRate); // convert ms to samples  
+        delaySamples.setTarget(newDelaySamples);
+    }
+
+    /**
+     * @brief Set a constant delay time in milliseconds for a specific channel.
+     * @param newDelayMs Delay time in milliseconds
+     * @param ch Channel index
+     */
+    void setDelayMs(T newDelayMs, size_t ch)
+    {
+        T newDelaySamples = msToSamples(newDelayMs, sampleRate); // convert ms to samples
+        delaySamples.setTarget(newDelaySamples, ch);              
+    }
+
+    /**
      * @brief Set a constant delay time in samples for all channels.
      * @param newDelaySamples Delay time in samples
      */
-    void setDelay(size_t newDelaySamples)
+    void setDelaySamples(T newDelaySamples)
     {
-        for (size_t ch = 0; ch < numChannels; ++ch)
-        {
-            delaySamples[ch] = std::min(newDelaySamples, bufferSize); // Clamp to buffer size
-        }
+        delaySamples.setTarget(newDelaySamples);
     }
 
     /**
@@ -189,18 +209,32 @@ public:
      * @param newDelaySamples Delay time in samples
      * @param ch Channel index
      */
-    void setDelay(size_t newDelaySamples, size_t ch)
+    void setDelaySamples(T newDelaySamples, size_t ch)
     {
-        delaySamples[ch] = std::min(newDelaySamples, bufferSize); // Clamp to buffer size
+        delaySamples.setTarget(newDelaySamples, ch);
     }
 
-private:
-    AudioBuffer<T> buffer;              // Multi-channel circular buffer
-    std::vector<size_t> writeIndex;     // Current write index in the buffer per channel
-    size_t bufferSize;                  // Maximum delay in samples (always power of two)
-    std::vector<size_t> delaySamples;   // Delay time in samples per channel
-    size_t numChannels;                 // Number of audio channels
 
+private:
+    T sampleRate = T(44100);                                // Sample rate in Hz
+    AudioBuffer<T> buffer;                                  // Multi-channel circular buffer
+    std::vector<size_t> writeIndex;                         // Current write index in the buffer per channel
+    size_t bufferSize;                                      // Maximum delay in samples (always power of two)
+    DspParam<T, SmootherType, SmootherOrder> delaySamples;  // Delay time in samples per channel
+    size_t numChannels;                                     // Number of audio channels
+
+    // Helper function to compute read index and fractional part for interpolation
+    std::pair<size_t, T> computeReadIndexAndFrac(T delay, size_t writeIdx) const
+    {
+       // Split into integer and fractional parts for interpolation
+        size_t delayInt = static_cast<size_t>(delay);
+        T delayFrac = delay - static_cast<T>(delayInt);
+    
+        // Calculate read index with wrap-around
+        size_t readIndex = (writeIdx + bufferSize - delayInt) & (bufferSize - 1);
+
+        return {readIndex, delayFrac};
+    }
 };
 } // namespace Jonssonic
 

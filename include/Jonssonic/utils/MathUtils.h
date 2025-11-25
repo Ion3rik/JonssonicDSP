@@ -27,27 +27,27 @@ inline size_t nextPowerOfTwo(size_t n)
 }
 
 /**
- * @brief Convert milliseconds to samples.
+ * @brief Convert milliseconds to samples (fractional allowed).
  * @param ms Time in milliseconds
  * @param sampleRate Sample rate in Hz
- * @return Number of samples
+ * @return Number of samples (fractional allowed)
  */
 template<typename T>
-inline size_t msToSamples(T ms, T sampleRate)
+inline T msToSamples(T ms, T sampleRate)
 {
-    return static_cast<size_t>(ms * sampleRate / T(1000.0));
+    return ms * sampleRate / T(1000.0);
 }
 
 /**
- * @brief Convert samples to milliseconds.
- * @param samples Number of samples
+ * @brief Convert samples to milliseconds (fractional allowed).
+ * @param samples Number of samples (fractional allowed)
  * @param sampleRate Sample rate in Hz
  * @return Time in milliseconds
  */
 template<typename T>
-inline T samplesToMs(size_t samples, T sampleRate)
+inline T samplesToMs(T samples, T sampleRate)
 {
-    return static_cast<T>(samples) * T(1000.0) / sampleRate;
+    return samples * T(1000.0) / sampleRate;
 }
 
 } // namespace Jonssonic

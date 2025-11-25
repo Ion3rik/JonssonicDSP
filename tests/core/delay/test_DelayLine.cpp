@@ -7,31 +7,37 @@
 #include <cmath>
 #include "Jonssonic/core/common/Interpolators.h"
 #include "Jonssonic/core/delays/DelayLine.h"
+#include "Jonssonic/utils/MathUtils.h"
 
 namespace Jonssonic {
 
 class DelayLineTest : public ::testing::Test {
 protected:
+    float sampleRate = 1000.0f; // Changed to 1000 Hz for easier ms-sample conversions
+    float maxDelayMs = 100.0f;
+
     void SetUp() override {
-        delayLine.prepare(2, 1024);
-        blockDelayLine.prepare(2, 1024);
-        zeroDelayLine.prepare(2, 1024);
-        maxDelayLine.prepare(1, 8);
-        smallDelayLine.prepare(1, 8);
-        clampDelayLine.prepare(2, 1024);
-        oversizeDelayLine.prepare(1, 8);
-        quadDelayLine.prepare(4, 1024);
-        surroundDelayLine.prepare(6, 1024);
-        
-        delayLine.setDelay(2);
-        blockDelayLine.setDelay(2);
-        zeroDelayLine.setDelay(0);
-        maxDelayLine.setDelay(7);
-        smallDelayLine.setDelay(4);
-        clampDelayLine.setDelay(2);
-        oversizeDelayLine.setDelay(100);
-        quadDelayLine.setDelay(2);
-        surroundDelayLine.setDelay(3);
+        // Use new prepare API: (channels, sampleRate, maxDelayMs)
+        delayLine.prepare(2, sampleRate, maxDelayMs);
+        blockDelayLine.prepare(2, sampleRate, maxDelayMs);
+        zeroDelayLine.prepare(2, sampleRate, maxDelayMs);
+        maxDelayLine.prepare(1, sampleRate, maxDelayMs);
+        smallDelayLine.prepare(1, sampleRate, maxDelayMs);
+        clampDelayLine.prepare(2, sampleRate, maxDelayMs);
+        oversizeDelayLine.prepare(1, sampleRate, maxDelayMs);
+        quadDelayLine.prepare(4, sampleRate, maxDelayMs);
+        surroundDelayLine.prepare(6, sampleRate, maxDelayMs);
+
+    // Set delays in samples (directly)
+    delayLine.setDelaySamples(2.0f);
+    blockDelayLine.setDelaySamples(2.0f);
+    zeroDelayLine.setDelaySamples(0.0f);
+    maxDelayLine.setDelaySamples(7.0f);
+    smallDelayLine.setDelaySamples(4.0f);
+    clampDelayLine.setDelaySamples(2.0f);
+    oversizeDelayLine.setDelaySamples(100.0f);
+    quadDelayLine.setDelaySamples(2.0f);
+    surroundDelayLine.setDelaySamples(3.0f);
     }
 
     void TearDown() override {
@@ -72,16 +78,16 @@ protected:
         }
     }
     
-    // Test fixture members - DelayLine instances
-    DelayLine<float, NearestInterpolator<float>> delayLine;          // Standard stereo
-    DelayLine<float, NearestInterpolator<float>> blockDelayLine;     // For block processing tests
-    DelayLine<float, NearestInterpolator<float>> zeroDelayLine;      // Zero delay test
-    DelayLine<float, NearestInterpolator<float>> maxDelayLine;       // Maximum delay test
-    DelayLine<float, NearestInterpolator<float>> smallDelayLine;     // Wraparound test
-    DelayLine<float, NearestInterpolator<float>> clampDelayLine;     // Modulation clamping test
-    DelayLine<float, NearestInterpolator<float>> oversizeDelayLine;  // Delay exceeds buffer test
-    DelayLine<float, NearestInterpolator<float>> quadDelayLine;      // Quad (4-channel)
-    DelayLine<float, NearestInterpolator<float>> surroundDelayLine;  // 5.1 surround (6-channel)
+    // Test fixture members - DelayLine instances (with smoothing disabled for precise testing)
+    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> delayLine;          // Standard stereo
+    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> blockDelayLine;     // For block processing tests
+    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> zeroDelayLine;      // Zero delay test
+    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> maxDelayLine;       // Maximum delay test
+    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> smallDelayLine;     // Wraparound test
+    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> clampDelayLine;     // Modulation clamping test
+    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> oversizeDelayLine;  // Delay exceeds buffer test
+    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> quadDelayLine;      // Quad (4-channel)
+    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> surroundDelayLine;  // 5.1 surround (6-channel)
     
     // Common input buffers
     float leftChannel[4] = {0.0f, 10.0f, 20.0f, 30.0f};
@@ -105,13 +111,11 @@ protected:
     // Test: Different integer delay times per channel
     TEST_F(DelayLineTest, PerChannelIntegerDelay)
     {
-        DelayLine<float, NearestInterpolator<float>> dl;
-        dl.prepare(2, 16);
-        // Set different delays for each channel
-        std::vector<size_t> delays = {2, 4};
-        // Simulate per-channel delay setting
-        dl.setDelay(delays[0], 0u); // left
-        dl.setDelay(delays[1], 1u); // right
+        DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> dl;
+    dl.prepare(2, sampleRate, maxDelayMs);
+    // Set different delays for each channel (in samples)
+    dl.setDelaySamples(2.0f, 0u); // left
+    dl.setDelaySamples(4.0f, 1u); // right
         float leftInput[6] = {1,2,3,4,5,6};
         float rightInput[6] = {10,20,30,40,50,60};
         float leftExpected[6] = {0,0,1,2,3,4};
@@ -128,11 +132,10 @@ protected:
     // Test: Different modulated delay times per channel
     TEST_F(DelayLineTest, PerChannelModulatedDelay)
     {
-        DelayLine<float, NearestInterpolator<float>> dl;
-        dl.prepare(2, 16);
-        std::vector<size_t> delays = {2, 4};
-        dl.setDelay(delays[0], 0u); // left
-        dl.setDelay(delays[1], 1u); // right
+        DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> dl;
+    dl.prepare(2, sampleRate, maxDelayMs);
+    dl.setDelaySamples(2.0f, 0u); // left
+    dl.setDelaySamples(4.0f, 1u); // right
         float leftInput[6] = {1,2,3,4,5,6};
         float rightInput[6] = {10,20,30,40,50,60};
         float leftExpected[6] = {0,0,1,2,3,4};
@@ -247,12 +250,13 @@ TEST_F(DelayLineTest, ProcessBlockFixedDelay) {
 // Test block processing matches sample-by-sample processing
 TEST_F(DelayLineTest, ProcessBlockMatchesSampleBySample) {
     // Create two identical delay lines for this comparison test
-    DelayLine<float, NearestInterpolator<float>> sampleDelayLine;
-    DelayLine<float, NearestInterpolator<float>> blockCompareDelayLine;
-    sampleDelayLine.prepare(2, 1024);
-    blockCompareDelayLine.prepare(2, 1024);
-    sampleDelayLine.setDelay(3);
-    blockCompareDelayLine.setDelay(3);
+    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> sampleDelayLine;
+    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> blockCompareDelayLine;
+    sampleDelayLine.prepare(2, sampleRate, maxDelayMs);
+    blockCompareDelayLine.prepare(2, sampleRate, maxDelayMs);
+    // Set delay in samples (directly)
+    sampleDelayLine.setDelaySamples(3.0f);
+    blockCompareDelayLine.setDelaySamples(3.0f);
     
     // Prepare output buffers
     float sampleOutputLeft[8] = {0.0f};
@@ -322,7 +326,6 @@ TEST_F(DelayLineTest, BufferWraparound) {
         inputSample[0] = static_cast<float>(i);
         outputSample[0] = smallDelayLine.processSample(inputSample[0], 0u);
         
-        
         if (i >= 4)
         {
             EXPECT_FLOAT_EQ(outputSample[0], static_cast<float>(i - 4)) 
@@ -371,21 +374,34 @@ TEST_F(DelayLineTest, MaximumDelay) {
     }
 }
 
-// Edge case: Delay exceeds buffer size (should be clamped)
-TEST_F(DelayLineTest, DelayExceedsBufferSize) {
+// Edge case: Delay set to maximum allowed (should not be clamped)
+TEST_F(DelayLineTest, DelayAtMaximum) {
     float inputSample[1];
     float outputSample[1];
     
-    float testSamples[12] = {1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f};
+    // maxDelayMs=100ms at 1000Hz = 100 samples (this is the max allowed)
+    // bufferSize = nextPowerOfTwo(100) = 128 (internal buffer is larger for efficiency)
+    // Setting 100 samples should give exactly 100 samples of delay
     
-    for (int i = 0; i < 12; ++i)
+    float testSamples[105];
+    for (int i = 0; i < 105; ++i) {
+        testSamples[i] = static_cast<float>(i + 1);
+    }
+    
+    for (int i = 0; i < 105; ++i)
     {
         inputSample[0] = testSamples[i];
         outputSample[0] = oversizeDelayLine.processSample(inputSample[0], 0u);
         
-        
-        EXPECT_FLOAT_EQ(outputSample[0], testSamples[i]) 
-            << "Sample " << i << " should have 0 delay (clamped to buffer size wraps around)";
+        if (i < 100) {
+            // First 100 samples are zeros (delay buffer filling)
+            EXPECT_FLOAT_EQ(outputSample[0], 0.0f) 
+                << "Sample " << i << " should be zero (buffer not filled yet)";
+        } else {
+            // After 100 samples, we get delayed output
+            EXPECT_FLOAT_EQ(outputSample[0], testSamples[i - 100]) 
+                << "Sample " << i << " should be delayed by 100 samples (at max delay)";
+        }
     }
 }
 
@@ -474,26 +490,58 @@ TEST_F(DelayLineTest, ModulatedDelayClampedToZero) {
     }
 }
 
-// Edge case: Modulated delay with extreme positive modulation (clamped to buffer size)
-TEST_F(DelayLineTest, ModulatedDelayClampedToBufferSize) {
-    DelayLine<float, NearestInterpolator<float>> clampLargeDelayLine;
-    clampLargeDelayLine.prepare(1, 8);
-    clampLargeDelayLine.setDelay(2);
-    
+// Edge case: Modulated delay with extreme positive modulation (clamped to max delay)
+TEST_F(DelayLineTest, ModulatedDelayClampedToMaxDelay) {
+    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> clampLargeDelayLine;
+    clampLargeDelayLine.prepare(1, sampleRate, maxDelayMs);
+    clampLargeDelayLine.setDelaySamples(2.0f);
+
+    // Base delay = 2 samples, modulation = 1000 samples
+    // Total = 1002 samples, but max allowed is 100 samples
+    // Should clamp to 100 samples
     float modExtreme[1] = {1000.0f};
-    float testSamples[12] = {1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f};
+    float testSamples[105];
+    for (int i = 0; i < 105; ++i) {
+        testSamples[i] = static_cast<float>(i + 1);
+    }
     
-    for (int i = 0; i < 12; ++i) {
-        
+    for (int i = 0; i < 105; ++i) {
         float outputSample = clampLargeDelayLine.processSample(testSamples[i], modExtreme[0], 0u);
-        if (i >= 7) {
-            EXPECT_FLOAT_EQ(outputSample, testSamples[i - 7]) 
-                << "Sample " << i << " delayed by 7 (clamped)";
-        } else {
+        
+        if (i < 100) {
+            // First 100 samples are zeros (buffer filling to max delay)
             EXPECT_FLOAT_EQ(outputSample, 0.0f) 
                 << "Sample " << i << " zero (buffer not filled)";
+        } else {
+            // After 100 samples, we get delayed output (clamped to max 100 samples)
+            EXPECT_FLOAT_EQ(outputSample, testSamples[i - 100]) 
+                << "Sample " << i << " delayed by 100 samples (clamped to max delay)";
         }
     }
 }
 
-} // namespace Jonssonic
+// Test setDelayMs and setDelaySamples consistency
+TEST_F(DelayLineTest, SetDelayMsAndSamplesConsistency) {
+    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> testDelayLine1;
+    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> testDelayLine2;
+    
+    testDelayLine1.prepare(1, sampleRate, maxDelayMs);
+    testDelayLine2.prepare(1, sampleRate, maxDelayMs);
+    
+    // Set same delay using different methods: 10ms = 10 samples at 1000 Hz
+    testDelayLine1.setDelayMs(10.0f);
+    testDelayLine2.setDelaySamples(10.0f);
+    
+    // Process identical input through both delay lines
+    float testInput[15] = {1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f};
+    
+    for (int i = 0; i < 15; ++i) {
+        float output1 = testDelayLine1.processSample(testInput[i], 0u);
+        float output2 = testDelayLine2.processSample(testInput[i], 0u);
+        
+        EXPECT_FLOAT_EQ(output1, output2) 
+            << "Sample " << i << ": setDelayMs(10.0) and setDelaySamples(10.0) should produce identical output";
+    }
+} 
+
+}// namespace Jonssonic

@@ -1,8 +1,7 @@
 
 // Jonssonic - A C++ audio DSP library
 // Interpolator structs for audio processing
-// Author: Jon Fagerström
-// Update: 18.11.2025
+// SPDX-License-Identifier: MIT
 
 /**
  * @file Interpolators.h
@@ -14,6 +13,20 @@
 
 namespace Jonssonic
 {
+/** 
+* @brief None interpolation, direct sample access.
+* @tparam T The data type of the samples (e.g., float, double).
+* This struct provides a method to access samples without interpolation.
+* @returns The sample value at the given index.
+*/
+template<typename T>
+struct NoneInterpolator
+{
+    static T interpolate(const T* buffer, size_t idx, float /*frac*/)
+    {
+        return buffer[idx];
+    }
+};
 /**
  * @brief Nearest neighbor interpolator.
  * @tparam T The data type of the samples (e.g., float, double).

@@ -56,11 +56,8 @@ public:
         sampleRate = newSampleRate;
         maxDelayMs = newMaxDelayMs;
         
-        // Calculate max delay in samples
-        maxDelaySamples = static_cast<size_t>(std::ceil(maxDelayMs * sampleRate / T(1000.0)));
-        
         // Prepare components
-        delayLine.prepare(newNumChannels, maxDelaySamples);
+        delayLine.prepare(newNumChannels, newSampleRate, newMaxDelayMs);
         lfo.prepare(newNumChannels, newSampleRate);
 
         // Initialize states
