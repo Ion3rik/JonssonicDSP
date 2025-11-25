@@ -69,8 +69,9 @@ public:
         lfo.setAntiAliasing(false);
         lfo.setFrequency(lfoRate);
         
-        // Update delay parameters
-        updateDelayParameters();
+        // Set initial delay and depth
+        delayLine.setDelayMs(centerDelayMs);
+        depthInSamples = (MAX_MODULATION_MS * depth * sampleRate)* T(0.001);
     }
 
     /**
@@ -135,7 +136,10 @@ public:
     void setDepth(T depthAmount)
     {
         depth = depthAmount;
-        updateDelayParameters();
+        if (sampleRate > T(0))
+        {
+            depthInSamples = (MAX_MODULATION_MS * depth * sampleRate) / T(1000.0);
+        }
     }
 
     /**
@@ -154,10 +158,10 @@ public:
      * @param delayMs Center delay in milliseconds (typical range: 1 - 7 ms)
      *                The LFO will modulate around this center point.
      */
-    void setCenterDelay(T delayMs)
+    void setDelayMs(T delayMs)
     {
         centerDelayMs = delayMs;
-        updateDelayParameters();
+        delayLine.setDelayMs(delayMs);
     }
 
     /**
@@ -177,25 +181,10 @@ public:
     }
 
 private:
-    /**
-     * @brief Update internal delay parameters when depth or center delay changes.
-     */
-    void updateDelayParameters()
-    {
-        if (sampleRate <= T(0)) return;
-        
-        // Convert center delay from ms to samples
-        baseDelaySamples = centerDelayMs * sampleRate / T(1000.0);
-        
-        // Convert depth to samples (depth scales the fixed ±3ms modulation range)
-        depthInSamples = (MAX_MODULATION_MS * depth * sampleRate) / T(1000.0);
-    }
-
     // Configuration
     size_t numChannels = 0;
     T sampleRate = T(0);
     T maxDelayMs = T(0);
-    size_t maxDelaySamples = 0;
 
     // Core processors
     DelayLine<T, LinearInterpolator<T>> delayLine;
@@ -209,7 +198,6 @@ private:
     T spread = T(1.0);            // Channel spread 0-1 (100% default)
 
     // Internal parameters
-    T baseDelaySamples = T(0);
     T depthInSamples = T(0);
     std::vector<T> phaseOffset;
     std::vector<T> feedbackState;

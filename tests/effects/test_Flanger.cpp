@@ -13,7 +13,7 @@ TEST(FlangerTest, BasicMonoProcess)
     flanger.setRate(0.5f);
     flanger.setDepth(0.7f);
     flanger.setFeedback(0.5f);
-    flanger.setCenterDelay(3.0f);
+    flanger.setDelayMs(3.0f);
     flanger.setSpread(0.0f);
 
     constexpr size_t numSamples = 32;
@@ -42,7 +42,7 @@ TEST(FlangerTest, StereoImpulseResponse)
     flanger.setRate(1.0f);
     flanger.setDepth(1.0f);
     flanger.setFeedback(0.0f);
-    flanger.setCenterDelay(5.0f);
+    flanger.setDelayMs(5.0f);
     flanger.setSpread(1.0f);
 
     constexpr size_t numSamples = 64;
