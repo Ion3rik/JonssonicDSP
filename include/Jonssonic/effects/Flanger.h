@@ -65,7 +65,7 @@ public:
         phaseOffset.assign(numChannels, T(0));
         
         // Configure LFO
-        lfo.setWaveform(Waveform::Sine);
+        lfo.setWaveform(Waveform::Triangle);  // TEST: Triangle instead of Sine
         lfo.setAntiAliasing(false);
         lfo.setFrequency(lfoRate);
         
@@ -102,7 +102,7 @@ public:
                 T inputWithFeedback = input[ch][n] + feedbackState[ch] * feedback;
                 
                 // process LFO with phase offset
-                T lfoValue = lfo.processSample(ch, phaseOffset[ch]);
+                T lfoValue = lfo.processSample(ch , phaseOffset[ch]);
                 
                 // Scale LFO by modulation depth
                 lfoValue *= depthInSamples;
@@ -113,7 +113,6 @@ public:
                 // Copy to output and update feedback state
                 output[ch][n] = delayedSample;
                 feedbackState[ch] = delayedSample;
-
             }
         }
     }
@@ -173,10 +172,10 @@ public:
     void setSpread(T spreadAmount)
     {
         spread = spreadAmount;
-        // Update phase offsets based on spread
+        // Update phase offsets based on spread (normalized to 0-1 for oscillator)
         for (size_t ch = 0; ch < numChannels; ++ch)
         {
-            phaseOffset[ch] = (spread * T(2) * M_PI * ch) / T(numChannels);
+            phaseOffset[ch] = (spread * ch) / T(numChannels);
         }
     }
 

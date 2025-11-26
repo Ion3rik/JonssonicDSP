@@ -103,21 +103,20 @@ class Oscillator
 
     // Process single sample for a specific channel (with phase modulation)
     T processSample(size_t ch, T phaseMod)
-    {
-        // Calculate modulated phase
+    {    
+        // Advance and wrap current phase
+        phase[ch] += phaseIncrement[ch];
+        while (phase[ch] >= T(1.0)) phase[ch] -= T(1.0);
+        while (phase[ch] < T(0.0)) phase[ch] += T(1.0);
+
+        // Calculate modulated phase and wrap separately
         T modulatedPhase = phase[ch] + phaseMod;
-        
-        // Wrap phase to [0, 1)
         while (modulatedPhase >= T(1.0)) modulatedPhase -= T(1.0);
         while (modulatedPhase < T(0.0)) modulatedPhase += T(1.0);
         
         // Generate waveform at modulated phase
         T output = generateWaveform(modulatedPhase);
-        
-        // Advance phase
-        phase[ch] += phaseIncrement[ch];
-        if (phase[ch] >= T(1.0)) 
-            phase[ch] -= T(1.0);
+
         
         return output;
     }
@@ -130,10 +129,10 @@ class Oscillator
                 // Generate waveform at current phase
                 output[ch][i] = generateWaveform(phase[ch]);
                 
-                // Advance phase
+                // Advance and wrap current phase
                 phase[ch] += phaseIncrement[ch];
-                if (phase[ch] >= T(1.0)) 
-                    phase[ch] -= T(1.0);
+                while (phase[ch] >= T(1.0)) phase[ch] -= T(1.0);
+                while (phase[ch] < T(0.0)) phase[ch] += T(1.0);
             }
         }
     }
@@ -143,20 +142,20 @@ class Oscillator
     {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t i = 0; i < numSamples; ++i) {
-                // Calculate modulated phase
+
+                // Advance and wrap current phase
+                phase[ch] += phaseIncrement[ch];
+                while (phase[ch] >= T(1.0)) phase[ch] -= T(1.0);
+                while (phase[ch] < T(0.0)) phase[ch] += T(1.0);
+
+                // Calculate and wrap modulated phase
                 T modulatedPhase = phase[ch] + phaseMod[ch][i];
-                
-                // Wrap phase to [0, 1)
                 while (modulatedPhase >= T(1.0)) modulatedPhase -= T(1.0);
                 while (modulatedPhase < T(0.0)) modulatedPhase += T(1.0);
                 
                 // Generate waveform at modulated phase
                 output[ch][i] = generateWaveform(modulatedPhase);
                 
-                // Advance phase
-                phase[ch] += phaseIncrement[ch];
-                if (phase[ch] >= T(1.0)) 
-                    phase[ch] -= T(1.0);
             }
         }
     }
