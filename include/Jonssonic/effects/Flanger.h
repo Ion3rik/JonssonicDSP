@@ -70,7 +70,7 @@ public:
         lfo.setFrequency(lfoRate);
         
         // Set initial delay and depth
-        delayLine.setDelayMs(centerDelayMs);
+        delayLine.setDelayMs(centerDelayMs, true);
         depthInSamples = (MAX_MODULATION_MS * depth * sampleRate)* T(0.001);
     }
 
@@ -160,10 +160,10 @@ public:
      * @param delayMs Center delay in milliseconds (typical range: 1 - 7 ms)
      *                The LFO will modulate around this center point.
      */
-    void setDelayMs(T delayMs)
+    void setDelayMs(T delayMs, bool skipSmoothing = false)
     {
         centerDelayMs = delayMs;
-        delayLine.setDelayMs(delayMs);
+        delayLine.setDelayMs(delayMs, skipSmoothing);
     }
 
     /**

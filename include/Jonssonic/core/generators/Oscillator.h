@@ -59,7 +59,6 @@ class Oscillator
         for (size_t ch = 0; ch < numChannels; ++ch) {
             phase[ch] = T(0);
         }
-        phaseIncrement.reset();
     }
 
     // Reset phase for specific channel
@@ -84,10 +83,6 @@ class Oscillator
     // Process single sample for a specific channel (with phase modulation)
     T processSample(size_t ch, T phaseMod)
     {    
-        // Advance and wrap current phase using floor
-        phase[ch] += phaseIncrement.getNextValue(ch);
-        phase[ch] = phase[ch] - std::floor(phase[ch]);
-
         // Calculate modulated phase and wrap using floor
         T modulatedPhase = phase[ch] + phaseMod;
         modulatedPhase = modulatedPhase - std::floor(modulatedPhase);
@@ -95,6 +90,9 @@ class Oscillator
         // Generate waveform at modulated phase
         T output = generateWaveform(modulatedPhase);
 
+        // Advance and wrap current phase using floor
+        phase[ch] += phaseIncrement.getNextValue(ch);
+        phase[ch] = phase[ch] - std::floor(phase[ch]);
         
         return output;
     }
@@ -120,10 +118,6 @@ class Oscillator
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t i = 0; i < numSamples; ++i) {
 
-                // Advance and wrap current phase using floor
-                phase[ch] += phaseIncrement.getNextValue(ch);
-                phase[ch] = phase[ch] - std::floor(phase[ch]);
-
                 // Calculate and wrap modulated phase using floor
                 T modulatedPhase = phase[ch] + phaseMod[ch][i];
                 modulatedPhase = modulatedPhase - std::floor(modulatedPhase);
@@ -131,6 +125,9 @@ class Oscillator
                 // Generate waveform at modulated phase
                 output[ch][i] = generateWaveform(modulatedPhase);
                 
+                // Advance and wrap current phase using floor
+                phase[ch] += phaseIncrement.getNextValue(ch);
+                phase[ch] = phase[ch] - std::floor(phase[ch]);
             }
         }
     }
@@ -173,8 +170,8 @@ private:
                 return (phase < T(0.5)) ? T(-1.0) : T(1.0);
             
             case Waveform::Triangle:
-                // Triangle wave 
-                return std::abs(T(2.0) * phase - T(1.0)) * T(2.0) - T(1.0);
+                // Triangle wave: -1 at phase 0, +1 at phase 0.5
+                return T(1.0) - std::abs(T(4.0) * phase - T(2.0));
             
             default:
                 return T(0);

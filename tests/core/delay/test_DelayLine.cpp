@@ -114,8 +114,8 @@ protected:
         DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> dl;
     dl.prepare(2, sampleRate, maxDelayMs);
     // Set different delays for each channel (in samples)
-    dl.setDelaySamples(2.0f, 0u); // left
-    dl.setDelaySamples(4.0f, 1u); // right
+    dl.setDelaySamples(0u, 2.0f); // left
+    dl.setDelaySamples(1u, 4.0f); // right
         float leftInput[6] = {1,2,3,4,5,6};
         float rightInput[6] = {10,20,30,40,50,60};
         float leftExpected[6] = {0,0,1,2,3,4};
@@ -134,8 +134,8 @@ protected:
     {
         DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> dl;
     dl.prepare(2, sampleRate, maxDelayMs);
-    dl.setDelaySamples(2.0f, 0u); // left
-    dl.setDelaySamples(4.0f, 1u); // right
+    dl.setDelaySamples(0u, 2.0f); // left
+    dl.setDelaySamples(1u, 4.0f); // right
         float leftInput[6] = {1,2,3,4,5,6};
         float rightInput[6] = {10,20,30,40,50,60};
         float leftExpected[6] = {0,0,1,2,3,4};

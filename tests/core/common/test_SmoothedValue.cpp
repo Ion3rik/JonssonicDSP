@@ -93,7 +93,7 @@ TEST_F(SmoothedValueTest, OnePoleMultiChannel) {
     smoother.reset();
     // Set different targets for each channel
     for (size_t ch = 0; ch < numChannels; ++ch) {
-        smoother.setTarget(static_cast<float>(ch + 1), ch);
+        smoother.setTarget(ch, static_cast<float>(ch + 1));
     }
     float last[numChannels] = {0};
     for (int i = 0; i < 100; ++i) {
@@ -113,7 +113,7 @@ TEST_F(SmoothedValueTest, LinearMultiChannel) {
     smoother.reset();
     // Set different targets for each channel
     for (size_t ch = 0; ch < numChannels; ++ch) {
-        smoother.setTarget(static_cast<float>(ch + 2), ch);
+        smoother.setTarget(ch, static_cast<float>(ch + 2));
     }
     float last[numChannels] = {0};
     for (int i = 0; i < 10; ++i) {

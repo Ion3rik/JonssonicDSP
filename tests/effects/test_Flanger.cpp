@@ -13,10 +13,12 @@ TEST(FlangerTest, BasicMonoProcess)
     flanger.setRate(0.5f);
     flanger.setDepth(0.7f);
     flanger.setFeedback(0.5f);
-    flanger.setDelayMs(3.0f);
+    flanger.setDelayMs(3.0f, true);  // 3ms = 144 samples at 48kHz
     flanger.setSpread(0.0f);
 
-    constexpr size_t numSamples = 32;
+    // Need enough samples to account for delay (3ms + modulation depth)
+    // Max delay ~ 3ms + 3ms*0.7 = ~5ms = 240 samples at 48kHz
+    constexpr size_t numSamples = 512;
     std::vector<float> input(numSamples, 0.0f);
     std::vector<float> output(numSamples, 0.0f);
     input[0] = 1.0f; // Impulse
@@ -42,10 +44,12 @@ TEST(FlangerTest, StereoImpulseResponse)
     flanger.setRate(1.0f);
     flanger.setDepth(1.0f);
     flanger.setFeedback(0.0f);
-    flanger.setDelayMs(5.0f);
+    flanger.setDelayMs(5.0f, true);  // 5ms = 220 samples at 44.1kHz
     flanger.setSpread(1.0f);
 
-    constexpr size_t numSamples = 64;
+    // Need enough samples to account for delay (5ms + modulation depth)
+    // Max delay ~ 5ms + 3ms*1.0 = 8ms = 352 samples at 44.1kHz
+    constexpr size_t numSamples = 512;
     std::vector<float> inputL(numSamples, 0.0f);
     std::vector<float> inputR(numSamples, 0.0f);
     std::vector<float> outputL(numSamples, 0.0f);
