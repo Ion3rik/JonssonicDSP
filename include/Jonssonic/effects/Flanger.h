@@ -189,7 +189,8 @@ private:
     T maxDelayMs = T(0);
 
     // Core processors
-    DelayLine<T, LinearInterpolator<T>, SmootherType::OnePole, 1, 10> delayLine;
+
+    DelayLine<T, LagrangeInterpolator<T>, SmootherType::OnePole, 1, 10> delayLine;
     Oscillator<T> lfo;
 
     // User parameters 
