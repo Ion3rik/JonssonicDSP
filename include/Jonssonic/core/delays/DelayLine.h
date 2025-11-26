@@ -76,7 +76,7 @@ public:
         writeIndex[ch] = (writeIndex[ch] + 1) & (bufferSize - 1);
 
         // Read output sample with interpolation
-        return Interpolator::interpolate(buffer.readChannelPtr(ch), readIndex, delayFrac, bufferSize);
+        return Interpolator::interpolateBackward(buffer.readChannelPtr(ch), readIndex, delayFrac, bufferSize);
     }
 
     /**
@@ -104,7 +104,7 @@ public:
         writeIndex[ch] = (writeIndex[ch] + 1) & (bufferSize - 1);
 
         // Interpolate output sample
-        return Interpolator::interpolate(buffer.readChannelPtr(ch), readIndex, delayFrac, bufferSize);
+        return Interpolator::interpolateBackward(buffer.readChannelPtr(ch), readIndex, delayFrac, bufferSize);
     
 
     }
@@ -130,7 +130,7 @@ public:
                 auto [readIndex, delayFrac] = computeReadIndexAndFrac(delaySamples.getNextValue(ch), writeIndex[ch]);
 
                 // Read output sample with interpolation
-                output[ch][i] = Interpolator::interpolate(buffer.readChannelPtr(ch), readIndex, delayFrac, bufferSize);
+                output[ch][i] = Interpolator::interpolateBackward(buffer.readChannelPtr(ch), readIndex, delayFrac, bufferSize);
                 
                 // Increment and wrap write index with bitwise AND for power-of-two buffer size
                 writeIndex[ch] = (writeIndex[ch] + 1) & (bufferSize - 1);
@@ -166,7 +166,7 @@ public:
                 auto [readIndex, delayFrac] = computeReadIndexAndFrac(modulatedDelay, writeIndex[ch]);
 
                 // Interpolate output sample
-                output[ch][i] = Interpolator::interpolate(buffer.readChannelPtr(ch), readIndex, delayFrac, bufferSize);
+                output[ch][i] = Interpolator::interpolateBackward(buffer.readChannelPtr(ch), readIndex, delayFrac, bufferSize);
                 
                 // Increment and wrap write index
                 writeIndex[ch] = (writeIndex[ch] + 1) & (bufferSize - 1);
@@ -178,40 +178,40 @@ public:
      * @brief Set a constant delay time in milliseconds for all channels.
      * @param newDelayMs Delay time in milliseconds
      */
-    void setDelayMs(T newDelayMs)
+    void setDelayMs(T newDelayMs, bool skipSmoothing = false)
     {
         T newDelaySamples = msToSamples(newDelayMs, sampleRate); // convert ms to samples  
-        delaySamples.setTarget(newDelaySamples);
+        delaySamples.setTarget(newDelaySamples, skipSmoothing);
     }
 
     /**
      * @brief Set a constant delay time in milliseconds for a specific channel.
-     * @param newDelayMs Delay time in milliseconds
      * @param ch Channel index
+     * @param newDelayMs Delay time in milliseconds
      */
-    void setDelayMs(T newDelayMs, size_t ch)
+    void setDelayMs(size_t ch, T newDelayMs, bool skipSmoothing = false)
     {
         T newDelaySamples = msToSamples(newDelayMs, sampleRate); // convert ms to samples
-        delaySamples.setTarget(newDelaySamples, ch);              
+        delaySamples.setTarget(ch, newDelaySamples, skipSmoothing);              
     }
 
     /**
      * @brief Set a constant delay time in samples for all channels.
      * @param newDelaySamples Delay time in samples
      */
-    void setDelaySamples(T newDelaySamples)
+    void setDelaySamples(T newDelaySamples, bool skipSmoothing = false)
     {
-        delaySamples.setTarget(newDelaySamples);
+        delaySamples.setTarget(newDelaySamples, skipSmoothing);
     }
 
     /**
      * @brief Set a constant delay time in samples for a specific channel.
-     * @param newDelaySamples Delay time in samples
      * @param ch Channel index
+     * @param newDelaySamples Delay time in samples
      */
-    void setDelaySamples(T newDelaySamples, size_t ch)
+    void setDelaySamples(size_t ch, T newDelaySamples, bool skipSmoothing = false)
     {
-        delaySamples.setTarget(newDelaySamples, ch);
+        delaySamples.setTarget(ch, newDelaySamples, skipSmoothing);
     }
 
 

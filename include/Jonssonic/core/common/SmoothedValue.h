@@ -57,29 +57,20 @@ public:
     }
 
     // Process (passthrough)
-    T process(T target, size_t ch) {
+    T process(size_t ch, T target) {
         value[ch] = target;
         return value[ch];
     }
 
-    // Set all channels to the same value
-    SmoothedValue& operator=(const T& newValue) {
-        for (auto& v : value) v = newValue;
-        return *this;
-    }
-
-    // Get channel value (read/write)
-    T& operator[](size_t ch) { return value[ch]; }
-    const T& operator[](size_t ch) const { return value[ch]; }
-
-    // Pass through methods to provide consistent interface
     // Set all channels to the same target value (no smoothing, just set value)
-    void setTarget(T newValue) {
+    void setTarget(T newValue, bool skipSmoothing = false) {
+        // skipSmoothing has no effect for None type (always immediate)
         for (auto& v : value) v = newValue;
     }
 
     // Set target value for specific channel
-    void setTarget(T newValue, size_t ch) {
+    void setTarget(size_t ch, T newValue, bool skipSmoothing = false) {
+        // skipSmoothing has no effect for None type (always immediate)
         value[ch] = newValue;
     }
 
@@ -141,27 +132,38 @@ public:
     }
 
     // Process (set target and get next value)
-    T process(T target, size_t ch) {
-        setTarget(target, ch);
+    T process(size_t ch, T target) {
+        setTarget(ch, target);
         return getNextValue(ch);
     }
 
-    // Force set current value on all channels
-    SmoothedValue& operator=(const T& newValue) {
-        for (auto& c : current) c = newValue;
-        for (auto& t : target) t = newValue;
-        return *this;
-    }
-
     // Set all channels to the same target value
-    void setTarget(T value) {
-        for (auto& t : target)
-            t = value;
+    void setTarget(T value, bool skipSmoothing = false) {
+        if (skipSmoothing) {
+            for (size_t ch = 0; ch < current.size(); ++ch) {
+                current[ch] = value;
+                target[ch] = value;
+                for (int i = 0; i < Order; ++i) {
+                    stage[ch][i] = value;
+                }
+            }
+        } else {
+            for (auto& t : target)
+                t = value;
+        }
     }
 
     // Set target value for specific channel
-    void setTarget(T value, size_t ch) {
-        target[ch] = value;
+    void setTarget(size_t ch, T value, bool skipSmoothing = false) {
+        if (skipSmoothing) {
+            current[ch] = value;
+            target[ch] = value;
+            for (int i = 0; i < Order; ++i) {
+                stage[ch][i] = value;
+            }
+        } else {
+            target[ch] = value;
+        }
     }
 
     // Get next smoothed value for a channel
@@ -238,35 +240,36 @@ public:
     }
 
     // Process (set target and get next value)
-    T process(T target, size_t ch) {
-        setTarget(target, ch);
+    T process(size_t ch, T target) {
+        setTarget(ch, target);
         return getNextValue(ch);
     }
 
-    // Force set current value on all channels
-    SmoothedValue& operator=(const T& newValue) {
-        for (auto& c : current) c = newValue;
-        for (auto& t : target) t = newValue;
-        return *this;
-    }
-
-    // Force set current value on specific channel
-    SmoothedValue& operator=(const std::pair<T, size_t>& valueCh) {
-        current[valueCh.second] = valueCh.first;
-        return *this;
-    }
-
     // Set all channels to the same target value
-    void setTarget(T value) {
-        for (size_t ch = 0; ch < target.size(); ++ch) {
-            setTarget(value, ch);
+    void setTarget(T value, bool skipSmoothing = false) {
+        if (skipSmoothing) {
+            for (size_t ch = 0; ch < current.size(); ++ch) {
+                current[ch] = value;
+                target[ch] = value;
+                rampStep[ch] = T(0);
+            }
+        } else {
+            for (size_t ch = 0; ch < target.size(); ++ch) {
+                setTarget(ch, value, false);
+            }
         }
     }
 
     // Set target value for a specific channel
-    void setTarget(T value, size_t ch) {
-        target[ch] = value;
-        rampStep[ch] = (target[ch] - current[ch]) / static_cast<T>(rampSamples > 0 ? rampSamples : 1);
+    void setTarget(size_t ch, T value, bool skipSmoothing = false) {
+        if (skipSmoothing) {
+            current[ch] = value;
+            target[ch] = value;
+            rampStep[ch] = T(0);
+        } else {
+            target[ch] = value;
+            rampStep[ch] = (target[ch] - current[ch]) / static_cast<T>(rampSamples > 0 ? rampSamples : 1);
+        }
     }
 
     // Get next value for a channel

@@ -142,7 +142,7 @@ public:
     {
         m_numChannels = numChannels;
         m_numSamples = numSamples;
-        m_data.resize(numChannels * numSamples, T(0));
+        m_data.assign(numChannels * numSamples, T(0)); // This is what you expect for audio buffers not std::vector::resize()
     }
 
     // ========================================================================

@@ -47,19 +47,16 @@ public:
         return clamp(getNextValue(ch) * mod);
     }
 
-    // Force set current value on all channels (clamped)
-    DspParam& operator=(const T& value) {
-        smoother = clamp(value);
-        return *this;
-    }
-
     // Set target value for all channels (clamped)
-    void setTarget(T value) {
-        smoother.setTarget(clamp(value));
+    void setTarget(T value, bool skipSmoothing = false) {
+        T clampedValue = clamp(value);
+        smoother.setTarget(clampedValue, skipSmoothing);
     }
+    
     // Set target value for specific channel (clamped)
-    void setTarget(T value, size_t ch) {
-        smoother.setTarget(clamp(value), ch);
+    void setTarget(size_t ch, T value, bool skipSmoothing = false) {
+        T clampedValue = clamp(value);
+        smoother.setTarget(ch, clampedValue, skipSmoothing);
     }
 
     T getNextValue(size_t ch) {

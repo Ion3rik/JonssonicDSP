@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <cmath>
+#include "../common/DspParam.h"
 
 namespace Jonssonic
 {
@@ -22,7 +23,11 @@ enum class Waveform
  * @brief Waveform generator class.
  * This class generates basic waveforms (sine, square, sawtooth, triangle) at a specified frequency.
  */
-template<typename T>
+template<typename T,
+    SmootherType SmootherType = SmootherType::OnePole,
+    int SmootherOrder = 1,
+    int SmoothingTimeMs = 10
+>
 class Oscillator
 {
     public:
@@ -45,8 +50,7 @@ class Oscillator
 
         // Resize and initialize to zero
         phase.assign(numChannels, T(0));
-        phaseIncrement.assign(numChannels, T(0));
-        frequency.assign(numChannels, T(0));
+        phaseIncrement.prepare(numChannels, sampleRate, SmoothingTimeMs);
     }
 
     // Reset phase for all channels
@@ -55,36 +59,13 @@ class Oscillator
         for (size_t ch = 0; ch < numChannels; ++ch) {
             phase[ch] = T(0);
         }
+        phaseIncrement.reset();
     }
 
     // Reset phase for specific channel
     void reset(size_t channel)
     {
         phase[channel] = T(0);
-    }
-
-    // Set all channels to same frequency
-    void setFrequency(T freq) {
-        for (size_t ch = 0; ch < numChannels; ++ch) {
-            frequency[ch] = freq;
-            phaseIncrement[ch] = freq / sampleRate;
-        }
-    }
-    
-    // Set specific channel frequency
-    void setFrequency(T freq, size_t channel) {
-        frequency[channel] = freq;
-        phaseIncrement[channel] = freq / sampleRate;
-    }
-
-    // Set waveform type
-    void setWaveform(Waveform wf) {
-        waveform = wf;
-    }
-
-    // Enable/disable anti-aliasing
-    void setAntiAliasing(bool enable) {
-        useAntiAliasing = enable;
     }
 
     // Process single sample for a specific channel (no phase modulation)
@@ -94,7 +75,7 @@ class Oscillator
         T output = generateWaveform(phase[ch]);
         
         // Advance and wrap phase using floor
-        phase[ch] += phaseIncrement[ch];
+        phase[ch] += phaseIncrement.getNextValue(ch);
         phase[ch] = phase[ch] - std::floor(phase[ch]);
         
         return output;
@@ -104,7 +85,7 @@ class Oscillator
     T processSample(size_t ch, T phaseMod)
     {    
         // Advance and wrap current phase using floor
-        phase[ch] += phaseIncrement[ch];
+        phase[ch] += phaseIncrement.getNextValue(ch);
         phase[ch] = phase[ch] - std::floor(phase[ch]);
 
         // Calculate modulated phase and wrap using floor
@@ -127,7 +108,7 @@ class Oscillator
                 output[ch][i] = generateWaveform(phase[ch]);
                 
                 // Advance and wrap current phase using floor
-                phase[ch] += phaseIncrement[ch];
+                phase[ch] += phaseIncrement.getNextValue(ch);
                 phase[ch] = phase[ch] - std::floor(phase[ch]);
             }
         }
@@ -140,7 +121,7 @@ class Oscillator
             for (size_t i = 0; i < numSamples; ++i) {
 
                 // Advance and wrap current phase using floor
-                phase[ch] += phaseIncrement[ch];
+                phase[ch] += phaseIncrement.getNextValue(ch);
                 phase[ch] = phase[ch] - std::floor(phase[ch]);
 
                 // Calculate and wrap modulated phase using floor
@@ -152,6 +133,26 @@ class Oscillator
                 
             }
         }
+    }
+
+    // Set all channels to same frequency
+    void setFrequency(T freq, bool skipSmoothing = false) {
+        phaseIncrement.setTarget(freq / sampleRate, skipSmoothing);
+    }
+    
+    // Set specific channel frequency
+    void setFrequency(size_t channel, T freq, bool skipSmoothing = false) {
+        phaseIncrement.setTarget(channel, freq / sampleRate, skipSmoothing);
+    }
+
+    // Set waveform type
+    void setWaveform(Waveform newWaveform) {
+        waveform = newWaveform;
+    }
+
+    // Enable/disable anti-aliasing
+    void setAntiAliasing(bool enable) {
+        useAntiAliasing = enable;
     }
 
 private:
@@ -185,8 +186,7 @@ private:
     Waveform waveform = Waveform::Sine;
     bool useAntiAliasing = false;
 
-    std::vector<T> phase;          // Phase per channel
-    std::vector<T> phaseIncrement; // Phase increment per channel
-    std::vector<T> frequency;      // Frequency per channel
+    std::vector<T> phase;           // Phase per channel
+    DspParam<T,SmootherType, SmootherOrder> phaseIncrement;     // Phase increment per channel
 };
 } // namespace Jonssonic

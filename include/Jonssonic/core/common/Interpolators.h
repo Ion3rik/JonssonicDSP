@@ -22,7 +22,12 @@ namespace Jonssonic
 template<typename T>
 struct NoneInterpolator
 {
-    static T interpolate(const T* buffer, size_t idx, float /*frac*/, size_t /*bufferSize*/)
+    static T interpolateBackward(const T* buffer, size_t idx, float /*frac*/, size_t /*bufferSize*/)
+    {
+        return buffer[idx];
+    }
+    
+    static T interpolateForward(const T* buffer, size_t idx, float /*frac*/, size_t /*bufferSize*/)
     {
         return buffer[idx];
     }
@@ -36,11 +41,18 @@ struct NoneInterpolator
 template<typename T>
 struct NearestInterpolator
 {
-    static T interpolate(const T* buffer, size_t idx, float frac, size_t bufferSize)
+    // For delay lines - interpolate backward in time
+    static T interpolateBackward(const T* buffer, size_t idx, float frac, size_t bufferSize)
     {
-        // Use backward interpolation for consistency
         size_t prevIdx = (idx + bufferSize - 1) & (bufferSize - 1);
         return (frac < 0.5f) ? buffer[idx] : buffer[prevIdx];
+    }
+    
+    // For wavetables/resampling - interpolate forward
+    static T interpolateForward(const T* buffer, size_t idx, float frac, size_t bufferSize)
+    {
+        size_t nextIdx = (idx + 1) & (bufferSize - 1);
+        return (frac < 0.5f) ? buffer[idx] : buffer[nextIdx];
     }
 };
 
@@ -53,11 +65,18 @@ struct NearestInterpolator
 template<typename T>
 struct LinearInterpolator
 {
-    static T interpolate(const T* buffer, size_t idx, float frac, size_t bufferSize)
+    // For delay lines - interpolate backward in time
+    static T interpolateBackward(const T* buffer, size_t idx, float frac, size_t bufferSize)
     {
-        // Interpolate backward (from past samples) to avoid reading unwritten data
         size_t prevIdx = (idx + bufferSize - 1) & (bufferSize - 1);
         return buffer[idx] * (1.0f - frac) + buffer[prevIdx] * frac;
+    }
+    
+    // For wavetables/resampling - interpolate forward
+    static T interpolateForward(const T* buffer, size_t idx, float frac, size_t bufferSize)
+    {
+        size_t nextIdx = (idx + 1) & (bufferSize - 1);
+        return buffer[idx] * (1.0f - frac) + buffer[nextIdx] * frac;
     }
 };
 
