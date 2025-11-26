@@ -544,4 +544,153 @@ TEST_F(DelayLineTest, SetDelayMsAndSamplesConsistency) {
     }
 } 
 
+// ============================================================================
+// Discontinuity Detection Tests for Modulated Delay
+// ============================================================================
+
+TEST_F(DelayLineTest, DelayTimeSmoothing10msIsEffective) {
+    // Test that delay time smoothing (10ms) prevents discontinuities
+    DelayLine<float, LinearInterpolator<float>, SmootherType::OnePole, 1, 10> dl;
+    dl.prepare(1, sampleRate, maxDelayMs);
+    
+    // Start with 5 samples delay
+    dl.setDelaySamples(5.0f);
+    
+    std::vector<float> samples(100);
+    std::vector<float> input(100);
+    
+    // Generate input: constant tone
+    for (int i = 0; i < 100; ++i) {
+        input[i] = std::sin(2.0f * M_PI * 100.0f * i / sampleRate);
+    }
+    
+    // Process first 50 samples at 5 sample delay
+    for (int i = 0; i < 50; ++i) {
+        samples[i] = dl.processSample(input[i], 0u);
+    }
+    
+    // Change delay to 10 samples
+    dl.setDelaySamples(10.0f);
+    
+    // Process next 50 samples - smoothing should be active
+    for (int i = 50; i < 100; ++i) {
+        samples[i] = dl.processSample(input[i], 0u);
+    }
+    
+    // Check for discontinuities right at the transition
+    for (int i = 50; i < 60; ++i) {
+        float jump = std::abs(samples[i] - samples[i-1]);
+        
+        // For 100Hz sine at 1000Hz sample rate, max derivative is ~0.63
+        // With smoothing, should not have large jumps
+        EXPECT_LT(jump, 0.8f)
+            << "Discontinuity at sample " << i << " with 10ms smoothing enabled";
+    }
+}
+
+TEST_F(DelayLineTest, RapidModulationWithLinearInterpolation) {
+    // Test that linear interpolation handles rapid modulation without graininess
+    // Uses a 44.1kHz sample rate (realistic audio) instead of 1kHz test rate
+    float audioSampleRate = 44100.0f;
+    DelayLine<float, LinearInterpolator<float>, SmootherType::OnePole, 1, 0> dl;
+    dl.prepare(1, audioSampleRate, 20.0f); // 20ms max delay
+    dl.setDelaySamples(220.0f); // 5ms base delay at 44.1kHz
+    
+    std::vector<float> samples(4410); // 100ms worth
+    
+    // Generate clean 1kHz sine wave input
+    for (int i = 0; i < 4410; ++i) {
+        float input = std::sin(2.0f * M_PI * 1000.0f * i / audioSampleRate);
+        
+        // Apply slow modulation (0.5 Hz LFO, ±2ms = ±88 samples)
+        float modulation = 88.0f * std::sin(2.0f * M_PI * 0.5f * i / audioSampleRate);
+        
+        samples[i] = dl.processSample(input, modulation, 0u);
+    }
+    
+    // Measure high-frequency noise by checking sample-to-sample differences
+    // A clean modulated delay should have smooth output
+    float maxDerivative = 0.0f;
+    float avgDerivative = 0.0f;
+    int derivativeCount = 0;
+    
+    for (int i = 221; i < 4409; ++i) { // Skip buffer fill period
+        float derivative = std::abs(samples[i+1] - samples[i]);
+        maxDerivative = std::max(maxDerivative, derivative);
+        avgDerivative += derivative;
+        derivativeCount++;
+    }
+    avgDerivative /= derivativeCount;
+    
+    // For a 1kHz sine at 44.1kHz, max derivative should be ~0.142
+    // With smooth modulation, it shouldn't exceed ~0.25 (allowing for some doppler effect)
+    // If we get graininess, we'll see much higher derivatives
+    EXPECT_LT(maxDerivative, 0.3f) 
+        << "High-frequency noise detected (graininess). Max derivative: " << maxDerivative;
+    
+    // Average derivative should also be reasonable
+    EXPECT_LT(avgDerivative, 0.1f)
+        << "Excessive average derivative suggests graininess. Avg: " << avgDerivative;
+}
+
+TEST_F(DelayLineTest, LargeModulationSwingsNoClicks) {
+    // Test that large modulation swings don't cause clicks with interpolation
+    DelayLine<float, LinearInterpolator<float>, SmootherType::OnePole, 1, 0> dl;
+    dl.prepare(1, sampleRate, maxDelayMs);
+    dl.setDelaySamples(20.0f); // Base delay
+    
+    std::vector<float> samples(500);
+    
+    // Generate input
+    for (int i = 0; i < 500; ++i) {
+        float input = std::sin(2.0f * M_PI * 200.0f * i / sampleRate);
+        
+        // Large modulation swings: ±15 samples
+        float modulation = 15.0f * std::sin(2.0f * M_PI * 2.0f * i / sampleRate);
+        
+        samples[i] = dl.processSample(input, modulation, 0u);
+    }
+    
+    // Check for extreme discontinuities (clicks)
+    int extremeJumps = 0;
+    for (int i = 30; i < 500; ++i) {
+        float jump = std::abs(samples[i] - samples[i-1]);
+        
+        // For a 200Hz sine at 1000Hz sample rate, max derivative is ~1.26
+        // With large modulation, allow up to 2.0 but not more
+        if (jump > 2.0f) {
+            extremeJumps++;
+        }
+    }
+    
+    // Should not have extreme discontinuities with proper interpolation
+    EXPECT_EQ(extremeJumps, 0)
+        << "Found " << extremeJumps << " extreme discontinuities (clicks) with large modulation";
+}
+
+TEST_F(DelayLineTest, FractionalDelayInterpolationSmooth) {
+    // Test that fractional delays are smooth (good interpolation)
+    DelayLine<float, LinearInterpolator<float>, SmootherType::OnePole, 1, 0> dl;
+    dl.prepare(1, sampleRate, maxDelayMs);
+    dl.setDelaySamples(5.5f); // Fractional delay
+    
+    std::vector<float> samples(200);
+    
+    // Generate smooth sine wave input
+    for (int i = 0; i < 200; ++i) {
+        float input = std::sin(2.0f * M_PI * 100.0f * i / sampleRate);
+        samples[i] = dl.processSample(input, 0u);
+    }
+    
+    // Check that output is also smooth (no interpolation artifacts)
+    for (int i = 20; i < 199; ++i) {
+        float diff = std::abs(samples[i] - samples[i-1]);
+        
+        // For 100Hz sine at 1000Hz, max derivative is ~0.63
+        EXPECT_LT(diff, 0.8f)
+            << "Discontinuity at sample " << i 
+            << " (fractional delay interpolation issue)";
+    }
+}
+
 }// namespace Jonssonic

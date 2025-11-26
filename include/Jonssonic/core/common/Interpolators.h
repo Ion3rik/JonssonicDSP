@@ -38,8 +38,9 @@ struct NearestInterpolator
 {
     static T interpolate(const T* buffer, size_t idx, float frac, size_t bufferSize)
     {
-        size_t nextIdx = (idx + 1) & (bufferSize - 1);
-        return (frac < 0.5f) ? buffer[idx] : buffer[nextIdx];
+        // Use backward interpolation for consistency
+        size_t prevIdx = (idx + bufferSize - 1) & (bufferSize - 1);
+        return (frac < 0.5f) ? buffer[idx] : buffer[prevIdx];
     }
 };
 
@@ -54,8 +55,9 @@ struct LinearInterpolator
 {
     static T interpolate(const T* buffer, size_t idx, float frac, size_t bufferSize)
     {
-        size_t nextIdx = (idx + 1) & (bufferSize - 1);
-        return buffer[idx] * (1.0f - frac) + buffer[nextIdx] * frac;
+        // Interpolate backward (from past samples) to avoid reading unwritten data
+        size_t prevIdx = (idx + bufferSize - 1) & (bufferSize - 1);
+        return buffer[idx] * (1.0f - frac) + buffer[prevIdx] * frac;
     }
 };
 

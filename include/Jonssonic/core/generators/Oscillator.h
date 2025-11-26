@@ -93,10 +93,9 @@ class Oscillator
         // Generate waveform at current phase
         T output = generateWaveform(phase[ch]);
         
-        // Advance phase
+        // Advance and wrap phase using floor
         phase[ch] += phaseIncrement[ch];
-        if (phase[ch] >= T(1.0)) 
-            phase[ch] -= T(1.0);
+        phase[ch] = phase[ch] - std::floor(phase[ch]);
         
         return output;
     }
@@ -104,15 +103,13 @@ class Oscillator
     // Process single sample for a specific channel (with phase modulation)
     T processSample(size_t ch, T phaseMod)
     {    
-        // Advance and wrap current phase
+        // Advance and wrap current phase using floor
         phase[ch] += phaseIncrement[ch];
-        while (phase[ch] >= T(1.0)) phase[ch] -= T(1.0);
-        while (phase[ch] < T(0.0)) phase[ch] += T(1.0);
+        phase[ch] = phase[ch] - std::floor(phase[ch]);
 
-        // Calculate modulated phase and wrap separately
+        // Calculate modulated phase and wrap using floor
         T modulatedPhase = phase[ch] + phaseMod;
-        while (modulatedPhase >= T(1.0)) modulatedPhase -= T(1.0);
-        while (modulatedPhase < T(0.0)) modulatedPhase += T(1.0);
+        modulatedPhase = modulatedPhase - std::floor(modulatedPhase);
         
         // Generate waveform at modulated phase
         T output = generateWaveform(modulatedPhase);
@@ -129,10 +126,9 @@ class Oscillator
                 // Generate waveform at current phase
                 output[ch][i] = generateWaveform(phase[ch]);
                 
-                // Advance and wrap current phase
+                // Advance and wrap current phase using floor
                 phase[ch] += phaseIncrement[ch];
-                while (phase[ch] >= T(1.0)) phase[ch] -= T(1.0);
-                while (phase[ch] < T(0.0)) phase[ch] += T(1.0);
+                phase[ch] = phase[ch] - std::floor(phase[ch]);
             }
         }
     }
@@ -143,15 +139,13 @@ class Oscillator
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t i = 0; i < numSamples; ++i) {
 
-                // Advance and wrap current phase
+                // Advance and wrap current phase using floor
                 phase[ch] += phaseIncrement[ch];
-                while (phase[ch] >= T(1.0)) phase[ch] -= T(1.0);
-                while (phase[ch] < T(0.0)) phase[ch] += T(1.0);
+                phase[ch] = phase[ch] - std::floor(phase[ch]);
 
-                // Calculate and wrap modulated phase
+                // Calculate and wrap modulated phase using floor
                 T modulatedPhase = phase[ch] + phaseMod[ch][i];
-                while (modulatedPhase >= T(1.0)) modulatedPhase -= T(1.0);
-                while (modulatedPhase < T(0.0)) modulatedPhase += T(1.0);
+                modulatedPhase = modulatedPhase - std::floor(modulatedPhase);
                 
                 // Generate waveform at modulated phase
                 output[ch][i] = generateWaveform(modulatedPhase);
@@ -178,11 +172,8 @@ private:
                 return (phase < T(0.5)) ? T(-1.0) : T(1.0);
             
             case Waveform::Triangle:
-                // Naive triangle
-                if (phase < T(0.5))
-                    return T(4.0) * phase - T(1.0);
-                else
-                    return T(-4.0) * phase + T(3.0);
+                // Triangle wave 
+                return std::abs(T(2.0) * phase - T(1.0)) * T(2.0) - T(1.0);
             
             default:
                 return T(0);

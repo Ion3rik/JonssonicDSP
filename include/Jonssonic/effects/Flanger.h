@@ -98,11 +98,14 @@ public:
         {
             for (size_t n = 0; n < numSamples; ++n)
             {
-                // Mix input with feedback
-                T inputWithFeedback = input[ch][n] + feedbackState[ch] * feedback;
+                // Mix input with feedback (TEST: feedback disabled for now)
+                T inputWithFeedback = input[ch][n] + feedbackState[ch] * feedback; 
                 
                 // process LFO with phase offset
-                T lfoValue = lfo.processSample(ch , phaseOffset[ch]);
+                T lfoValue = lfo.processSample(ch, phaseOffset[ch]);
+
+                // Convert to unipolar [0, 1]
+                lfoValue = lfoValue * T(0.5) + T(0.5);
                 
                 // Scale LFO by modulation depth
                 lfoValue *= depthInSamples;
@@ -186,13 +189,13 @@ private:
     T maxDelayMs = T(0);
 
     // Core processors
-    DelayLine<T, LinearInterpolator<T>> delayLine;
+    DelayLine<T, LinearInterpolator<T>, SmootherType::OnePole, 1, 10> delayLine;
     Oscillator<T> lfo;
 
     // User parameters 
     T lfoRate = T(0.5);           // LFO rate in Hz
     T depth = T(0.7);             // Modulation depth 0-1 (70% default)
-    T feedback = T(0.5);          // Feedback amount -1 to 1 (50% default)
+    T feedback = T(0.7);          // Feedback amount -1 to 1 (50% default)
     T centerDelayMs = T(3.0);     // Center delay in ms (3ms default)
     T spread = T(1.0);            // Channel spread 0-1 (100% default)
 

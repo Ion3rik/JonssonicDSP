@@ -226,9 +226,13 @@ private:
     // Helper function to compute read index and fractional part for interpolation
     std::pair<size_t, T> computeReadIndexAndFrac(T delay, size_t writeIdx) const
     {
-       // Split into integer and fractional parts for interpolation
-        size_t delayInt = static_cast<size_t>(delay);
-        T delayFrac = delay - static_cast<T>(delayInt);
+        // Clamp delay to valid range as safety measure
+        delay = std::max(T(0), std::min(delay, static_cast<T>(bufferSize - 1)));
+        
+        // Split into integer and fractional parts using floor for proper handling
+        T delayFloor = std::floor(delay);
+        size_t delayInt = static_cast<size_t>(delayFloor);
+        T delayFrac = delay - delayFloor;
     
         // Calculate read index with wrap-around
         size_t readIndex = (writeIdx + bufferSize - delayInt) & (bufferSize - 1);
