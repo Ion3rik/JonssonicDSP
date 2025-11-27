@@ -40,7 +40,7 @@ public:
         numChannels = newNumChannels;
         mix.prepare(newNumChannels, newSampleRate, smoothingTimeMs);
         mix.setBounds(T(0), T(1)); // Clamp between 0 and 1
-        mix.setTarget(T(0.5)); // Default to 50/50 mix
+        mix.setTarget(T(1), true); // Default to full wet
     }
 
     /**
@@ -56,7 +56,7 @@ public:
      * @param amount Mix amount (0.0 = full dry, 1.0 = full wet)
      * @param skipSmoothing If true, jump immediately to target value without smoothing
      */
-    void setMix(T newMix bool skipSmoothing = false)
+    void setMix(T newMix, bool skipSmoothing = false)
     {
         mix.setTarget(newMix, skipSmoothing);
     }
