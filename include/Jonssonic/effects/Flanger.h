@@ -113,8 +113,9 @@ public:
                 // Process through delay line
                 T delayedSample = delayLine.processSample(inputWithFeedback, lfoValue, ch);
         
-                // Copy to output and update feedback state
-                output[ch][n] = delayedSample;
+                // Mix dry and delayed (50/50 for classic flanger comb filtering)
+                // Scale by 0.5 to maintain unity gain
+                output[ch][n] = T(0.5) * (input[ch][n] + delayedSample);
                 feedbackState[ch] = delayedSample;
             }
         }
