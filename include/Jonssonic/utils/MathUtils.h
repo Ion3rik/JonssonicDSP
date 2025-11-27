@@ -5,9 +5,42 @@
 
 #pragma once
 #include <cstddef>
+#include <numbers>
 
 namespace Jonssonic
 {
+
+// Mathematical constants (C++20 std::numbers or fallback)
+#ifdef __cpp_lib_math_constants
+using std::numbers::pi;
+using std::numbers::e;
+#else
+template<typename T>
+inline constexpr T pi = T(3.141592653589793238462643383279502884);
+
+template<typename T>
+inline constexpr T e = T(2.718281828459045235360287471352662498);
+#endif
+
+// Commonly used derived constants
+template<typename T>
+inline constexpr T pi_over_2 = pi<T> / T(2);
+
+template<typename T>
+inline constexpr T pi_over_4 = pi<T> / T(4);
+
+template<typename T>
+inline constexpr T two_pi = pi<T> * T(2);
+
+template<typename T>
+inline constexpr T inv_pi = T(1) / pi<T>;
+
+template<typename T>
+inline constexpr T sqrt2 = T(1.414213562373095048801688724209698079);
+
+template<typename T>
+inline constexpr T inv_sqrt2 = T(1) / sqrt2<T>;
+
 /**
  * @brief Calculate the next power of two greater than or equal to n.
  * @param n Input value
