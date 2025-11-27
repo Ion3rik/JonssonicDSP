@@ -26,8 +26,10 @@ template<typename T>
 class Flanger
 {
 public:
-    /// Maximum modulation depth in milliseconds (±3ms at depth=1.0)
-    static constexpr T MAX_MODULATION_MS = T(3.0);
+    // Tunable constants
+    static constexpr T MAX_MODULATION_MS = T(3.0);      // Maximum modulation depth in milliseconds (±3ms at depth=1.0)
+    static constexpr int SMOOTHING_TIME_MS = 100;       // Smoothing time for parameter changes in milliseconds
+    static constexpr T MAX_DELAY_MS = T(10.0);          // Maximum delay buffer size
     
     /**
      * @brief Default constructor for Flanger effect.
@@ -47,30 +49,35 @@ public:
      * @brief Prepare the flanger for processing.
      * @param newNumChannels Number of channels
      * @param newSampleRate Sample rate in Hz
-     * @param newMaxDelayMs Maximum delay buffer size in milliseconds (default 10ms)
      */
-    void prepare(size_t newNumChannels, T newSampleRate, T newMaxDelayMs = T(10.0))
+    void prepare(size_t newNumChannels, T newSampleRate)
     {
+        // Store global parameters
         numChannels = newNumChannels;
         sampleRate = newSampleRate;
-        maxDelayMs = newMaxDelayMs;
         
-        // Prepare components
-        delayLine.prepare(newNumChannels, newSampleRate, newMaxDelayMs);
+        // Prepare DSP components
+        delayLine.prepare(newNumChannels, newSampleRate, MAX_DELAY_MS);
         lfo.prepare(newNumChannels, newSampleRate);
-
-        // Initialize states
-        feedbackState.assign(numChannels, T(0));
-        phaseOffset.assign(numChannels, T(0));
-        
-        // Configure LFO
-        lfo.setWaveform(Waveform::Triangle);  // TEST: Triangle instead of Sine
+        lfo.setWaveform(Waveform::Triangle); 
         lfo.setAntiAliasing(false);
-        lfo.setFrequency(lfoRate);
+
+        // Set parameter safety bounds
+        phaseOffset.setBounds(T(0), T(1));
+        feedback.setBounds(T(-0.99), T(0.99));
         
-        // Set initial delay and depth
-        delayLine.setDelayMs(centerDelayMs, true);
-        depthInSamples = (MAX_MODULATION_MS * depth * sampleRate)* T(0.001);
+        // Initialize states and parameters
+        feedbackState.assign(newNumChannels, T(0));
+        phaseOffset.prepare(newNumChannels, newSampleRate, SMOOTHING_TIME_MS);
+        depthInSamples.prepare(newNumChannels, newSampleRate, SMOOTHING_TIME_MS);
+        feedback.prepare(newNumChannels, newSampleRate, SMOOTHING_TIME_MS);
+
+        // Set Default Parameters
+        setRate(T(0.5), true);          // 0.5 Hz
+        setDepth(T(0.5), true);         // 50% depth
+        setFeedback(T(0.0), true);      // No feedback
+        setDelayMs(T(5.0), true);       // 5 ms center delay
+        setSpread(T(0.0), true);        // No spread
     }
 
     /**
@@ -79,7 +86,11 @@ public:
     void clear()
     {
         delayLine.clear();
-        std::fill(phaseOffset.begin(), phaseOffset.end(), T(0));
+        lfo.reset();
+        std::fill(feedbackState.begin(), feedbackState.end(), T(0));
+        phaseOffset.reset();
+        depthInSamples.reset();
+        feedback.reset();
     }
 
     /**
@@ -98,16 +109,16 @@ public:
             for (size_t n = 0; n < numSamples; ++n)
             {
                 // Mix input with feedback (TEST: feedback disabled for now)
-                T inputWithFeedback = input[ch][n] + feedbackState[ch] * feedback; 
+                T inputWithFeedback = input[ch][n] + feedbackState[ch] * feedback.getNextValue(ch); 
                 
                 // process LFO with phase offset
-                T lfoValue = lfo.processSample(ch, phaseOffset[ch]);
+                T lfoValue = lfo.processSample(ch, phaseOffset.getNextValue(ch));
 
                 // Convert to unipolar [0, 1]
                 lfoValue = lfoValue * T(0.5) + T(0.5);
                 
                 // Scale LFO by modulation depth
-                lfoValue *= depthInSamples;
+                lfoValue *= depthInSamples.getNextValue(ch);
                 
                 // Process through delay line
                 T delayedSample = delayLine.processSample(inputWithFeedback, lfoValue, ch);
@@ -123,23 +134,21 @@ public:
      * @brief Set the LFO rate (modulation speed).
      * @param rateHz Rate in Hz (typical range: 0.1 - 5 Hz for flanging)
      */
-    void setRate(T rateHz)
+    void setRate(T rateHz, bool skipSmoothing = false)
     {
-        lfoRate = rateHz;
-        lfo.setFrequency(lfoRate);
+        lfo.setFrequency(rateHz);
     }
 
     /**
      * @brief Set the modulation depth.
-     * @param depthAmount Depth amount 0.0 - 1.0
+     * @param depth Depth amount 0.0 - 1.0
      *                    (0 = no modulation, 1 = full ±3ms modulation)
      */
-    void setDepth(T depthAmount)
+    void setDepth(T depth, bool skipSmoothing = false)
     {
-        depth = depthAmount;
         if (sampleRate > T(0))
         {
-            depthInSamples = (MAX_MODULATION_MS * depth * sampleRate) / T(1000.0);
+            depthInSamples.setTarget((MAX_MODULATION_MS * depth * sampleRate) / T(1000.0), skipSmoothing);
         }
     }
 
@@ -149,9 +158,9 @@ public:
      *                       (negative = inverted feedback)
      *                       WARNING: |feedback| >= 1.0 causes runaway gain
      */
-    void setFeedback(T feedbackAmount)
+    void setFeedback(T feedbackAmount, bool skipSmoothing = false)
     {
-        feedback = feedbackAmount;
+        feedback.setTarget(feedbackAmount, skipSmoothing);
     }
 
     /**
@@ -161,47 +170,37 @@ public:
      */
     void setDelayMs(T delayMs, bool skipSmoothing = false)
     {
-        centerDelayMs = delayMs;
         delayLine.setDelayMs(delayMs, skipSmoothing);
     }
 
     /**
      * @brief Set the channel spread (phase offset between channels).
-     * @param spreadAmount Spread amount 0.0 - 1.0
+     * @param spread Spread amount 0.0 - 1.0
      *                     0.0 = mono (all channels in phase)
      *                     1.0 = maximum spread (phase distributed across channels)
      */
-    void setSpread(T spreadAmount)
+    void setSpread(T spread, bool skipSmoothing = false)
     {
-        spread = spreadAmount;
-        // Update phase offsets based on spread (normalized to 0-1 for oscillator)
+        // Update phase offsets based on spread (normalized to 0-1)
         for (size_t ch = 0; ch < numChannels; ++ch)
         {
-            phaseOffset[ch] = (spread * ch) / T(numChannels);
+            phaseOffset.setTarget(ch, (spread * ch) / T(numChannels), skipSmoothing);
         }
     }
 
 private:
-    // Configuration
+    // Global Parameters
     size_t numChannels = 0;
     T sampleRate = T(0);
-    T maxDelayMs = T(0);
 
     // Core processors
+    DelayLine<T, LagrangeInterpolator<T>, SmootherType::OnePole, 1, SMOOTHING_TIME_MS> delayLine;
+    Oscillator<T, SmootherType::OnePole, 1, SMOOTHING_TIME_MS> lfo;
 
-    DelayLine<T, LagrangeInterpolator<T>, SmootherType::OnePole, 1, 10> delayLine;
-    Oscillator<T> lfo;
-
-    // User parameters 
-    T lfoRate = T(0.5);           // LFO rate in Hz
-    T depth = T(0.7);             // Modulation depth 0-1 (70% default)
-    T feedback = T(0.7);          // Feedback amount -1 to 1 (50% default)
-    T centerDelayMs = T(3.0);     // Center delay in ms (3ms default)
-    T spread = T(1.0);            // Channel spread 0-1 (100% default)
-
-    // Internal parameters
-    T depthInSamples = T(0);
-    std::vector<T> phaseOffset;
+    // DSP parameters and states
+    DspParam<T> phaseOffset;
+    DspParam<T> depthInSamples;
+    DspParam<T> feedback;
     std::vector<T> feedbackState;
 };
 
