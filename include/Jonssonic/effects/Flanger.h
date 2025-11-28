@@ -27,9 +27,9 @@ class Flanger
 {
 public:
     // Tunable constants
-    static constexpr T MAX_MODULATION_MS = T(3.0);      // Maximum modulation depth in milliseconds (±3ms at depth=1.0)
+    static constexpr T MAX_MODULATION_MS = T(5.0);      // Maximum modulation depth in milliseconds (±3ms at depth=1.0)
     static constexpr int SMOOTHING_TIME_MS = 100;       // Smoothing time for parameter changes in milliseconds
-    static constexpr T MAX_DELAY_MS = T(10.0);          // Maximum delay buffer size
+    static constexpr T MAX_DELAY_MS = T(15.0);          // Maximum delay buffer size
     
     /**
      * @brief Default constructor for Flanger effect.
@@ -65,7 +65,7 @@ public:
         // Set parameter safety bounds
         phaseOffset.setBounds(T(0), T(1));
         feedback.setBounds(T(-0.99), T(0.99));
-        
+
         // Initialize states and parameters
         feedbackState.assign(newNumChannels, T(0));
         phaseOffset.prepare(newNumChannels, newSampleRate, SMOOTHING_TIME_MS);
