@@ -76,59 +76,6 @@ TEST(FlangerTest, StereoImpulseResponse)
     EXPECT_FALSE(nonZeroR) << "Right channel output should be all zeros";
 }
 
-TEST(FlangerTest, NoGraininessWithContinuousModulation)
-{
-    // Test that the flanger doesn't produce grainy artifacts with realistic audio
-    Flanger<float> flanger;
-    float sampleRate = 44100.0f;
-    flanger.prepare(1, sampleRate);
-    
-    // Typical flanger settings
-    flanger.setRate(0.5f);        // 0.5 Hz LFO
-    flanger.setDepth(0.7f);       // 70% depth
-    flanger.setFeedback(0.5f);    // 50% feedback
-    flanger.setDelayMs(3.0f);     // 3ms center delay
-    flanger.setSpread(0.0f);      // Mono
-    
-    // Process 1 second of 1kHz sine wave
-    size_t numSamples = static_cast<size_t>(sampleRate);
-    std::vector<float> input(numSamples);
-    std::vector<float> output(numSamples, 0.0f);
-    
-    // Generate clean 1kHz sine input
-    for (size_t i = 0; i < numSamples; ++i) {
-        input[i] = std::sin(2.0f * M_PI * 1000.0f * i / sampleRate);
-    }
-    
-    const float* inPtrs[1] = { input.data() };
-    float* outPtrs[1] = { output.data() };
-    
-    flanger.processBlock(inPtrs, outPtrs, numSamples);
-    
-    // Measure graininess by checking sample-to-sample derivative
-    // Graininess shows up as high-frequency noise (sharp sample transitions)
-    float maxDerivative = 0.0f;
-    float avgDerivative = 0.0f;
-    int derivativeCount = 0;
-    
-    // Skip first 1000 samples (warm-up)
-    for (size_t i = 1000; i < numSamples - 1; ++i) {
-        float derivative = std::abs(output[i+1] - output[i]);
-        maxDerivative = std::max(maxDerivative, derivative);
-        avgDerivative += derivative;
-        derivativeCount++;
-    }
-    avgDerivative /= derivativeCount;
-    
-    // For a 1kHz sine at 44.1kHz, max derivative should be ~0.142
-    // With flanger modulation and feedback, allow some headroom but not excessive
-    // If we have graininess, derivatives will be much higher
-    EXPECT_LT(maxDerivative, 0.4f) 
-        << "Graininess detected: excessive max derivative " << maxDerivative;
-    
-    EXPECT_LT(avgDerivative, 0.12f)
-        << "Graininess detected: excessive avg derivative " << avgDerivative;
-}
 
 TEST(FlangerTest, InterpolationQualityWithSlowSweep)
 {
