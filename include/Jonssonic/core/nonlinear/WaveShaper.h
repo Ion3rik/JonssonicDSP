@@ -44,10 +44,6 @@ public:
 	SampleType processSample(SampleType x) const {
 		return std::max<SampleType>(-1, std::min<SampleType>(1, x));
 	}
-	void processBlock(SampleType* data, size_t numSamples) const {
-		for (size_t i = 0; i < numSamples; ++i)
-			data[i] = processSample(data[i]);
-	}
 };
 // =====================================================================
 // SoftClip specialization
@@ -61,10 +57,6 @@ class WaveShaper<SampleType, WaveShaperType::SoftClip> {
 public:
 	SampleType processSample(SampleType x) const {
 		return std::atan(x);
-	}
-	void processBlock(SampleType* data, size_t numSamples) const {
-		for (size_t i = 0; i < numSamples; ++i)
-			data[i] = processSample(data[i]);
 	}
 };
 
@@ -81,10 +73,6 @@ public:
 	SampleType processSample(SampleType x) const {
 		return std::tanh(x);
 	}
-	void processBlock(SampleType* data, size_t numSamples) const {
-		for (size_t i = 0; i < numSamples; ++i)
-			data[i] = processSample(data[i]);
-	}
 };
 
 // =====================================================================
@@ -100,10 +88,6 @@ public:
 	SampleType processSample(SampleType x) const {
 		return std::abs(x);
 	}
-	void processBlock(SampleType* data, size_t numSamples) const {
-		for (size_t i = 0; i < numSamples; ++i)
-			data[i] = processSample(data[i]);
-	}
 };
 
 // =====================================================================
@@ -118,10 +102,6 @@ class WaveShaper<SampleType, WaveShaperType::HalfWaveRectifier> {
 public:
 	SampleType processSample(SampleType x) const {
 		return x < 0 ? 0 : x;
-	}
-	void processBlock(SampleType* data, size_t numSamples) const {
-		for (size_t i = 0; i < numSamples; ++i)
-			data[i] = processSample(data[i]);
 	}
 };
 
@@ -141,10 +121,6 @@ public:
 	WaveShaper(FnType fn) : customFn(std::move(fn)) {}
 	SampleType processSample(SampleType x) const {
 		return customFn ? customFn(x) : x;
-	}
-	void processBlock(SampleType* data, size_t numSamples) const {
-		for (size_t i = 0; i < numSamples; ++i)
-			data[i] = processSample(data[i]);
 	}
 private:
 	FnType customFn;
