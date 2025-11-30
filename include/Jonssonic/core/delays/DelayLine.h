@@ -58,13 +58,12 @@ public:
     }
 
     /**
-     * @brief Process a single sample for all channels with fixed delay.
-     * @param input Input samples (one value per channel) - array of size numChannels
-     * @param output Output samples (one value per channel) - array of size numChannels
-     * 
-     * @note Input and output must have the same number of channels as prepared.
+     * @brief Process a single sample for a specific channel.
+     * @param ch Channel index
+     * @param input Input sample
+     * @return Delayed output sample
      */
-    T processSample(T input, size_t ch)
+    T processSample(size_t ch, T input)
     {
         // Write input sample to buffer
         buffer[ch][writeIndex[ch]] = input;
@@ -80,16 +79,14 @@ public:
     }
 
     /**
-     * @brief Process a single sample for all channels with modulated delay.
-     * @param input Input samples (one value per channel) - array of size numChannels
-     * @param output Output samples (one value per channel) - array of size numChannels
-     * @param modulation Modulation values (one value per channel, in samples) - array of size numChannels
-     * 
-     * @note The modulation signal is added to the base delay time. 
-     *       Modulation values should be in samples and will be clamped to valid range [0, bufferSize-1].
-     * @note Input, output, and modulation must all have the same number of channels as prepared.
-     */
-    T processSample(T input, T modulation, size_t ch)
+    * @brief Process a single sample for a specific channel with modulated delay.
+    * @param ch Channel index
+    * @param input Input sample
+    * @param modulation Modulation value in samples to be added to base delay
+    * @return Delayed output sample
+    */
+   
+    T processSample(size_t ch, T input, T modulation)
     {
         // Write input sample to buffer
         buffer[ch][writeIndex[ch]] = input;

@@ -53,8 +53,8 @@ protected:
         for (size_t i = 0; i < numSamples; ++i) {
             inputSamples[0] = left[i];
             inputSamples[1] = right[i];
-            outputSamples[0] =delayLine.processSample(inputSamples[0], 0u);
-            outputSamples[1] =delayLine.processSample(inputSamples[1], 1u);
+            outputSamples[0] =delayLine.processSample(0u, inputSamples[0]);
+            outputSamples[1] =delayLine.processSample(1u, inputSamples[1]);
             EXPECT_FLOAT_EQ(outputSamples[0], expectedLeft[i]) << "Sample " << i << " left channel";
             EXPECT_FLOAT_EQ(outputSamples[1], expectedRight[i]) << "Sample " << i << " right channel";
         }
@@ -71,8 +71,8 @@ protected:
         for (size_t i = 0; i < numSamples; ++i) {
             inputSamples[0] = left[i];
             inputSamples[1] = right[i];
-            outputSamples[0] = delayLine.processSample(inputSamples[0], modulation[0], 0u);
-            outputSamples[1] = delayLine.processSample(inputSamples[1], modulation[1], 1u);
+            outputSamples[0] = delayLine.processSample(0u, inputSamples[0], modulation[0]);
+            outputSamples[1] = delayLine.processSample(1u, inputSamples[1], modulation[1]);
             EXPECT_FLOAT_EQ(outputSamples[0], expectedLeft[i]) << "Sample " << i << " left channel";
             EXPECT_FLOAT_EQ(outputSamples[1], expectedRight[i]) << "Sample " << i << " right channel";
         }
@@ -122,8 +122,8 @@ protected:
         float rightExpected[6] = {0,0,0,0,10,20};
         // Process left with delay 2, right with delay 4
         for (size_t i = 0; i < 6; ++i) {
-            float outL = dl.processSample(leftInput[i], 0u);
-            float outR = dl.processSample(rightInput[i], 1u);
+            float outL = dl.processSample(0u, leftInput[i]);
+            float outR = dl.processSample(1u, rightInput[i]);
             EXPECT_FLOAT_EQ(outL, leftExpected[i]) << "Left sample " << i;
             EXPECT_FLOAT_EQ(outR, rightExpected[i]) << "Right sample " << i;
         }
@@ -144,8 +144,8 @@ protected:
         float rightMod[6] = {0,0,0,0,0,0};
 
         for (size_t i = 0; i < 6; ++i) {
-            float outL = dl.processSample(leftInput[i], leftMod[i], 0u);
-            float outR = dl.processSample(rightInput[i], rightMod[i], 1u);
+            float outL = dl.processSample(0u, leftInput[i], leftMod[i]);
+            float outR = dl.processSample(1u, rightInput[i], rightMod[i]);
     
             // For simplicity, just check output is close to expected (interpolated)
             EXPECT_NEAR(outL, leftExpected[i], 1e-5) << "Left sample " << i;
@@ -174,8 +174,8 @@ TEST_F(DelayLineTest, ProcessSingleSampleModulatedDelayPositiveModulation) {
     for (int i = 0; i < 5; ++i) {
         inputSamples[0] = leftChannel[i % 4];
         inputSamples[1] = rightChannel[i % 4];
-        outputSamples[0] = delayLine.processSample(inputSamples[0], modulation[0], 0u);
-        outputSamples[1] = delayLine.processSample(inputSamples[1], modulation[1], 1u);
+        outputSamples[0] = delayLine.processSample(0u, inputSamples[0], modulation[0]);
+        outputSamples[1] = delayLine.processSample(1u, inputSamples[1], modulation[1]);
         EXPECT_FLOAT_EQ(outputSamples[0], expected3Left[i]) << "Sample " << i << " left";
         EXPECT_FLOAT_EQ(outputSamples[1], expected3Right[i]) << "Sample " << i << " right";
     }
@@ -197,8 +197,8 @@ TEST_F(DelayLineTest, ProcessSingleSampleModulatedDelayFractionalModulation) {
     for (int i = 0; i < 4; ++i) {
         inputSamples[0] = leftChannel[i];
         inputSamples[1] = rightChannel[i];
-        outputSamples[0] = delayLine.processSample(inputSamples[0], modulation[0], 0u);
-        outputSamples[1] = delayLine.processSample(inputSamples[1], modulation[1], 1u);
+        outputSamples[0] = delayLine.processSample(0u, inputSamples[0], modulation[0]);
+        outputSamples[1] = delayLine.processSample(1u, inputSamples[1], modulation[1]);
         EXPECT_GE(outputSamples[0], 0.0f) << "Sample " << i << " left channel should be non-negative";
         EXPECT_GE(outputSamples[1], 0.0f) << "Sample " << i << " right channel should be non-negative";
     }
@@ -217,8 +217,8 @@ TEST_F(DelayLineTest, ProcessSingleSampleModulatedDelayVaryingModulation) {
         modulation[0] = modulationValues[i];
         modulation[1] = modulationValues[i];
         
-        outputSamples[0] = delayLine.processSample(inputSamples[0], modulation[0], 0u);
-        outputSamples[1] = delayLine.processSample(inputSamples[1], modulation[1], 1u);
+        outputSamples[0] = delayLine.processSample(0u, inputSamples[0], modulation[0]);
+        outputSamples[1] = delayLine.processSample(1u, inputSamples[1], modulation[1]);
         EXPECT_FALSE(std::isnan(outputSamples[0])) << "Sample " << i << " left should not be NaN";
         EXPECT_FALSE(std::isnan(outputSamples[1])) << "Sample " << i << " right should not be NaN";
         EXPECT_TRUE(std::isfinite(outputSamples[0])) << "Sample " << i << " left should be finite";
@@ -272,8 +272,8 @@ TEST_F(DelayLineTest, ProcessBlockMatchesSampleBySample) {
     // Process sample-by-sample
     for (int i = 0; i < 8; ++i)
     {
-        sampleOutputLeft[i] = sampleDelayLine.processSample(testInputLeft[i], 0u);
-        sampleOutputRight[i] = sampleDelayLine.processSample(testInputRight[i], 1u);
+        sampleOutputLeft[i] = sampleDelayLine.processSample(0u, testInputLeft[i]);
+        sampleOutputRight[i] = sampleDelayLine.processSample(1u, testInputRight[i]);
     }
     
     // Process as block
@@ -324,7 +324,7 @@ TEST_F(DelayLineTest, BufferWraparound) {
     for (int i = 0; i < 20; ++i)
     {
         inputSample[0] = static_cast<float>(i);
-        outputSample[0] = smallDelayLine.processSample(inputSample[0], 0u);
+        outputSample[0] = smallDelayLine.processSample(0u, inputSample[0]);
         
         if (i >= 4)
         {
@@ -341,8 +341,8 @@ TEST_F(DelayLineTest, ZeroDelay) {
     for (int i = 0; i < 4; ++i) {
         inputSamples[0] = leftChannel[i];
         inputSamples[1] = rightChannel[i];
-        outputSamples[0] = zeroDelayLine.processSample(inputSamples[0], 0u);
-        outputSamples[1] = zeroDelayLine.processSample(inputSamples[1], 1u);
+        outputSamples[0] = zeroDelayLine.processSample(0u, inputSamples[0]);
+        outputSamples[1] = zeroDelayLine.processSample(1u, inputSamples[1]);
         EXPECT_FLOAT_EQ(outputSamples[0], leftChannel[i]) << "Sample " << i << " left should pass through";
         EXPECT_FLOAT_EQ(outputSamples[1], rightChannel[i]) << "Sample " << i << " right should pass through";
     }
@@ -358,7 +358,7 @@ TEST_F(DelayLineTest, MaximumDelay) {
     for (int i = 0; i < 10; ++i)
     {
         inputSample[0] = testSamples[i];
-        outputSample[0] = maxDelayLine.processSample(inputSample[0], 0u);
+        outputSample[0] = maxDelayLine.processSample(0u, inputSample[0]);
         
         
         if (i >= 7)
@@ -391,7 +391,7 @@ TEST_F(DelayLineTest, DelayAtMaximum) {
     for (int i = 0; i < 105; ++i)
     {
         inputSample[0] = testSamples[i];
-        outputSample[0] = oversizeDelayLine.processSample(inputSample[0], 0u);
+        outputSample[0] = oversizeDelayLine.processSample(0u, inputSample[0]);
         
         if (i < 100) {
             // First 100 samples are zeros (delay buffer filling)
@@ -423,10 +423,10 @@ TEST_F(DelayLineTest, QuadChannelProcessing) {
     float expectedCh4[4] = {0.0f, 0.0f, 1000.0f, 2000.0f};
     
     for (int i = 0; i < 4; ++i) {
-        output[0] = quadDelayLine.processSample(channel1[i], 0u);
-        output[1] = quadDelayLine.processSample(channel2[i], 1u);
-        output[2] = quadDelayLine.processSample(channel3[i], 2u);
-        output[3] = quadDelayLine.processSample(channel4[i], 3u);
+        output[0] = quadDelayLine.processSample(0u, channel1[i]);
+        output[1] = quadDelayLine.processSample(1u, channel2[i]);
+        output[2] = quadDelayLine.processSample(2u, channel3[i]);
+        output[3] = quadDelayLine.processSample(3u, channel4[i]);
         
         EXPECT_FLOAT_EQ(output[0], expectedCh1[i]) << "Sample " << i << " channel 1";
         EXPECT_FLOAT_EQ(output[1], expectedCh2[i]) << "Sample " << i << " channel 2";
@@ -483,8 +483,8 @@ TEST_F(DelayLineTest, ModulatedDelayClampedToZero) {
     
     for (int i = 0; i < 4; ++i) {
         float outputSamples[2];
-        outputSamples[0] = clampDelayLine.processSample(leftChannel[i], modExtreme[0], 0u);
-        outputSamples[1] = clampDelayLine.processSample(rightChannel[i], modExtreme[1], 1u);
+        outputSamples[0] = clampDelayLine.processSample(0u, leftChannel[i], modExtreme[0]);
+        outputSamples[1] = clampDelayLine.processSample(1u, rightChannel[i], modExtreme[1]);
         EXPECT_FLOAT_EQ(outputSamples[0], leftChannel[i]) << "Sample " << i << " left (clamped)";
         EXPECT_FLOAT_EQ(outputSamples[1], rightChannel[i]) << "Sample " << i << " right (clamped)";
     }
@@ -506,7 +506,7 @@ TEST_F(DelayLineTest, ModulatedDelayClampedToMaxDelay) {
     }
     
     for (int i = 0; i < 105; ++i) {
-        float outputSample = clampLargeDelayLine.processSample(testSamples[i], modExtreme[0], 0u);
+        float outputSample = clampLargeDelayLine.processSample(0u, testSamples[i], modExtreme[0]);
         
         if (i < 100) {
             // First 100 samples are zeros (buffer filling to max delay)
@@ -536,8 +536,8 @@ TEST_F(DelayLineTest, SetDelayMsAndSamplesConsistency) {
     float testInput[15] = {1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f};
     
     for (int i = 0; i < 15; ++i) {
-        float output1 = testDelayLine1.processSample(testInput[i], 0u);
-        float output2 = testDelayLine2.processSample(testInput[i], 0u);
+        float output1 = testDelayLine1.processSample(0u, testInput[i]);
+        float output2 = testDelayLine2.processSample(0u, testInput[i]);
         
         EXPECT_FLOAT_EQ(output1, output2) 
             << "Sample " << i << ": setDelayMs(10.0) and setDelaySamples(10.0) should produce identical output";
@@ -566,7 +566,7 @@ TEST_F(DelayLineTest, DelayTimeSmoothing10msIsEffective) {
     
     // Process first 50 samples at 5 sample delay
     for (int i = 0; i < 50; ++i) {
-        samples[i] = dl.processSample(input[i], 0u);
+        samples[i] = dl.processSample(0u, input[i]);
     }
     
     // Change delay to 10 samples
@@ -574,7 +574,7 @@ TEST_F(DelayLineTest, DelayTimeSmoothing10msIsEffective) {
     
     // Process next 50 samples - smoothing should be active
     for (int i = 50; i < 100; ++i) {
-        samples[i] = dl.processSample(input[i], 0u);
+        samples[i] = dl.processSample(0u, input[i]);
     }
     
     // Check for discontinuities right at the transition
@@ -605,7 +605,7 @@ TEST_F(DelayLineTest, RapidModulationWithLinearInterpolation) {
         // Apply slow modulation (0.5 Hz LFO, ±2ms = ±88 samples)
         float modulation = 88.0f * std::sin(2.0f * M_PI * 0.5f * i / audioSampleRate);
         
-        samples[i] = dl.processSample(input, modulation, 0u);
+        samples[i] = dl.processSample(0u, input, modulation);
     }
     
     // Measure high-frequency noise by checking sample-to-sample differences
@@ -648,7 +648,7 @@ TEST_F(DelayLineTest, LargeModulationSwingsNoClicks) {
         // Large modulation swings: ±15 samples
         float modulation = 15.0f * std::sin(2.0f * M_PI * 2.0f * i / sampleRate);
         
-        samples[i] = dl.processSample(input, modulation, 0u);
+        samples[i] = dl.processSample(0u, input, modulation);
     }
     
     // Check for extreme discontinuities (clicks)
@@ -679,7 +679,7 @@ TEST_F(DelayLineTest, FractionalDelayInterpolationSmooth) {
     // Generate smooth sine wave input
     for (int i = 0; i < 200; ++i) {
         float input = std::sin(2.0f * M_PI * 100.0f * i / sampleRate);
-        samples[i] = dl.processSample(input, 0u);
+        samples[i] = dl.processSample(0u, input);
     }
     
     // Check that output is also smooth (no interpolation artifacts)

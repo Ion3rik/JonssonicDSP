@@ -121,7 +121,7 @@ public:
                 lfoValue *= depthInSamples.getNextValue(ch);
                 
                 // Process through delay line
-                T delayedSample = delayLine.processSample(inputWithFeedback, lfoValue, ch);
+                T delayedSample = delayLine.processSample(ch, inputWithFeedback, lfoValue);
         
                 // Mix dry and delayed (50/50 for classic flanger comb filtering)
                 output[ch][n] = input[ch][n] + delayedSample;
