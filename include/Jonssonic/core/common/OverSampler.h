@@ -82,15 +82,12 @@ private:
             constexpr size_t N = FIRTaps;
             const size_t numChannels = stateBuffer.getNumChannels();
             for (size_t ch = 0; ch < numChannels; ++ch) {
-                T* state = stateBuffer.getWritePointer(ch);
-                const T* in = input[ch];
-                T* out = output[ch];
                 for (size_t n = 0; n < numInputSamples; ++n) {
                     // Shift state buffer left by 1, append new sample
                     for (size_t i = 0; i < N - 1; ++i) {
-                        state[i] = state[i + 1];
+                        stateBuffer[ch][i] = stateBuffer[ch][i + 1];
                     }
-                    state[N - 1] = in[n];
+                    stateBuffer[ch][N - 1] = input[ch][n];
                     // Even phase: output sample at input position (all coeffs)
                     T y0 = T(0);
                     for (size_t k = 0; k < N; k += 2) {

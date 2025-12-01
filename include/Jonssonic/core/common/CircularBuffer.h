@@ -1,0 +1,54 @@
+// Jonssonic - A C++ audio DSP library
+// CircularAudioBuffer class header file
+// SPDX-License-Identifier: MIT
+
+#pragma once
+#include "AudioBuffer.h"
+#include "../../utils/MathUtils.h"
+#include <vector>
+#include <cstddef>
+#include <cassert>
+
+
+namespace Jonssonic {
+
+template<typename T>
+class CircularAudioBuffer {
+public:
+    CircularAudioBuffer() = default;
+    ~CircularAudioBuffer() = default;
+
+
+    void resize(size_t newNumChannels, size_t newNumSamples) {
+        bufferSize = nextPowerOfTwo(newNumSamples); // ensure power-of-two size for efficient wrap-around
+        buffer.resize(newNumChannels, bufferSize);
+        writeIndex.assign(newNumChannels, 0);
+    }
+
+
+    // Write a sample to a channel (advances write index)
+    void write(size_t channel, T value) {
+        assert(channel < buffer.getNumChannels());
+        buffer[channel][writeIndex[channel]] = value;
+        writeIndex[channel] = (writeIndex[channel] + 1) & (bufferSize - 1);
+    }
+
+    // Read sample at delay (0 = most recent, 1 = previous, ...)
+    T read(size_t channel, size_t delay) const {
+        assert(channel < buffer.getNumChannels());
+        assert(delay < bufferSize);
+        size_t readIndex = (writeIndex[channel] + bufferSize - delay - 1) & (bufferSize - 1);
+        return buffer[channel][readIndex];
+    }
+
+    size_t getNumChannels() const { return buffer.getNumChannels(); }
+    size_t getBufferSize() const { return bufferSize; }
+    void reset() { writeIndex.assign(buffer.getNumChannels(), 0); }
+
+private:
+    AudioBuffer<T> buffer;
+    std::vector<size_t> writeIndex; // per-channel write index
+    size_t bufferSize = 0;
+};
+
+} // namespace Jonssonic
