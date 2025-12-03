@@ -2,7 +2,7 @@
 // Unit tests for CircularBuffer class
 // SPDX-License-Identifier: MIT
 
-#include "../../../include/Jonssonic/core/common/CircularBuffer.h"
+#include "../../../include/Jonssonic/core/common/CircularAudioBuffer.h"
 #include <gtest/gtest.h>
 
 using namespace Jonssonic;

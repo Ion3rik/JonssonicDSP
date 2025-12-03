@@ -6,6 +6,9 @@
 #pragma once
 #include <cstddef>
 #include <numbers>
+#include <complex>
+#include <vector>
+
 
 namespace Jonssonic
 {
@@ -58,6 +61,52 @@ inline size_t nextPowerOfTwo(size_t n)
     n |= n >> 32;
     return n + 1;
 }
+
+//==============================================================================
+// Simple DFT/FFT Implementation (for test/analysis use)
+//==============================================================================
+
+
+// Compute the DFT of a real input vector (output is complex)
+template<typename T>
+std::vector<std::complex<T>> complexSpectrum(const std::vector<T>& input) {
+    size_t N = input.size();
+    std::vector<std::complex<T>> output(N);
+    const T pi = Jonssonic::pi<T>;
+    for (size_t k = 0; k < N; ++k) {
+        std::complex<T> sum(0, 0);
+        for (size_t n = 0; n < N; ++n) {
+            T angle = -2 * pi * k * n / N;
+            sum += input[n] * std::exp(std::complex<T>(0, angle));
+        }
+        output[k] = sum;
+    }
+    return output;
+}
+
+
+// Compute the magnitude spectrum of a real input vector
+// If oneSided=true, returns only the first N/2+1 bins (for real input)
+// If dB=true, returns 20*log10(mag+1e-12)
+template<typename T>
+std::vector<T> magnitudeSpectrum(const std::vector<T>& input, bool oneSided = false, bool dB = false) {
+    auto spec = complexSpectrum(input);
+    size_t N = spec.size();
+    size_t outLen = oneSided ? (N / 2 + 1) : N;
+    std::vector<T> mag(outLen);
+    constexpr T minMag = T(1e-12); // minimum magnitude to avoid log(0)
+    constexpr T minDb = T(-120);   // minimum dB value to clamp to
+    for (size_t i = 0; i < outLen; ++i) {
+        T val = std::abs(spec[i]);
+        if (dB) {
+            val = 20 * std::log10(std::max(val, minMag));
+            if (val < minDb) val = minDb;
+        }
+        mag[i] = val;
+    }
+    return mag;
+}
+
 
 /**
  * @brief Convert milliseconds to samples (fractional allowed).
