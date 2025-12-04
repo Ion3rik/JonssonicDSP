@@ -47,21 +47,21 @@ public:
     /**
      * @brief Get array of const pointers to each channel's data (for read-only access).
      */
-    std::vector<const T*> readPtrs() const {
-        std::vector<const T*> ptrs(m_numChannels);
+    const T* const* readPtrs() const {
+        m_readPtrs.resize(m_numChannels);
         for (size_t ch = 0; ch < m_numChannels; ++ch)
-            ptrs[ch] = m_data.data() + (ch * m_numSamples);
-        return ptrs;
+            m_readPtrs[ch] = m_data.data() + (ch * m_numSamples);
+        return m_readPtrs.data();
     }
 
     /**
      * @brief Get array of pointers to each channel's data (for write access).
      */
-    std::vector<T*> writePtrs() {
-        std::vector<T*> ptrs(m_numChannels);
+    T* const* writePtrs() {
+        m_writePtrs.resize(m_numChannels);
         for (size_t ch = 0; ch < m_numChannels; ++ch)
-            ptrs[ch] = m_data.data() + (ch * m_numSamples);
-        return ptrs;
+            m_writePtrs[ch] = m_data.data() + (ch * m_numSamples);
+        return m_writePtrs.data();
     }
 
     /**
@@ -300,6 +300,10 @@ private:
     size_t m_numSamples;
     size_t m_numChannels;
     std::vector<T> m_data;  // Flat deinterleaved storage for all channels
+    
+    // Cached pointer arrays for readPtrs() and writePtrs()
+    mutable std::vector<const T*> m_readPtrs;
+    mutable std::vector<T*> m_writePtrs;
 
 };
 

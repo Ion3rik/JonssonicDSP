@@ -132,4 +132,78 @@ inline T samplesToMs(T samples, T sampleRate)
     return samples * T(1000.0) / sampleRate;
 }
 
+/**
+ * @brief Compute crosscorrelation between two signals.
+ * @param x First input signal
+ * @param y Second input signal
+ * @param normalize If true, normalize the result
+ * @return Pair of crosscorrelation vector and corresponding lag indices
+ */
+template<typename T>
+std::pair<std::vector<T>, std::vector<int>> xcorr(const std::vector<T>& x, const std::vector<T>& y, bool normalize = false)
+{
+    size_t N = x.size();
+    size_t M = y.size();
+    size_t len = N + M - 1;
+    std::vector<T> result(len, T(0));
+    std::vector<int> lags(len);
+    
+    // Generate lag indices: -(M-1) to (N-1)
+    int startLag = -(static_cast<int>(M) - 1);
+    for (size_t i = 0; i < len; ++i) {
+        lags[i] = startLag + static_cast<int>(i);
+    }
+    
+    for (size_t n = 0; n < len; ++n) {
+        for (size_t k = 0; k < M; ++k) {
+            if (n >= k && (n - k) < N) {
+                result[n] += x[n - k] * y[k];
+            }
+        }
+    }
+    
+    if (normalize) {
+        T maxVal = T(0);
+        for (const auto& val : result) {
+            if (std::abs(val) > maxVal) {
+                maxVal = std::abs(val);
+            }
+        }
+        if (maxVal > T(0)) {
+            for (auto& val : result) {
+                val /= maxVal;
+            }
+        }
+    }
+    
+    return {result, lags};
+}
+
+/**
+ * @brief Estimate time delay between two signals using cross-correlation.
+ * @param reference Reference signal (original/earlier signal)
+ * @param delayed Delayed signal (signal to measure delay of)
+ * @return Delay in samples (positive means delayed is later than reference)
+ * @note Uses cross-correlation peak to find the delay.
+ * @note Assumes signals are aligned such that delay is positive and less than signal length.
+ */
+
+template<typename T>
+int measureLatency(const std::vector<T>& reference, const std::vector<T>& delayed)
+{
+    auto [corr, lags] = xcorr(reference, delayed, true);
+    T maxVal = T(0);
+    size_t maxIdx = 0;
+    for (size_t i = 0; i < corr.size(); ++i) {
+        if (corr[i] > maxVal) {
+            maxVal = corr[i];
+            maxIdx = i;
+        }
+    }
+    int rawLag = lags[maxIdx];
+    // Convert from xcorr convention to delay: negate and adjust for signal length
+    int delay = (static_cast<int>(reference.size()) - 1) + rawLag;
+    return delay;
+}
+
 } // namespace Jonssonic
