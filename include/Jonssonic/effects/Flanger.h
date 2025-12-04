@@ -108,8 +108,8 @@ public:
         {
             for (size_t n = 0; n < numSamples; ++n)
             {
-                // Mix input with feedback (TEST: feedback disabled for now)
-                T inputWithFeedback = input[ch][n] + feedbackState[ch] * feedback.getNextValue(ch); 
+                // Mix input with feedback 
+                T inputWithFeedback = input[ch][n] + feedbackState[ch]; 
                 
                 // process LFO with phase offset
                 T lfoValue = lfo.processSample(ch, phaseOffset.getNextValue(ch));
@@ -123,9 +123,11 @@ public:
                 // Process through delay line
                 T delayedSample = delayLine.processSample(ch, inputWithFeedback, lfoValue);
         
+                // Apply feedback gain and store for next iteration
+                feedbackState[ch] = delayedSample * feedback.getNextValue(ch);
+
                 // Mix dry and delayed (50/50 for classic flanger comb filtering)
                 output[ch][n] = input[ch][n] + delayedSample;
-                feedbackState[ch] = delayedSample;
             }
         }
     }
