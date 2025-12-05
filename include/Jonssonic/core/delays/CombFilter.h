@@ -70,7 +70,6 @@ public:
 		feedforwardGain.setBounds(T(-1), T(1));
 		feedbackGain.setTarget(T(0), true);
 		feedforwardGain.setTarget(T(0), true);
-		feedbackState.assign(numChannels, T(0));
 	}
 
 	void clear()
@@ -78,7 +77,6 @@ public:
 		delayLine.clear();
 		feedbackGain.reset();
 		feedforwardGain.reset();
-		std::fill(feedbackState.begin(), feedbackState.end(), T(0));
 	}
 
 	/**
@@ -93,19 +91,14 @@ public:
 		T ffGain = feedforwardGain.getNextValue(ch);
 		T fbGain = feedbackGain.getNextValue(ch);
 		
-        // Input with feedback (feedback of previous output)
-        T inputWithFeedback = input + feedbackState[ch];
+        // Read delayed signal
+        T delayed = delayLine.readSample(ch);
 
-        // Process through delay line
-        T delayed = delayLine.processSample(ch, inputWithFeedback);
+        // Compute what to write back (input + delayed feedback)
+        T toWrite = input + delayed * fbGain;
+        delayLine.writeSample(ch, toWrite);
 
-        // Apply feedback gain to delayed signal
-        T delayedWithFeedback = delayed * fbGain;
-
-        // Store feedback state for next iteration
-		feedbackState[ch] = delayedWithFeedback;
-
-        // Apply feedforward to create output
+        // Compute output (input + delayed feedforward)
         T output = input + delayed * ffGain;
 
 		return output;
@@ -120,27 +113,22 @@ public:
      */
     T processSample(size_t ch, T input, CombMod::Sample<T>& modStruct)
     {
-
         // Apply modulation to feedback and feedforward gains
         T modulatedFbGain = feedbackGain.applyMultiplicativeMod(modStruct.feedbackMod, ch);
         T modulatedFfGain = feedforwardGain.applyMultiplicativeMod(modStruct.feedforwardMod, ch);
         
-        // Input with feedback (feedback of previous output)
-        T inputWithFeedback = input + feedbackState[ch];
+        // Read delayed signal with modulation
+        T delayed = delayLine.readSample(ch, modStruct.delayMod);
 
-        // Process through delay line
-        T delayed = delayLine.processSample(ch, inputWithFeedback);
+        // Compute what to write back (input + delayed feedback)
+        T toWrite = input + delayed * modulatedFbGain;
+        delayLine.writeSample(ch, toWrite);
 
-        // Apply feedback gain to delayed signal
-        T delayedWithFeedback = delayed * modulatedFbGain;
-
-        // Store feedback state for next iteration
-		feedbackState[ch] = delayedWithFeedback;
-
-        // Apply feedforward to create output
+        // Compute output (input + delayed feedforward)
         T output = input + delayed * modulatedFfGain;
 
-		return output;    }
+		return output;
+    }
 
     /**
 	 * @brief Process a block of samples for all channels (no modulation).
@@ -156,26 +144,19 @@ public:
 		{
 			for (size_t i = 0; i < numSamples; ++i)
 			{
-			// Get smoothed gain values
+				// Get smoothed gain values
 				T ffGain = feedforwardGain.getNextValue(ch);
 				T fbGain = feedbackGain.getNextValue(ch);
 
-                // Input with feedback (feedback of previous output)
-                T inputWithFeedback = input[ch][i] + feedbackState[ch];
+                // Read delayed signal
+                T delayed = delayLine.readSample(ch);
 
-                // Process through delay line
-                T delayed = delayLine.processSample(ch, inputWithFeedback);
+                // Compute what to write back (input + delayed feedback)
+                T toWrite = input[ch][i] + delayed * fbGain;
+                delayLine.writeSample(ch, toWrite);
 
-                // Apply feedback gain to delayed signal
-                T delayedWithFeedback = delayed * fbGain;
-
-                // Store feedback state for next iteration
-				feedbackState[ch] = delayedWithFeedback;
-
-                // Apply feedforward to create output
-                T outputSample = input[ch][i] + delayed * ffGain;
-
-				output[ch][i] = outputSample;
+                // Compute output (input + delayed feedforward)
+                output[ch][i] = input[ch][i] + delayed * ffGain;
 			}
 		}
 	}
@@ -199,22 +180,15 @@ public:
                 T modulatedFbGain = feedbackGain.applyMultiplicativeMod(modStruct.feedbackMod[ch][i], ch);
                 T modulatedFfGain = feedforwardGain.applyMultiplicativeMod(modStruct.feedforwardMod[ch][i], ch);
 
-                // Input with feedback (feedback of previous output)
-                T inputWithFeedback = input[ch][i] + feedbackState[ch];
+                // Read delayed signal with modulation
+                T delayed = delayLine.readSample(ch, modStruct.delayMod[ch][i]);
 
-                // Process through delay line
-                T delayed = delayLine.processSample(ch, inputWithFeedback, modStruct.delayMod[ch][i]);
+                // Compute what to write back (input + delayed feedback)
+                T toWrite = input[ch][i] + delayed * modulatedFbGain;
+                delayLine.writeSample(ch, toWrite);
 
-                // Apply feedback gain to delayed signal
-                T delayedWithFeedback = delayed * modulatedFbGain;
-
-                // Store feedback state for next iteration
-				feedbackState[ch] = delayedWithFeedback;
-
-                // Apply feedforward to create output
-                T outputSample = input[ch][i] + delayed * modulatedFfGain;
-
-				output[ch][i] = outputSample;
+                // Compute output (input + delayed feedforward)
+                output[ch][i] = input[ch][i] + delayed * modulatedFfGain;
 			}
 		}
 	}
@@ -261,7 +235,6 @@ private:
 	DelayLine<T, Interpolator, SmootherType, SmootherOrder, SmoothingTimeMs> delayLine;
 	DspParam<T, SmootherType, SmootherOrder> feedbackGain;
 	DspParam<T, SmootherType, SmootherOrder> feedforwardGain;
-	std::vector<T> feedbackState;
 	size_t numChannels = 0;
 };
 } 

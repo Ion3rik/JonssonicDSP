@@ -211,6 +211,52 @@ public:
         delaySamples.setTarget(ch, newDelaySamples, skipSmoothing);
     }
 
+    /**
+     * @brief Read a delayed sample from the buffer without writing.
+     * @param ch Channel index
+     * @return Delayed output sample
+     */
+    T readSample(size_t ch)
+    {
+        // Calculate read index and fractional part for interpolation
+        auto [readIndex, delayFrac] = computeReadIndexAndFrac(delaySamples.getNextValue(ch), writeIndex[ch]);
+
+        // Read output sample with interpolation
+        return Interpolator::interpolateBackward(buffer.readChannelPtr(ch), readIndex, delayFrac, bufferSize);
+    }
+
+    /**
+     * @brief Read a delayed sample from the buffer with modulated delay without writing.
+     * @param ch Channel index
+     * @param modulation Modulation value in samples to be added to base delay
+     * @return Delayed output sample
+     */
+    T readSample(size_t ch, T modulation)
+    {
+        // Calculate modulated delay time with internal clamping (base delay + modulation)
+        T modulatedDelay = delaySamples.applyAdditiveMod(modulation, ch);
+        
+        // Calculate read index and fractional part for interpolation
+        auto [readIndex, delayFrac] = computeReadIndexAndFrac(modulatedDelay, writeIndex[ch]);
+
+        // Read output sample with interpolation
+        return Interpolator::interpolateBackward(buffer.readChannelPtr(ch), readIndex, delayFrac, bufferSize);
+    }
+
+    /**
+     * @brief Write a sample to the buffer and advance the write position.
+     * @param ch Channel index
+     * @param input Input sample to write
+     */
+    void writeSample(size_t ch, T input)
+    {
+        // Write input sample to buffer
+        buffer[ch][writeIndex[ch]] = input;
+
+        // Increment and wrap write index
+        writeIndex[ch] = (writeIndex[ch] + 1) & (bufferSize - 1);
+    }
+
 
 private:
     T sampleRate = T(44100);                                // Sample rate in Hz

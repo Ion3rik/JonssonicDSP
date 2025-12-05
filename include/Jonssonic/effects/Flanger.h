@@ -66,8 +66,7 @@ public:
         phaseOffset.setBounds(T(0), T(1));
         feedback.setBounds(T(-0.99), T(0.99));
 
-        // Initialize states and parameters
-        feedbackState.assign(newNumChannels, T(0));
+        // Initialize parameters
         phaseOffset.prepare(newNumChannels, newSampleRate, SMOOTHING_TIME_MS);
         depthInSamples.prepare(newNumChannels, newSampleRate, SMOOTHING_TIME_MS);
         feedback.prepare(newNumChannels, newSampleRate, SMOOTHING_TIME_MS);
@@ -87,7 +86,6 @@ public:
     {
         delayLine.clear();
         lfo.reset();
-        std::fill(feedbackState.begin(), feedbackState.end(), T(0));
         phaseOffset.reset();
         depthInSamples.reset();
         feedback.reset();
@@ -108,9 +106,6 @@ public:
         {
             for (size_t n = 0; n < numSamples; ++n)
             {
-                // Mix input with feedback 
-                T inputWithFeedback = input[ch][n] + feedbackState[ch]; 
-                
                 // process LFO with phase offset
                 T lfoValue = lfo.processSample(ch, phaseOffset.getNextValue(ch));
 
@@ -120,11 +115,12 @@ public:
                 // Scale LFO by modulation depth
                 lfoValue *= depthInSamples.getNextValue(ch);
                 
-                // Process through delay line
-                T delayedSample = delayLine.processSample(ch, inputWithFeedback, lfoValue);
+                // Read delayed sample with modulation
+                T delayedSample = delayLine.readSample(ch, lfoValue);
         
-                // Apply feedback gain and store for next iteration
-                feedbackState[ch] = delayedSample * feedback.getNextValue(ch);
+                // Compute what to write back (input + delayed feedback)
+                T toWrite = input[ch][n] + delayedSample * feedback.getNextValue(ch);
+                delayLine.writeSample(ch, toWrite);
 
                 // Mix dry and delayed (50/50 for classic flanger comb filtering)
                 output[ch][n] = input[ch][n] + delayedSample;
@@ -199,11 +195,10 @@ private:
     DelayLine<T, LagrangeInterpolator<T>, SmootherType::OnePole, 1, SMOOTHING_TIME_MS> delayLine;
     Oscillator<T, SmootherType::OnePole, 1, SMOOTHING_TIME_MS> lfo;
 
-    // DSP parameters and states
+    // DSP parameters
     DspParam<T> phaseOffset;
     DspParam<T> depthInSamples;
     DspParam<T> feedback;
-    std::vector<T> feedbackState;
 };
 
 } // namespace Jonssonic

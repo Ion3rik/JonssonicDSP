@@ -215,23 +215,20 @@ TEST_F(CombFilterTest, FeedbackBehavior) {
     
     // Should see recurring energy due to feedback at delay intervals
     // With feedback gain of 0.7 and feedforward gain of 1.0:
-    // Sample 0: impulse (1.0) goes in, output = 1.0 (dry input)
-    // Sample 48: impulse comes through delay as 1.0, gets scaled by fbGain (0.7) before feeding back
-    //            output = 0 + 1.0 * ffGain = 1.0, feedbackState = 1.0 * 0.7 = 0.7
-    // Sample 49: 0.7 goes into delay
-    // Sample 97: 0.7 comes out, gets scaled to 0.49 for feedback
-    //            output = 0 + 0.7 * 1.0 = 0.7
+    // Sample 0: impulse (1.0) goes in, reads 0, writes 1.0, output = 1.0
+    // Sample 48: reads 1.0 from delay, writes 0.7 (1.0 * fbGain), output = 1.0 (delayed signal)
+    // Sample 96: reads 0.7 from delay, writes 0.49, output = 0.7
     
     // Check first echo at delay time - should be 1.0 (original impulse, not yet attenuated)
     float firstEcho = outputs[static_cast<size_t>(delaySamples)];
     EXPECT_NEAR(firstEcho, 1.0f, 0.05f);
     
-    // Check second echo at delay+1+delay (sample 97)
-    float secondEcho = outputs[static_cast<size_t>(delaySamples + 1 + delaySamples)];
+    // Check second echo at delay*2 (sample 96)
+    float secondEcho = outputs[static_cast<size_t>(delaySamples * 2)];
     EXPECT_NEAR(secondEcho, 0.7f, 0.05f);
     
-    // Check third echo
-    float thirdEcho = outputs[static_cast<size_t>(delaySamples + 1 + delaySamples + 1 + delaySamples)];
+    // Check third echo at delay*3 (sample 144)
+    float thirdEcho = outputs[static_cast<size_t>(delaySamples * 3)];
     EXPECT_NEAR(thirdEcho, 0.49f, 0.05f);
 }
 
@@ -291,7 +288,7 @@ TEST_F(CombFilterTest, FeedbackCombFrequencyResponse) {
     
     comb.setDelayMs(delayMs, true);
     comb.setFeedbackGain(0.7f, true);
-    comb.setFeedforwardGain(1.0f, true); // Need feedforward=1 to hear delayed signal
+    comb.setFeedforwardGain(1.0f, true); // Feedforward=1.0 to output the delayed signal
     
     // Generate impulse response
     size_t irLength = 4096; // Longer for better frequency resolution
