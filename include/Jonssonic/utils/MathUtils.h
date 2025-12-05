@@ -133,6 +133,28 @@ inline T samplesToMs(T samples, T sampleRate)
 }
 
 /**
+ * @brief Convert decibels to linear magnitude.
+ * @param dB Value in decibels
+ * @return Linear magnitude
+ */
+template<typename T>
+inline T dB2Mag(T dB)
+{
+    return std::pow(T(10), dB / T(20));
+}
+
+/**
+ * @brief Convert linear magnitude to decibels.
+ * @param mag Linear magnitude
+ * @return Value in decibels
+ */
+template<typename T>
+inline T mag2dB(T mag)
+{
+    return T(20) * std::log10(mag);
+}
+
+/**
  * @brief Compute crosscorrelation between two signals.
  * @param x First input signal
  * @param y Second input signal
