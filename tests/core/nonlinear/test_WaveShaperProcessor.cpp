@@ -1,25 +1,25 @@
 // Jonssonic - A C++ audio DSP library
-// Unit tests for DistortionStage class
+// Unit tests for WaveShaperProcessor class
 // SPDX-License-Identifier: MIT
 
 #include <gtest/gtest.h>
-#include "../../../include/Jonssonic/core/nonlinear/DistortionStage.h"
+#include "../../../include/Jonssonic/core/nonlinear/WaveShaperProcessor.h"
 #include <cmath>
 
 using namespace Jonssonic;
 
 // Typedef for a simple float, hardclip distortion stage
-using TestDistortionStage = DistortionStage<float, WaveShaperType::HardClip>;
+using TestWaveShaperProcessor = WaveShaperProcessor<float, WaveShaperType::HardClip>;
 
-TEST(DistortionStage, DefaultConstruction)
+TEST(WaveShaperProcessor, DefaultConstruction)
 {
-	TestDistortionStage stage;
+	TestWaveShaperProcessor stage;
 	SUCCEED(); // Just ensure it constructs
 }
 
-TEST(DistortionStage, PrepareAndReset)
+TEST(WaveShaperProcessor, PrepareAndReset)
 {
-	TestDistortionStage stage;
+	TestWaveShaperProcessor stage;
 	stage.prepare(2, 44100.0f, 5.0f);
 	stage.setInputGain(2.0f, true);
 	stage.setOutputGain(0.5f, true);
@@ -29,9 +29,9 @@ TEST(DistortionStage, PrepareAndReset)
 	SUCCEED();
 }
 
-TEST(DistortionStage, ProcessSample)
+TEST(WaveShaperProcessor, ProcessSample)
 {
-	TestDistortionStage stage;
+	TestWaveShaperProcessor stage;
 	stage.prepare(1, 44100.0f, 0.0f);
 	stage.setInputGain(1.0f, true);
 	stage.setOutputGain(1.0f, true);
@@ -45,9 +45,9 @@ TEST(DistortionStage, ProcessSample)
 	EXPECT_FLOAT_EQ(stage.processSample(0, -2.0f), -1.0f);
 }
 
-TEST(DistortionStage, ParameterEffects)
+TEST(WaveShaperProcessor, ParameterEffects)
 {
-	TestDistortionStage stage;
+	TestWaveShaperProcessor stage;
 	stage.prepare(1, 44100.0f, 0.0f);
 	// Input gain
 	stage.setInputGain(2.0f, true);

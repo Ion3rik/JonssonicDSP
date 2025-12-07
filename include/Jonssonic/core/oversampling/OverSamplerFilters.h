@@ -1,5 +1,5 @@
 // Jonssonic - A C++ audio DSP library
-// OverSamplerFilter classes 
+// OversamplerFilter classes 
 // SPDX-License-Identifier: MIT
 
 #pragma once
@@ -43,6 +43,11 @@ public:
 
         // Initialize filter coefficients
         prepareCoeffs();
+    }
+
+    void reset() {
+        upsamplerBuffer.reset();
+        downsamplerBuffer.reset();
     }
 
     /** 

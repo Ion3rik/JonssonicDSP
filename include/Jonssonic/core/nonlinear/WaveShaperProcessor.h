@@ -1,5 +1,5 @@
 // Jonssonic - A C++ audio DSP library
-// DistortionStage class header file
+// WaveShaperProcessor class header file
 // SPDX-License-Identifier: MIT
 
 #pragma once
@@ -24,16 +24,16 @@ template
     SmootherType SmootherType = SmootherType::OnePole,
     int SmootherOrder = 1>
 
-class DistortionStage {
+class WaveShaperProcessor {
 public:
-   DistortionStage() = default;
-   ~DistortionStage() = default;
+   WaveShaperProcessor() = default;
+   ~WaveShaperProcessor() = default;
 
     // no copy semantics nor move semantics
-    DistortionStage(const DistortionStage&) = delete;
-    const DistortionStage& operator=(const DistortionStage&) = delete;
-    DistortionStage(DistortionStage&&) = delete;
-    const DistortionStage& operator=(DistortionStage&&) = delete;
+    WaveShaperProcessor(const WaveShaperProcessor&) = delete;
+    const WaveShaperProcessor& operator=(const WaveShaperProcessor&) = delete;
+    WaveShaperProcessor(WaveShaperProcessor&&) = delete;
+    const WaveShaperProcessor& operator=(WaveShaperProcessor&&) = delete;
 
     void prepare(size_t newNumChannels, T sampleRate, T smoothTimeMs = T(10)) {
         numChannels = newNumChannels;
@@ -162,5 +162,21 @@ private:
     DspParam<T, SmootherType, SmootherOrder> asymmetry;
     WaveShaper<T, ShaperType> shaper;
 };
+
+// Convenient type aliases for common distortion stages
+template<typename T>
+using HardDistortion = WaveShaperProcessor<T, WaveShaperType::HardClip>;
+
+template<typename T>
+using AtanDistortion = WaveShaperProcessor<T, WaveShaperType::Atan>;
+
+template<typename T>
+using TanhDistortion = WaveShaperProcessor<T, WaveShaperType::Tanh>;
+
+template<typename T>
+using FullWaveRectifierDistortion = WaveShaperProcessor<T, WaveShaperType::FullWaveRectifier>;
+
+template<typename T>
+using HalfWaveRectifierDistortion = WaveShaperProcessor<T, WaveShaperType::HalfWaveRectifier>;
 
 } // namespace Jonssonic

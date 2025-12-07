@@ -1,11 +1,11 @@
 // Jonssonic - A C++ audio DSP library
-// OverSampler class header file
+// Oversampler class header file
 // SPDX-License-Identifier: MIT
 
 #pragma once
 #include "../common/AudioBuffer.h"
 #include "../common/Interpolators.h"
-#include "OverSamplerFilters.h"
+#include "OversamplerFilters.h"
 
 
 namespace Jonssonic {
@@ -17,18 +17,18 @@ namespace Jonssonic {
  */
 
 template<typename T, size_t Factor = 4>
-class OverSampler {
+class Oversampler {
     // Compile-time checks
     static_assert(Factor == 2 || Factor == 4 || Factor == 8 || Factor == 16, "Supported oversampling Factors are 2, 4, 8, and 16");
 public:
-    OverSampler() = default;
-    ~OverSampler() = default;
+    Oversampler() = default;
+    ~Oversampler() = default;
 
     // No copy or move semantics
-    OverSampler(const OverSampler&) = delete;
-    OverSampler& operator=(const OverSampler&) = delete;
-    OverSampler(OverSampler&&) = delete;
-    OverSampler& operator=(OverSampler&&) = delete;
+    Oversampler(const Oversampler&) = delete;
+    Oversampler& operator=(const Oversampler&) = delete;
+    Oversampler(Oversampler&&) = delete;
+    Oversampler& operator=(Oversampler&&) = delete;
 
     void prepare(size_t newNumChannels, size_t newMaxBlockSize) {
         numChannels = newNumChannels;
@@ -52,7 +52,22 @@ public:
 
     }
 
-    void upsample(const T* const* input, T* const* output, size_t numInputSamples) {
+    void reset() {
+        if constexpr (Factor >= 2) {
+            stage1.reset();
+        }
+        if constexpr (Factor >= 4) {
+            stage2.reset();
+        }
+        if constexpr (Factor >= 8) {
+            stage3.reset();
+        }
+        if constexpr (Factor == 16) {
+            stage4.reset();
+        }
+    }
+
+    size_t upsample(const T* const* input, T* const* output, size_t numInputSamples) {
         // Factor 2
         if constexpr (Factor == 2) {
             stage1.upsample(input, output, numInputSamples); // stage1 1x to 2x
@@ -87,6 +102,7 @@ public:
             // stage4 8x to 16x
             stage4.upsample(intermediateBuffer4to8.readPtrs(), output, 8*numInputSamples);
         }
+        return numInputSamples * Factor;
     }
     void downsample(const T* const* input, T* const* output, size_t numOutputSamples) {
         // Factor 2

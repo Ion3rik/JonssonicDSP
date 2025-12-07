@@ -1,8 +1,8 @@
 // Jonssonic - A C++ audio DSP library
-// Unit tests for the OverSampler class
+// Unit tests for the Oversampler class
 // SPDX-License-Identifier: MIT
 
-#include "../../../include/Jonssonic/core/oversampling/OverSampler.h"
+#include "../../../include/Jonssonic/core/oversampling/Oversampler.h"
 #include "../../../include/Jonssonic/utils/MathUtils.h"
 #include <gtest/gtest.h>
 
@@ -14,12 +14,12 @@
 using namespace Jonssonic;
 
 //==============================================================================
-// OVERSAMPLER TESTS - FACTOR 2
+// Oversampler TESTS - FACTOR 2
 //==============================================================================
 
-TEST(OverSamplerTest, Factor2_DCSignalRoundTrip) {
-    OverSampler<float, 2> oversampler;
-    oversampler.prepare(1, 128);
+TEST(OversamplerTest, Factor2_DCSignalRoundTrip) {
+    Oversampler<float, 2> Oversampler;
+    Oversampler.prepare(1, 128);
     
     constexpr size_t baseLen = 128;
     constexpr size_t oversampledLen = baseLen * 2;
@@ -33,8 +33,8 @@ TEST(OverSamplerTest, Factor2_DCSignalRoundTrip) {
     const float* upsampledPtrsConst[1] = {upsampled.data()};
     float* outputPtrs[1] = {output.data()};
     
-    oversampler.upsample(inputPtrs, upsampledPtrs, baseLen);
-    oversampler.downsample(upsampledPtrsConst, outputPtrs, baseLen);
+    Oversampler.upsample(inputPtrs, upsampledPtrs, baseLen);
+    Oversampler.downsample(upsampledPtrsConst, outputPtrs, baseLen);
     
     // Check DC level is preserved (after filter settles)
     constexpr size_t skipSamples = 50;  // Skip transients
@@ -55,9 +55,9 @@ TEST(OverSamplerTest, Factor2_DCSignalRoundTrip) {
     EXPECT_NEAR(avgOutput, 1.0f, 0.02f);
 }
 
-TEST(OverSamplerTest, Factor2_UpsampleDoublesSampleCount) {
-    OverSampler<float, 2> oversampler;
-    oversampler.prepare(1, 128);
+TEST(OversamplerTest, Factor2_UpsampleDoublesSampleCount) {
+    Oversampler<float, 2> Oversampler;
+    Oversampler.prepare(1, 128);
     
     constexpr size_t inputLen = 64;
     constexpr size_t outputLen = inputLen * 2;
@@ -70,10 +70,10 @@ TEST(OverSamplerTest, Factor2_UpsampleDoublesSampleCount) {
     const float* inputPtrs[1] = {input.data()};
     float* outputPtrs[1] = {output.data()};
     
-    oversampler.upsample(inputPtrs, outputPtrs, inputLen);
+    Oversampler.upsample(inputPtrs, outputPtrs, inputLen);
     
     // Check output length is correct
-    EXPECT_EQ(oversampler.getUpsampledLength(inputLen), outputLen);
+    EXPECT_EQ(Oversampler.getUpsampledLength(inputLen), outputLen);
     
     // Check some energy was produced
     float energy = 0.0f;
@@ -83,9 +83,9 @@ TEST(OverSamplerTest, Factor2_UpsampleDoublesSampleCount) {
     EXPECT_GT(energy, 0.1f);
 }
 
-TEST(OverSamplerTest, Factor2_DownsampleHalvesSampleCount) {
-    OverSampler<float, 2> oversampler;
-    oversampler.prepare(1, 128);
+TEST(OversamplerTest, Factor2_DownsampleHalvesSampleCount) {
+    Oversampler<float, 2> Oversampler;
+    Oversampler.prepare(1, 128);
     
     constexpr size_t outputLen = 64;
     constexpr size_t inputLen = outputLen * 2;
@@ -101,10 +101,10 @@ TEST(OverSamplerTest, Factor2_DownsampleHalvesSampleCount) {
     const float* inputPtrs[1] = {input.data()};
     float* outputPtrs[1] = {output.data()};
     
-    oversampler.downsample(inputPtrs, outputPtrs, outputLen);
+    Oversampler.downsample(inputPtrs, outputPtrs, outputLen);
     
     // Check output length calculation
-    EXPECT_EQ(oversampler.getDownsampledLength(inputLen), outputLen);
+    EXPECT_EQ(Oversampler.getDownsampledLength(inputLen), outputLen);
     
     // Check reasonable output values
     for (size_t i = 0; i < outputLen; ++i) {
@@ -112,9 +112,9 @@ TEST(OverSamplerTest, Factor2_DownsampleHalvesSampleCount) {
     }
 }
 
-TEST(OverSamplerTest, Factor2_RoundTripPreservesSignal) {
-    OverSampler<float, 2> oversampler;
-    oversampler.prepare(1, 128);
+TEST(OversamplerTest, Factor2_RoundTripPreservesSignal) {
+    Oversampler<float, 2> Oversampler;
+    Oversampler.prepare(1, 128);
     
     constexpr size_t baseLen = 128;
     constexpr size_t oversampledLen = baseLen * 2;
@@ -128,8 +128,8 @@ TEST(OverSamplerTest, Factor2_RoundTripPreservesSignal) {
     const float* upsampledPtrsConst[1] = {upsampled.data()};
     float* outputPtrs[1] = {output.data()};
     
-    oversampler.upsample(inputPtrs, upsampledPtrs, baseLen);
-    oversampler.downsample(upsampledPtrsConst, outputPtrs, baseLen);
+    Oversampler.upsample(inputPtrs, upsampledPtrs, baseLen);
+    Oversampler.downsample(upsampledPtrsConst, outputPtrs, baseLen);
     
     // Check DC level preservation (after filter settles)
     constexpr size_t skipSamples = 50;
@@ -144,12 +144,12 @@ TEST(OverSamplerTest, Factor2_RoundTripPreservesSignal) {
 }
 
 //==============================================================================
-// OVERSAMPLER TESTS - FACTOR 4
+// Oversampler TESTS - FACTOR 4
 //==============================================================================
 
-TEST(OverSamplerTest, Factor4_UpsampleQuadruplesSampleCount) {
-    OverSampler<float, 4> oversampler;
-    oversampler.prepare(1, 128);
+TEST(OversamplerTest, Factor4_UpsampleQuadruplesSampleCount) {
+    Oversampler<float, 4> Oversampler;
+    Oversampler.prepare(1, 128);
     
     constexpr size_t inputLen = 64;
     constexpr size_t outputLen = inputLen * 4;
@@ -162,9 +162,9 @@ TEST(OverSamplerTest, Factor4_UpsampleQuadruplesSampleCount) {
     const float* inputPtr = input.data();
     float* outputPtr = output.data();
     
-    oversampler.upsample(&inputPtr, &outputPtr, inputLen);
+    Oversampler.upsample(&inputPtr, &outputPtr, inputLen);
     
-    EXPECT_EQ(oversampler.getUpsampledLength(inputLen), outputLen);
+    EXPECT_EQ(Oversampler.getUpsampledLength(inputLen), outputLen);
     
     float energy = 0.0f;
     for (size_t i = 0; i < outputLen; ++i) {
@@ -173,9 +173,9 @@ TEST(OverSamplerTest, Factor4_UpsampleQuadruplesSampleCount) {
     EXPECT_GT(energy, 0.1f);
 }
 
-TEST(OverSamplerTest, Factor4_DownsampleQuartersSampleCount) {
-    OverSampler<float, 4> oversampler;
-    oversampler.prepare(1, 128);
+TEST(OversamplerTest, Factor4_DownsampleQuartersSampleCount) {
+    Oversampler<float, 4> Oversampler;
+    Oversampler.prepare(1, 128);
     
     constexpr size_t outputLen = 64;
     constexpr size_t inputLen = outputLen * 4;
@@ -190,14 +190,14 @@ TEST(OverSamplerTest, Factor4_DownsampleQuartersSampleCount) {
     const float* inputPtrs[1] = {input.data()};
     float* outputPtrs[1] = {output.data()};
     
-    oversampler.downsample(inputPtrs, outputPtrs, outputLen);
+    Oversampler.downsample(inputPtrs, outputPtrs, outputLen);
     
-    EXPECT_EQ(oversampler.getDownsampledLength(inputLen), outputLen);
+    EXPECT_EQ(Oversampler.getDownsampledLength(inputLen), outputLen);
 }
 
-TEST(OverSamplerTest, Factor4_RoundTripPreservesSignal) {
-    OverSampler<float, 4> oversampler;
-    oversampler.prepare(1, 128);
+TEST(OversamplerTest, Factor4_RoundTripPreservesSignal) {
+    Oversampler<float, 4> Oversampler;
+    Oversampler.prepare(1, 128);
     
     constexpr size_t baseLen = 128;
     constexpr size_t oversampledLen = baseLen * 4;
@@ -211,8 +211,8 @@ TEST(OverSamplerTest, Factor4_RoundTripPreservesSignal) {
     const float* upsampledPtrsConst[1] = {upsampled.data()};
     float* outputPtrs[1] = {output.data()};
     
-    oversampler.upsample(inputPtrs, upsampledPtrs, baseLen);
-    oversampler.downsample(upsampledPtrsConst, outputPtrs, baseLen);
+    Oversampler.upsample(inputPtrs, upsampledPtrs, baseLen);
+    Oversampler.downsample(upsampledPtrsConst, outputPtrs, baseLen);
     
     // Check DC level preservation (after filter settles)
     constexpr size_t skipSamples = 50;
@@ -227,12 +227,12 @@ TEST(OverSamplerTest, Factor4_RoundTripPreservesSignal) {
 }
 
 //==============================================================================
-// OVERSAMPLER TESTS - FACTOR 8
+// Oversampler TESTS - FACTOR 8
 //==============================================================================
 
-TEST(OverSamplerTest, Factor8_UpsampleOctuplesSampleCount) {
-    OverSampler<float, 8> oversampler;
-    oversampler.prepare(1, 128);
+TEST(OversamplerTest, Factor8_UpsampleOctuplesSampleCount) {
+    Oversampler<float, 8> Oversampler;
+    Oversampler.prepare(1, 128);
     
     constexpr size_t inputLen = 64;
     constexpr size_t outputLen = inputLen * 8;
@@ -245,9 +245,9 @@ TEST(OverSamplerTest, Factor8_UpsampleOctuplesSampleCount) {
     const float* inputPtrs[1] = {input.data()};
     float* outputPtrs[1] = {output.data()};
     
-    oversampler.upsample(inputPtrs, outputPtrs, inputLen);
+    Oversampler.upsample(inputPtrs, outputPtrs, inputLen);
     
-    EXPECT_EQ(oversampler.getUpsampledLength(inputLen), outputLen);
+    EXPECT_EQ(Oversampler.getUpsampledLength(inputLen), outputLen);
     
     float energy = 0.0f;
     for (size_t i = 0; i < outputLen; ++i) {
@@ -256,9 +256,9 @@ TEST(OverSamplerTest, Factor8_UpsampleOctuplesSampleCount) {
     EXPECT_GT(energy, 0.1f);
 }
 
-TEST(OverSamplerTest, Factor8_RoundTripPreservesSignal) {
-    OverSampler<float, 8> oversampler;
-    oversampler.prepare(1, 128);
+TEST(OversamplerTest, Factor8_RoundTripPreservesSignal) {
+    Oversampler<float, 8> Oversampler;
+    Oversampler.prepare(1, 128);
     
     constexpr size_t baseLen = 128;
     constexpr size_t oversampledLen = baseLen * 8;
@@ -272,8 +272,8 @@ TEST(OverSamplerTest, Factor8_RoundTripPreservesSignal) {
     const float* upsampledPtrsConst[1] = {upsampled.data()};
     float* outputPtrs[1] = {output.data()};
     
-    oversampler.upsample(inputPtrs, upsampledPtrs, baseLen);
-    oversampler.downsample(upsampledPtrsConst, outputPtrs, baseLen);
+    Oversampler.upsample(inputPtrs, upsampledPtrs, baseLen);
+    Oversampler.downsample(upsampledPtrsConst, outputPtrs, baseLen);
     
     // Check DC level preservation (after filter settles)
     constexpr size_t skipSamples = 50;
@@ -288,12 +288,12 @@ TEST(OverSamplerTest, Factor8_RoundTripPreservesSignal) {
 }
 
 //==============================================================================
-// OVERSAMPLER TESTS - FACTOR 16
+// Oversampler TESTS - FACTOR 16
 //==============================================================================
 
-TEST(OverSamplerTest, Factor16_UpsampleSixteenXSampleCount) {
-    OverSampler<float, 16> oversampler;
-    oversampler.prepare(1, 128);
+TEST(OversamplerTest, Factor16_UpsampleSixteenXSampleCount) {
+    Oversampler<float, 16> Oversampler;
+    Oversampler.prepare(1, 128);
     
     constexpr size_t inputLen = 64;
     constexpr size_t outputLen = inputLen * 16;
@@ -306,9 +306,9 @@ TEST(OverSamplerTest, Factor16_UpsampleSixteenXSampleCount) {
     const float* inputPtrs[1] = {input.data()};
     float* outputPtrs[1] = {output.data()};
     
-    oversampler.upsample(inputPtrs, outputPtrs, inputLen);
+    Oversampler.upsample(inputPtrs, outputPtrs, inputLen);
     
-    EXPECT_EQ(oversampler.getUpsampledLength(inputLen), outputLen);
+    EXPECT_EQ(Oversampler.getUpsampledLength(inputLen), outputLen);
     
     float energy = 0.0f;
     for (size_t i = 0; i < outputLen; ++i) {
@@ -317,9 +317,9 @@ TEST(OverSamplerTest, Factor16_UpsampleSixteenXSampleCount) {
     EXPECT_GT(energy, 0.1f);
 }
 
-TEST(OverSamplerTest, Factor16_RoundTripPreservesSignal) {
-    OverSampler<float, 16> oversampler;
-    oversampler.prepare(1, 128);
+TEST(OversamplerTest, Factor16_RoundTripPreservesSignal) {
+    Oversampler<float, 16> Oversampler;
+    Oversampler.prepare(1, 128);
     
     constexpr size_t baseLen = 128;
     constexpr size_t oversampledLen = baseLen * 16;
@@ -333,8 +333,8 @@ TEST(OverSamplerTest, Factor16_RoundTripPreservesSignal) {
     const float* upsampledPtrsConst[1] = {upsampled.data()};
     float* outputPtrs[1] = {output.data()};
     
-    oversampler.upsample(inputPtrs, upsampledPtrs, baseLen);
-    oversampler.downsample(upsampledPtrsConst, outputPtrs, baseLen);
+    Oversampler.upsample(inputPtrs, upsampledPtrs, baseLen);
+    Oversampler.downsample(upsampledPtrsConst, outputPtrs, baseLen);
     
     // Check DC level preservation (after filter settles)
     constexpr size_t skipSamples = 50;
@@ -352,9 +352,9 @@ TEST(OverSamplerTest, Factor16_RoundTripPreservesSignal) {
 // MULTI-CHANNEL TESTS
 //==============================================================================
 
-TEST(OverSamplerTest, MultiChannel_Factor4_StereoProcessing) {
-    OverSampler<float, 4> oversampler;
-    oversampler.prepare(2, 128);
+TEST(OversamplerTest, MultiChannel_Factor4_StereoProcessing) {
+    Oversampler<float, 4> Oversampler;
+    Oversampler.prepare(2, 128);
     
     constexpr size_t baseLen = 128;
     constexpr size_t oversampledLen = baseLen * 4;
@@ -371,8 +371,8 @@ TEST(OverSamplerTest, MultiChannel_Factor4_StereoProcessing) {
     const float* upsampledPtrsConst[2] = {upsampledL.data(), upsampledR.data()};
     float* outputPtrs[2] = {outputL.data(), outputR.data()};
     
-    oversampler.upsample(inputPtrs, upsampledPtrs, baseLen);
-    oversampler.downsample(upsampledPtrsConst, outputPtrs, baseLen);
+    Oversampler.upsample(inputPtrs, upsampledPtrs, baseLen);
+    Oversampler.downsample(upsampledPtrsConst, outputPtrs, baseLen);
     
     // Check both channels preserve their DC levels independently
     constexpr size_t skipSamples = 50;
@@ -394,9 +394,9 @@ TEST(OverSamplerTest, MultiChannel_Factor4_StereoProcessing) {
 // LATENCY TESTS
 //==============================================================================
 
-TEST(OverSamplerTest, Factor2_LatencyAccurate) {
-    OverSampler<float, 2> oversampler;
-    oversampler.prepare(1, 256);
+TEST(OversamplerTest, Factor2_LatencyAccurate) {
+    Oversampler<float, 2> Oversampler;
+    Oversampler.prepare(1, 256);
     
     constexpr size_t baseLen = 256;
     constexpr size_t oversampledLen = baseLen * 2;
@@ -412,12 +412,12 @@ TEST(OverSamplerTest, Factor2_LatencyAccurate) {
     const float* upsampledPtrsConst[1] = {upsampled.data()};
     float* outputPtrs[1] = {output.data()};
     
-    oversampler.upsample(inputPtrs, upsampledPtrs, baseLen);
-    oversampler.downsample(upsampledPtrsConst, outputPtrs, baseLen);
+    Oversampler.upsample(inputPtrs, upsampledPtrs, baseLen);
+    Oversampler.downsample(upsampledPtrsConst, outputPtrs, baseLen);
     
     // Measure latency using cross-correlation
     int measuredLatency = measureLatency(input, output);
-    size_t expectedLatency = oversampler.getLatencySamples();
+    size_t expectedLatency = Oversampler.getLatencySamples();
     
     std::cout << "Factor 2: Measured latency = " << measuredLatency 
               << " samples, Expected = " << expectedLatency << " samples" << std::endl;
@@ -425,9 +425,9 @@ TEST(OverSamplerTest, Factor2_LatencyAccurate) {
     EXPECT_EQ(measuredLatency, static_cast<int>(expectedLatency));
 }
 
-TEST(OverSamplerTest, Factor4_LatencyAccurate) {
-    OverSampler<float, 4> oversampler;
-    oversampler.prepare(1, 256);
+TEST(OversamplerTest, Factor4_LatencyAccurate) {
+    Oversampler<float, 4> Oversampler;
+    Oversampler.prepare(1, 256);
     
     constexpr size_t baseLen = 256;
     constexpr size_t oversampledLen = baseLen * 4;
@@ -443,12 +443,12 @@ TEST(OverSamplerTest, Factor4_LatencyAccurate) {
     const float* upsampledPtrsConst[1] = {upsampled.data()};
     float* outputPtrs[1] = {output.data()};
     
-    oversampler.upsample(inputPtrs, upsampledPtrs, baseLen);
-    oversampler.downsample(upsampledPtrsConst, outputPtrs, baseLen);
+    Oversampler.upsample(inputPtrs, upsampledPtrs, baseLen);
+    Oversampler.downsample(upsampledPtrsConst, outputPtrs, baseLen);
     
     // Measure latency using cross-correlation
     int measuredLatency = measureLatency(input, output);
-    size_t expectedLatency = oversampler.getLatencySamples();
+    size_t expectedLatency = Oversampler.getLatencySamples();
     
     std::cout << "Factor 4: Measured latency = " << measuredLatency 
               << " samples, Expected = " << expectedLatency << " samples" << std::endl;
@@ -456,9 +456,9 @@ TEST(OverSamplerTest, Factor4_LatencyAccurate) {
     EXPECT_EQ(measuredLatency, static_cast<int>(expectedLatency));
 }
 
-TEST(OverSamplerTest, Factor8_LatencyAccurate) {
-    OverSampler<float, 8> oversampler;
-    oversampler.prepare(1, 256);
+TEST(OversamplerTest, Factor8_LatencyAccurate) {
+    Oversampler<float, 8> Oversampler;
+    Oversampler.prepare(1, 256);
     
     constexpr size_t baseLen = 256;
     constexpr size_t oversampledLen = baseLen * 8;
@@ -474,12 +474,12 @@ TEST(OverSamplerTest, Factor8_LatencyAccurate) {
     const float* upsampledPtrsConst[1] = {upsampled.data()};
     float* outputPtrs[1] = {output.data()};
     
-    oversampler.upsample(inputPtrs, upsampledPtrs, baseLen);
-    oversampler.downsample(upsampledPtrsConst, outputPtrs, baseLen);
+    Oversampler.upsample(inputPtrs, upsampledPtrs, baseLen);
+    Oversampler.downsample(upsampledPtrsConst, outputPtrs, baseLen);
     
     // Measure latency using cross-correlation
     int measuredLatency = measureLatency(input, output);
-    size_t expectedLatency = oversampler.getLatencySamples();
+    size_t expectedLatency = Oversampler.getLatencySamples();
     
     std::cout << "Factor 8: Measured latency = " << measuredLatency 
               << " samples, Expected = " << expectedLatency << " samples" << std::endl;
@@ -487,9 +487,9 @@ TEST(OverSamplerTest, Factor8_LatencyAccurate) {
     EXPECT_EQ(measuredLatency, static_cast<int>(expectedLatency));
 }
 
-TEST(OverSamplerTest, Factor16_LatencyAccurate) {
-    OverSampler<float, 16> oversampler;
-    oversampler.prepare(1, 256);
+TEST(OversamplerTest, Factor16_LatencyAccurate) {
+    Oversampler<float, 16> Oversampler;
+    Oversampler.prepare(1, 256);
     
     constexpr size_t baseLen = 256;
     constexpr size_t oversampledLen = baseLen * 16;
@@ -505,12 +505,12 @@ TEST(OverSamplerTest, Factor16_LatencyAccurate) {
     const float* upsampledPtrsConst[1] = {upsampled.data()};
     float* outputPtrs[1] = {output.data()};
     
-    oversampler.upsample(inputPtrs, upsampledPtrs, baseLen);
-    oversampler.downsample(upsampledPtrsConst, outputPtrs, baseLen);
+    Oversampler.upsample(inputPtrs, upsampledPtrs, baseLen);
+    Oversampler.downsample(upsampledPtrsConst, outputPtrs, baseLen);
     
     // Measure latency using cross-correlation
     int measuredLatency = measureLatency(input, output);
-    size_t expectedLatency = oversampler.getLatencySamples();
+    size_t expectedLatency = Oversampler.getLatencySamples();
     
     std::cout << "Factor 16: Measured latency = " << measuredLatency 
               << " samples, Expected = " << expectedLatency << " samples" << std::endl;

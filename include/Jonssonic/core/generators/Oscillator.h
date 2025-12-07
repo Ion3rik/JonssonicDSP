@@ -157,20 +157,21 @@ private:
     inline T generateWaveform(T phase) const
     {
         switch (waveform)
-        {
+        {   
             case Waveform::Sine:
+                // Sine wave
                 return std::sin(T(2.0 * M_PI) * phase);
             
             case Waveform::Saw:
-                // Naive sawtooth
+                // Sawtooth wave
                 return T(2.0) * phase - T(1.0);
             
             case Waveform::Square:
-                // Naive square
+                // Square wave
                 return (phase < T(0.5)) ? T(-1.0) : T(1.0);
             
             case Waveform::Triangle:
-                // Triangle wave: -1 at phase 0, +1 at phase 0.5
+                // Triangle wave
                 return T(1.0) - std::abs(T(4.0) * phase - T(2.0));
             
             default:

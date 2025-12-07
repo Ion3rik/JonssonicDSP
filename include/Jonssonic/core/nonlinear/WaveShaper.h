@@ -14,7 +14,7 @@ namespace Jonssonic {
 
 enum class WaveShaperType {
 	HardClip,
-	SoftClip,
+	Atan,
 	Tanh,
 	FullWaveRectifier,
 	HalfWaveRectifier,
@@ -46,14 +46,14 @@ public:
 	}
 };
 // =====================================================================
-// SoftClip specialization
+// Atan specialization
 // =====================================================================
 /**
- * @brief Soft clipper specialization.
+ * @brief Atan shaper specialization.
  *        Applies atan(x) for smooth limiting.
  */
 template<typename SampleType>
-class WaveShaper<SampleType, WaveShaperType::SoftClip> {
+class WaveShaper<SampleType, WaveShaperType::Atan> {
 public:
 	SampleType processSample(SampleType x) const {
 		return std::atan(x);
