@@ -6,6 +6,7 @@
 #include "SOSFilter.h"
 #include "BiquadCoeffs.h"
 #include "../../utils/MathUtils.h"
+#include <algorithm>
 
 namespace Jonssonic
 {
@@ -94,25 +95,31 @@ public:
 
     void setGainDb(T newGainDb)
     {
-        gain = Jonssonic::dB2Mag(newGainDb);
+        // clamp gain to avoid instability
+        newGainDb = std::clamp(newGainDb, T(-60), T(20));
+        gain = Jonssonic::dB2Mag(newGainDb); // convert to linear
         updateCoeffs();
     }
 
     void setGainLinear(T newGainLin)
-    {
+    {   
+        // clamp gain to avoid instability
+        newGainLin = std::clamp(newGainLin, T(0.001), T(10));
         gain = newGainLin;
         updateCoeffs();
     }
 
     void setFreq(T newFreq)
     {
-        freq = newFreq;
+        // clamp frequency to stable range
+        newFreq = std::clamp(newFreq, T(1), sampleRate / T(2));
         updateCoeffs();
     }
 
     void setQ(T newQ)
     {
-        Q = newQ;
+        // clamp Q to avoid instability
+        Q = std::clamp(newQ, T(0.1), T(10));
         updateCoeffs();
     }
 

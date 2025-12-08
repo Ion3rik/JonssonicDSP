@@ -78,7 +78,7 @@ private:
 
     // Clamp helper
     T clamp(T value) const {
-        return std::clamp(value, min, max);
+        return Jonssonic::clamp(value, min, max);
     }
 };
 
