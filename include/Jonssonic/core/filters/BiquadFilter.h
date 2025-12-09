@@ -112,7 +112,7 @@ public:
     void setFreq(T newFreq)
     {
         // clamp frequency to stable range
-        newFreq = std::clamp(newFreq, T(1), sampleRate / T(2));
+        freq = std::clamp(newFreq, T(1), sampleRate / T(2));
         updateCoeffs();
     }
 

@@ -167,12 +167,14 @@ template<typename T>
 inline void computePeakCoeffs(T freq, T Q, T gainLinear, T sampleRate,
                                T& b0, T& b1, T& b2, T& a1, T& a2)
 {
-    T A = gainLinear;
+    // For peaking EQ, A should be sqrt(gainLinear), not gainLinear
+    T A = std::sqrt(gainLinear);
     T w0 = two_pi<T> * freq / sampleRate;
     T cosw0 = std::cos(w0);
     T sinw0 = std::sin(w0);
     T alpha = sinw0 / (T(2) * Q);
     
+    // Standard peaking EQ formulas from Audio EQ Cookbook
     T a0 = T(1) + alpha / A;
     b0 = (T(1) + alpha * A) / a0;
     b1 = (-T(2) * cosw0) / a0;
@@ -197,7 +199,7 @@ template<typename T>
 inline void computeLowshelfCoeffs(T freq, T Q, T gainLinear, T sampleRate,
                                    T& b0, T& b1, T& b2, T& a1, T& a2)
 {
-    T A = gainLinear;
+    T A = std::sqrt(gainLinear);
     T w0 = two_pi<T> * freq / sampleRate;
     T cosw0 = std::cos(w0);
     T sinw0 = std::sin(w0);
@@ -228,7 +230,7 @@ template<typename T>
 inline void computeHighshelfCoeffs(T freq, T Q, T gainLinear, T sampleRate,
                                     T& b0, T& b1, T& b2, T& a1, T& a2)
 {
-    T A = gainLinear;
+    T A = std::sqrt(gainLinear);
     T w0 = two_pi<T> * freq / sampleRate;
     T cosw0 = std::cos(w0);
     T sinw0 = std::sin(w0);
