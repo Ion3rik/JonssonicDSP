@@ -8,10 +8,11 @@
 #include "../core/common/DspParam.h"
 #include "../core/generators/Oscillator.h"
 #include "../utils/MathUtils.h"
+#include "../core/nonlinear/WaveShaper.h"
 
 namespace Jonssonic {
 /**
- * @brief Delay Effect with Feedback, Damping, and cross-talk
+ * @brief Delay Effect with Feedback, Damping, and ping-pong cross-talk
  * @param T Sample data type (e.g., float, double)
  */
 template<typename T>
@@ -21,7 +22,6 @@ public:
     static constexpr T MAX_MODULATION_MS = T(5.0);          // Maximum modulation depth in milliseconds 
     static constexpr T WOW_PORTION_OF_MODULATION = T(0.7);  // Portion of modulation depth for wow effect
     static constexpr int SMOOTHING_TIME_MS = 100;           // Smoothing time for parameter changes in milliseconds
-    static constexpr T MAX_DELAY_MS = T(15.0);              // Maximum delay buffer size
 
 
     // Constructor and Destructor
@@ -59,33 +59,31 @@ public:
         
         // DC blocker setup
         dcBlocker.prepare(newNumChannels, newSampleRate);
-        dcBlocker.setType(FirstOrderType::Highpass);
-        dcBlocker.setFreqNormalized(T(0.0005)); // ~22 Hz at 44.1kHz
         
         // LFO setup
         wowLfo.prepare(newNumChannels, newSampleRate);
         wowLfo.setWaveform(Waveform::Sine);
-        wowLfo.setFrequency(T(0.5)); // 0.5 Hz for wow
+        wowLfo.setFrequency(T(0.3)); // 0.3 Hz for wow
         
         flutterLfo.prepare(newNumChannels, newSampleRate);
         flutterLfo.setWaveform(Waveform::Sine);
-        flutterLfo.setFrequency(T(5.0)); // 5 Hz for flutter
+        flutterLfo.setFrequency(T(6.0)); // 6 Hz for flutter
 
         // Set parameter bounds
-        feedback.setBounds(T(0), T(0.99));
-        crossTalk.setBounds(T(0), T(1));
+        feedback.setBounds(T(0), T(1));
+        pingPong.setBounds(T(0), T(1));
         modDepth.setBounds(T(0), T(1));
 
         // Prepare parameters
         feedback.prepare(newNumChannels, newSampleRate, SMOOTHING_TIME_MS);
-        crossTalk.prepare(newNumChannels, newSampleRate, SMOOTHING_TIME_MS);
+        pingPong.prepare(newNumChannels, newSampleRate, SMOOTHING_TIME_MS);
         modDepth.prepare(newNumChannels, newSampleRate, SMOOTHING_TIME_MS);
 
         // Set default parameter values
         delayLine.setDelayMs(T(500), true);
         feedback.setTarget(T(0), true);
         dampingFilter.setFreq(T(20000)); // no damping
-        crossTalk.setTarget(T(0), true);
+        pingPong.setTarget(T(0), true);
         modDepth.setTarget(T(0), true);
     }
 
@@ -106,7 +104,7 @@ public:
         for (size_t n = 0; n < numSamples; ++n)
         {
             for (size_t ch = 0; ch < numChannels; ++ch) 
-            {   
+            {  
                 // Compute modulation value (wow + flutter)
                 T modAmount = modDepth.getNextValue(ch) * MAX_MODULATION_MS;
                 T wowValue = wowLfo.processSample(ch) * WOW_PORTION_OF_MODULATION * modAmount;
@@ -119,22 +117,25 @@ public:
                 // Apply damping filter to delayed sample
                 T dampedSample = dampingFilter.processSample(ch, delayedSample);
 
-                // Compute cross-talk sample from opposite channel
+                // Compute feedback: mix own channel with opposite channel (ping-pong)
                 size_t oppositeCh = (ch + 1) % numChannels;
-                T crossTalkSample = delayLine.readSample(oppositeCh, totalModulation);
-                crossTalkSample = dampingFilter.processSample(oppositeCh, crossTalkSample);
+                T oppositeDelayed = delayLine.readSample(oppositeCh, totalModulation);
                 
-                // Mix cross-talk into delayed sample
-                dampedSample += crossTalk.getNextValue(ch) * crossTalkSample;
-
-                // Compute feedback sample
-                T feedbackSample = dampedSample * feedback.getNextValue(ch);
+                T pingPongAmount = pingPong.getNextValue(ch);
+                T feedbackSample = (dampedSample * (T(1) - pingPongAmount) + oppositeDelayed * pingPongAmount) * feedback.getNextValue(ch);
                 
                 // Apply DC blocking to feedback path
                 feedbackSample = dcBlocker.processSample(ch, feedbackSample);
 
-                // Write input + feedback into delay line
-                delayLine.writeSample(ch, input[ch][n] + feedbackSample);
+                // For ping-pong: scale input by (1 - pingPong) so at max pingPong,
+                // only channel 0 receives input, creating true ping-pong effect
+                T inputGain = (ch == 0) ? T(1) : (T(1) - pingPongAmount);
+                
+                // Soft-clip feedback to avoid runaway
+                feedbackSample = softClipper.processSample(feedbackSample);
+
+                // Write input + soft-clipped feedback into delay line
+                delayLine.writeSample(ch, input[ch][n] * inputGain + feedbackSample);
 
                 // Output the damped delayed sample
                 output[ch][n] = dampedSample;
@@ -159,8 +160,8 @@ public:
         dampingFilter.setFreq(newDampingHz);
     }
 
-    void setCrossTalk(T newCrossTalk, bool skipSmoothing = false) {
-        crossTalk.setTarget(newCrossTalk, skipSmoothing);
+    void setPingPong(T newPingPong, bool skipSmoothing = false) {
+        pingPong.setTarget(newPingPong, skipSmoothing);
     }
 
     void setModDepth(T newModDepth, bool skipSmoothing = false) {
@@ -182,15 +183,16 @@ private:
     T sampleRate = T(44100);
 
     // PROCESSORS
-    DelayLine<T> delayLine; // core delay line
+    DelayLine<T, LagrangeInterpolator<T>, SmootherType::OnePole, 1, SMOOTHING_TIME_MS> delayLine;
     FirstOrderFilter<T> dampingFilter; // damping lowpass filter
     FirstOrderFilter<T> dcBlocker; // DC blocker for feedback path
     Oscillator<T> wowLfo; // Slower LFO for wow effect
     Oscillator<T> flutterLfo; // Faster LFO for flutter effect
+    WaveShaper<T, WaveShaperType::Atan> softClipper; // Soft clipper for feedback
 
     // PARAMS
     DspParam<T> feedback;       // Feedback amount
-    DspParam<T> crossTalk;      // Cross-talk amount
+    DspParam<T> pingPong;      // Ping-pong amount
     DspParam<T> modDepth;        // Modulation depth (normalized)
 
 
