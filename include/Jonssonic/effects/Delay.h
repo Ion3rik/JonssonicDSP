@@ -19,7 +19,7 @@ template<typename T>
 class Delay {
 public:
     // Tunable constants
-    static constexpr T MAX_MODULATION_MS = T(5.0);          // Maximum modulation depth in milliseconds 
+    static constexpr T MAX_MODULATION_MS = T(3.0);          // Maximum modulation depth in milliseconds 
     static constexpr T WOW_PORTION_OF_MODULATION = T(0.7);  // Portion of modulation depth for wow effect
     static constexpr int SMOOTHING_TIME_MS = 100;           // Smoothing time for parameter changes in milliseconds
 
@@ -70,7 +70,7 @@ public:
         flutterLfo.setFrequency(T(6.0)); // 6 Hz for flutter
 
         // Set parameter bounds
-        feedback.setBounds(T(0), T(1));
+        //feedback.setBounds(T(0), T(1));
         pingPong.setBounds(T(0), T(1));
         modDepth.setBounds(T(0), T(1));
 
@@ -122,17 +122,18 @@ public:
                 T oppositeDelayed = delayLine.readSample(oppositeCh, totalModulation);
                 
                 T pingPongAmount = pingPong.getNextValue(ch);
-                T feedbackSample = (dampedSample * (T(1) - pingPongAmount) + oppositeDelayed * pingPongAmount) * feedback.getNextValue(ch);
+                T mixedSample = (dampedSample * (T(1) - pingPongAmount) + oppositeDelayed * pingPongAmount);
                 
-                // Apply DC blocking to feedback path
-                feedbackSample = dcBlocker.processSample(ch, feedbackSample);
+                // Apply DC blocking to feedback path BEFORE soft clipping
+                mixedSample = dcBlocker.processSample(ch, mixedSample);
+                
+                // Soft-clip first, then apply feedback gain
+                T clippedSample = softClipper.processSample(mixedSample);
+                T feedbackSample = clippedSample * feedback.getNextValue(ch);
 
                 // For ping-pong: scale input by (1 - pingPong) so at max pingPong,
                 // only channel 0 receives input, creating true ping-pong effect
                 T inputGain = (ch == 0) ? T(1) : (T(1) - pingPongAmount);
-                
-                // Soft-clip feedback to avoid runaway
-                feedbackSample = softClipper.processSample(feedbackSample);
 
                 // Write input + soft-clipped feedback into delay line
                 delayLine.writeSample(ch, input[ch][n] * inputGain + feedbackSample);

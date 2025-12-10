@@ -50,13 +50,15 @@ public:
 // =====================================================================
 /**
  * @brief Atan shaper specialization.
- *        Applies atan(x) for smooth limiting.
+ *        Applies atan(x) for smooth limiting, normalized to [-1, 1].
  */
 template<typename SampleType>
 class WaveShaper<SampleType, WaveShaperType::Atan> {
 public:
 	SampleType processSample(SampleType x) const {
-		return std::atan(x);
+		// Normalize: atan(x) * (2/π) maps [-∞,∞] → [-1,1]
+		constexpr SampleType scale = SampleType(2) / pi<SampleType>;
+		return std::atan(x) * scale;
 	}
 };
 
