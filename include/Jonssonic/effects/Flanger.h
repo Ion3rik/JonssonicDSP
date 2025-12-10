@@ -61,6 +61,11 @@ public:
         lfo.prepare(newNumChannels, newSampleRate);
         lfo.setWaveform(Waveform::Triangle); 
         lfo.setAntiAliasing(false);
+        
+        // DC blocker setup
+        dcBlocker.prepare(newNumChannels, newSampleRate);
+        dcBlocker.setType(FirstOrderType::Highpass);
+        dcBlocker.setFreqNormalized(T(0.0005)); // ~22 Hz at 44.1kHz
 
         // Set parameter safety bounds
         phaseOffset.setBounds(T(0), T(1));
@@ -86,6 +91,7 @@ public:
     {
         delayLine.clear();
         lfo.reset();
+        dcBlocker.clear();
         phaseOffset.reset();
         depthInSamples.reset();
         feedback.reset();
@@ -118,8 +124,12 @@ public:
                 // Read delayed sample with modulation
                 T delayedSample = delayLine.readSample(ch, lfoValue);
         
+                // Compute feedback with DC blocking
+                T feedbackSignal = delayedSample * feedback.getNextValue(ch);
+                feedbackSignal = dcBlocker.processSample(ch, feedbackSignal);
+                
                 // Compute what to write back (input + delayed feedback)
-                T toWrite = input[ch][n] + delayedSample * feedback.getNextValue(ch);
+                T toWrite = input[ch][n] + feedbackSignal;
                 delayLine.writeSample(ch, toWrite);
 
                 // Mix dry and delayed (50/50 for classic flanger comb filtering)

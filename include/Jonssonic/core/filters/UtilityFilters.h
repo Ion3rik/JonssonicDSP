@@ -16,12 +16,10 @@ public:
      * @param cutoffHz Cutoff frequency in Hz (default: 20 Hz)
      */
     template<typename T>
-    static FirstOrderFilter<T> DCBlocker(size_t numChannels, T sampleRate) {
-        constexpr T normFreq = T(0.0005); // Universal normalized freq for DC blocking
-        FirstOrderFilter<T> filter(numChannels, sampleRate);
-        filter.setType(FirstOrderType::Highpass);
-        filter.setFreqNormalized(normFreq);
-        filter.prepare();
+    static FirstOrderFilter<T> DCBlocker() {
+        FirstOrderFilter<T> filter(); // construct a first-order filter
+        filter.setType(FirstOrderType::Highpass); // select highpass
+        filter.setFreqNormalized(T(0.0005)); // set very low cutoff
         return filter;
     }
 };
