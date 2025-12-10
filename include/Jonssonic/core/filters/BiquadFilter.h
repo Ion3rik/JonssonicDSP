@@ -54,15 +54,14 @@ public:
     void prepare(size_t newNumChannels, T newSampleRate)
     {
         sampleRate = newSampleRate;
-        freq = sampleRate / T(4); // default to quarter Nyquist
+        // If not set, default to quarter Nyquist
+        if (!freqNormalizedSet) {
+            freqNormalized = T(0.25);
+        }
         Q = T(0.707);             // default to Butterworth
         gain = T(1);              // unity gain
         type = BiquadType::Lowpass; // default to lowpass
-
-        // Prepare underlying SOS filter first
         BiquadCore.prepare(newNumChannels, 1); // single second-order section
-        
-        // Then update coefficients
         updateCoeffs();
     }
 
@@ -111,8 +110,13 @@ public:
 
     void setFreq(T newFreq)
     {
-        // clamp frequency to stable range
-        freq = std::clamp(newFreq, T(10), sampleRate / T(2));
+        // Convert Hz to normalized frequency (0..0.5)
+        if (sampleRate > T(0)) {
+            freqNormalized = std::clamp(newFreq / sampleRate, T(0), T(0.5));
+        } else {
+            freqNormalized = std::clamp(newFreq / T(44100), T(0), T(0.5));
+        }
+        freqNormalizedSet = true;
         updateCoeffs();
     }
 
@@ -130,10 +134,9 @@ public:
     }
 
 private:
-
-    // Parameters
     T sampleRate = T(44100); // default sample rate
-    T freq; // cutoff/center frequency
+    T freqNormalized = T(0.25); // default to quarter Nyquist
+    bool freqNormalizedSet = false;
     T Q;    // quality factor
     T gain; // linear gain for shelving/peak filters
     BiquadType type; // filter type
@@ -149,42 +152,42 @@ private:
         switch (type)
         {
             case BiquadType::Lowpass:
-                Jonssonic::computeLowpassCoeffs<T>(freq, Q, sampleRate,
+                Jonssonic::computeLowpassCoeffs<T>(freqNormalized, Q,
                     b0, b1, b2, a1, a2);
                 BiquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
                 break;
             case BiquadType::Highpass:
-                Jonssonic::computeHighpassCoeffs<T>(freq, Q, sampleRate,
+                Jonssonic::computeHighpassCoeffs<T>(freqNormalized, Q,
                     b0, b1, b2, a1, a2);
                 BiquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
                 break;
             case BiquadType::Bandpass:
-                Jonssonic::computeBandpassCoeffs<T>(freq, Q, sampleRate,
+                Jonssonic::computeBandpassCoeffs<T>(freqNormalized, Q,
                     b0, b1, b2, a1, a2);
                 BiquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
                 break;
             case BiquadType::Allpass:
-                Jonssonic::computeAllpassCoeffs<T>(freq, Q, sampleRate,
+                Jonssonic::computeAllpassCoeffs<T>(freqNormalized, Q,
                     b0, b1, b2, a1, a2);
                 BiquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
                 break;
             case BiquadType::Notch:
-                Jonssonic::computeNotchCoeffs<T>(freq, Q, sampleRate,
+                Jonssonic::computeNotchCoeffs<T>(freqNormalized, Q,
                     b0, b1, b2, a1, a2);
                 BiquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
                 break;
             case BiquadType::Peak:
-                Jonssonic::computePeakCoeffs<T>(freq, Q, gain, sampleRate,
+                Jonssonic::computePeakCoeffs<T>(freqNormalized, Q, gain,
                     b0, b1, b2, a1, a2);
                 BiquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
                 break;
             case BiquadType::Lowshelf:
-                Jonssonic::computeLowshelfCoeffs<T>(freq, Q, gain, sampleRate,
+                Jonssonic::computeLowshelfCoeffs<T>(freqNormalized, Q, gain,
                     b0, b1, b2, a1, a2);
                 BiquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
                 break;
             case BiquadType::Highshelf:
-                Jonssonic::computeHighshelfCoeffs<T>(freq, Q, gain, sampleRate,
+                Jonssonic::computeHighshelfCoeffs<T>(freqNormalized, Q, gain,
                     b0, b1, b2, a1, a2);
                 BiquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
                 break;

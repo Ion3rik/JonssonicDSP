@@ -42,7 +42,6 @@ public:
 
     void prepare(size_t newNumChannels, T newSampleRate) {
         sampleRate = newSampleRate;
-        freq = sampleRate / T(4); // default to quarter Nyquist
         type = FirstOrderType::Lowpass; // default to lowpass
         FirstOrderCore.prepare(newNumChannels, 1); // single section
         updateCoeffs();
@@ -60,8 +59,24 @@ public:
         FirstOrderCore.processBlock(input, output, numSamples);
     }
 
-    void setFreq(T newFreq) {
-        freq = std::clamp(newFreq, T(10), sampleRate / T(2));
+    /**
+     * @brief Set the cutoff frequency in Hz
+     * @param newFreq Cutoff frequency in Hz
+     */
+    void setFreq(T newFreqHz) {
+        assert(sampleRate > T(0) && "Sample rate must be set before setting frequency");
+        // Convert Hz to normalized frequency (0..0.5)
+        freqNormalized = std::clamp(newFreqHz / sampleRate, T(0), T(0.5));
+        updateCoeffs();
+    }
+
+    /**
+     * @brief Set the cutoff frequency as a normalized value (0..0.5, where 0.5 = Nyquist)
+     *        This allows setting the cutoff before the sample rate is known. The actual frequency will be set on prepare().
+     * @param normalizedFreq Normalized frequency (0..0.5)
+     */
+    void setFreqNormalized(T normalizedFreq) {
+        freqNormalized = std::clamp(normalizedFreq, T(0), T(0.5));
         updateCoeffs();
     }
 
@@ -70,45 +85,45 @@ public:
         updateCoeffs();
     }
 
-private:
-    T sampleRate = T(44100);
-    T freq;
-    T gain = T(1); // linear gain for shelf filters
-    FirstOrderType type;
-    FirstOrderCore<T> FirstOrderCore;
-
-public:
     void setGainLinear(T newGainLin) {
         gain = std::clamp(newGainLin, T(0.001), T(10));
         updateCoeffs();
     }
+
     void setGainDb(T newGainDb) {
         gain = Jonssonic::dB2Mag(newGainDb);
         updateCoeffs();
     }
 
 private:
+    T sampleRate = T(44100);
+    T freqNormalized = T(0.25); // default to quarter Nyquist
+    T gain = T(1); // linear gain for shelf filters
+
+    FirstOrderType type;
+    FirstOrderCore<T> FirstOrderCore;
+
     void updateCoeffs() {
         T b0 = T(0), b1 = T(0), a1 = T(0);
         switch (type) {
             case FirstOrderType::Lowpass:
-                Jonssonic::computeFirstOrderLowpassCoeffs<T>(freq, sampleRate, b0, b1, a1);
+                Jonssonic::computeFirstOrderLowpassCoeffs<T>(freqNormalized, b0, b1, a1);
                 FirstOrderCore.setSectionCoeffs(0, b0, b1, a1);
                 break;
             case FirstOrderType::Highpass:
-                Jonssonic::computeFirstOrderHighpassCoeffs<T>(freq, sampleRate, b0, b1, a1);
+                Jonssonic::computeFirstOrderHighpassCoeffs<T>(freqNormalized, b0, b1, a1);
                 FirstOrderCore.setSectionCoeffs(0, b0, b1, a1);
                 break;
             case FirstOrderType::Allpass:
-                Jonssonic::computeFirstOrderAllpassCoeffs<T>(freq, sampleRate, b0, b1, a1);
+                Jonssonic::computeFirstOrderAllpassCoeffs<T>(freqNormalized, b0, b1, a1);
                 FirstOrderCore.setSectionCoeffs(0, b0, b1, a1);
                 break;
             case FirstOrderType::Lowshelf:
-                Jonssonic::computeFirstOrderLowshelfCoeffs<T>(freq, gain, sampleRate, b0, b1, a1);
+                Jonssonic::computeFirstOrderLowshelfCoeffs<T>(freqNormalized, gain, b0, b1, a1);
                 FirstOrderCore.setSectionCoeffs(0, b0, b1, a1);
                 break;
             case FirstOrderType::Highshelf:
-                Jonssonic::computeFirstOrderHighshelfCoeffs<T>(freq, gain, sampleRate, b0, b1, a1);
+                Jonssonic::computeFirstOrderHighshelfCoeffs<T>(freqNormalized, gain, b0, b1, a1);
                 FirstOrderCore.setSectionCoeffs(0, b0, b1, a1);
                 break;
             default:
@@ -117,5 +132,6 @@ private:
         }
     }
 };
+
 
 } // namespace Jonssonic

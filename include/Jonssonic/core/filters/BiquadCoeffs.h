@@ -12,9 +12,8 @@ namespace Jonssonic
 
 /**
  * @brief Compute lowpass biquad filter coefficients.
- * @param freq Cutoff frequency in Hz
+ * @param normFreq Normalized cutoff frequency (0..0.5, where 0.5 = Nyquist)
  * @param Q Quality factor
- * @param sampleRate Sample rate in Hz
  * @param b0 Feedforward coefficient 0 (output)
  * @param b1 Feedforward coefficient 1 (output)
  * @param b2 Feedforward coefficient 2 (output)
@@ -22,14 +21,12 @@ namespace Jonssonic
  * @param a2 Feedback coefficient 2 (output)
  */
 template<typename T>
-inline void computeLowpassCoeffs(T freq, T Q, T sampleRate, 
-                                  T& b0, T& b1, T& b2, T& a1, T& a2)
+inline void computeLowpassCoeffs(T normFreq, T Q, T& b0, T& b1, T& b2, T& a1, T& a2)
 {
-    T w0 = two_pi<T> * freq / sampleRate;
+    T w0 = two_pi<T> * normFreq;
     T cosw0 = std::cos(w0);
     T sinw0 = std::sin(w0);
     T alpha = sinw0 / (T(2) * Q);
-    
     T a0 = T(1) + alpha;
     b0 = ((T(1) - cosw0) / T(2)) / a0;
     b1 = (T(1) - cosw0) / a0;
@@ -40,9 +37,8 @@ inline void computeLowpassCoeffs(T freq, T Q, T sampleRate,
 
 /**
  * @brief Compute highpass biquad filter coefficients.
- * @param freq Cutoff frequency in Hz
+ * @param normFreq Normalized cutoff frequency (0..0.5, where 0.5 = Nyquist)
  * @param Q Quality factor
- * @param sampleRate Sample rate in Hz
  * @param b0 Feedforward coefficient 0 (output)
  * @param b1 Feedforward coefficient 1 (output)
  * @param b2 Feedforward coefficient 2 (output)
@@ -50,14 +46,12 @@ inline void computeLowpassCoeffs(T freq, T Q, T sampleRate,
  * @param a2 Feedback coefficient 2 (output)
  */
 template<typename T>
-inline void computeHighpassCoeffs(T freq, T Q, T sampleRate,
-                                   T& b0, T& b1, T& b2, T& a1, T& a2)
+inline void computeHighpassCoeffs(T normFreq, T Q, T& b0, T& b1, T& b2, T& a1, T& a2)
 {
-    T w0 = two_pi<T> * freq / sampleRate;
+    T w0 = two_pi<T> * normFreq;
     T cosw0 = std::cos(w0);
     T sinw0 = std::sin(w0);
     T alpha = sinw0 / (T(2) * Q);
-    
     T a0 = T(1) + alpha;
     b0 = ((T(1) + cosw0) / T(2)) / a0;
     b1 = -(T(1) + cosw0) / a0;
@@ -68,9 +62,8 @@ inline void computeHighpassCoeffs(T freq, T Q, T sampleRate,
 
 /**
  * @brief Compute bandpass biquad filter coefficients (constant skirt gain).
- * @param freq Center frequency in Hz
+ * @param normFreq Normalized center frequency (0..0.5, where 0.5 = Nyquist)
  * @param Q Quality factor
- * @param sampleRate Sample rate in Hz
  * @param b0 Feedforward coefficient 0 (output)
  * @param b1 Feedforward coefficient 1 (output)
  * @param b2 Feedforward coefficient 2 (output)
@@ -78,14 +71,12 @@ inline void computeHighpassCoeffs(T freq, T Q, T sampleRate,
  * @param a2 Feedback coefficient 2 (output)
  */
 template<typename T>
-inline void computeBandpassCoeffs(T freq, T Q, T sampleRate,
-                                   T& b0, T& b1, T& b2, T& a1, T& a2)
+inline void computeBandpassCoeffs(T normFreq, T Q, T& b0, T& b1, T& b2, T& a1, T& a2)
 {
-    T w0 = two_pi<T> * freq / sampleRate;
+    T w0 = two_pi<T> * normFreq;
     T cosw0 = std::cos(w0);
     T sinw0 = std::sin(w0);
     T alpha = sinw0 / (T(2) * Q);
-    
     T a0 = T(1) + alpha;
     b0 = alpha / a0;
     b1 = T(0);
@@ -96,25 +87,21 @@ inline void computeBandpassCoeffs(T freq, T Q, T sampleRate,
 
 /**
  * @brief Compute allpass biquad filter coefficients.
- * @param freq Center frequency in Hz
+ * @param normFreq Normalized center frequency (0..0.5, where 0.5 = Nyquist)
  * @param Q Quality factor
- * @param sampleRate Sample rate in Hz
  * @param b0 Feedforward coefficient 0 (output)
  * @param b1 Feedforward coefficient 1 (output)
  * @param b2 Feedforward coefficient 2 (output)
  * @param a1 Feedback coefficient 1 (output)
  * @param a2 Feedback coefficient 2 (output)
  */
-
 template<typename T>
-inline void computeAllpassCoeffs(T freq, T Q, T sampleRate,
-                                  T& b0, T& b1, T& b2, T& a1, T& a2)
+inline void computeAllpassCoeffs(T normFreq, T Q, T& b0, T& b1, T& b2, T& a1, T& a2)
 {
-    T w0 = two_pi<T> * freq / sampleRate;
+    T w0 = two_pi<T> * normFreq;
     T cosw0 = std::cos(w0);
     T sinw0 = std::sin(w0);
     T alpha = sinw0 / (T(2) * Q);
-    
     T a0 = T(1) + alpha;
     b0 = (T(1) - alpha) / a0;
     b1 = (-T(2) * cosw0) / a0;
@@ -125,9 +112,8 @@ inline void computeAllpassCoeffs(T freq, T Q, T sampleRate,
 
 /**
  * @brief Compute notch biquad filter coefficients.
- * @param freq Center frequency in Hz
+ * @param normFreq Normalized center frequency (0..0.5, where 0.5 = Nyquist)
  * @param Q Quality factor
- * @param sampleRate Sample rate in Hz
  * @param b0 Feedforward coefficient 0 (output)
  * @param b1 Feedforward coefficient 1 (output)
  * @param b2 Feedforward coefficient 2 (output)
@@ -135,14 +121,12 @@ inline void computeAllpassCoeffs(T freq, T Q, T sampleRate,
  * @param a2 Feedback coefficient 2 (output)
  */
 template<typename T>
-inline void computeNotchCoeffs(T freq, T Q, T sampleRate,
-                                T& b0, T& b1, T& b2, T& a1, T& a2)
+inline void computeNotchCoeffs(T normFreq, T Q, T& b0, T& b1, T& b2, T& a1, T& a2)
 {
-    T w0 = two_pi<T> * freq / sampleRate;
+    T w0 = two_pi<T> * normFreq;
     T cosw0 = std::cos(w0);
     T sinw0 = std::sin(w0);
     T alpha = sinw0 / (T(2) * Q);
-    
     T a0 = T(1) + alpha;
     b0 = T(1) / a0;
     b1 = (-T(2) * cosw0) / a0;
@@ -153,10 +137,9 @@ inline void computeNotchCoeffs(T freq, T Q, T sampleRate,
 
 /**
  * @brief Compute peaking EQ biquad filter coefficients.
- * @param freq Center frequency in Hz
+ * @param normFreq Normalized center frequency (0..0.5, where 0.5 = Nyquist)
  * @param Q Quality factor
  * @param gainLinear Linear gain (not dB)
- * @param sampleRate Sample rate in Hz
  * @param b0 Feedforward coefficient 0 (output)
  * @param b1 Feedforward coefficient 1 (output)
  * @param b2 Feedforward coefficient 2 (output)
@@ -164,16 +147,15 @@ inline void computeNotchCoeffs(T freq, T Q, T sampleRate,
  * @param a2 Feedback coefficient 2 (output)
  */
 template<typename T>
-inline void computePeakCoeffs(T freq, T Q, T gainLinear, T sampleRate,
+inline void computePeakCoeffs(T normFreq, T Q, T gainLinear,
                                T& b0, T& b1, T& b2, T& a1, T& a2)
 {
     // For peaking EQ, A should be sqrt(gainLinear), not gainLinear
     T A = std::sqrt(gainLinear);
-    T w0 = two_pi<T> * freq / sampleRate;
+    T w0 = two_pi<T> * normFreq;
     T cosw0 = std::cos(w0);
     T sinw0 = std::sin(w0);
     T alpha = sinw0 / (T(2) * Q);
-    
     // Standard peaking EQ formulas from Audio EQ Cookbook
     T a0 = T(1) + alpha / A;
     b0 = (T(1) + alpha * A) / a0;
@@ -185,10 +167,9 @@ inline void computePeakCoeffs(T freq, T Q, T gainLinear, T sampleRate,
 
 /**
  * @brief Compute low shelf biquad filter coefficients.
- * @param freq Transition frequency in Hz
+ * @param normFreq Normalized transition frequency (0..0.5, where 0.5 = Nyquist)
  * @param Q Quality factor (shelf slope)
  * @param gainLinear Linear gain (not dB)
- * @param sampleRate Sample rate in Hz
  * @param b0 Feedforward coefficient 0 (output)
  * @param b1 Feedforward coefficient 1 (output)
  * @param b2 Feedforward coefficient 2 (output)
@@ -196,16 +177,15 @@ inline void computePeakCoeffs(T freq, T Q, T gainLinear, T sampleRate,
  * @param a2 Feedback coefficient 2 (output)
  */
 template<typename T>
-inline void computeLowshelfCoeffs(T freq, T Q, T gainLinear, T sampleRate,
+inline void computeLowshelfCoeffs(T normFreq, T Q, T gainLinear,
                                    T& b0, T& b1, T& b2, T& a1, T& a2)
 {
     T A = std::sqrt(gainLinear);
-    T w0 = two_pi<T> * freq / sampleRate;
+    T w0 = two_pi<T> * normFreq;
     T cosw0 = std::cos(w0);
     T sinw0 = std::sin(w0);
     T alpha = sinw0 / (T(2) * Q);
     T sqrtA = std::sqrt(A);
-    
     T a0 = (A + T(1)) + (A - T(1)) * cosw0 + T(2) * sqrtA * alpha;
     b0 = (A * ((A + T(1)) - (A - T(1)) * cosw0 + T(2) * sqrtA * alpha)) / a0;
     b1 = (T(2) * A * ((A - T(1)) - (A + T(1)) * cosw0)) / a0;
@@ -216,10 +196,9 @@ inline void computeLowshelfCoeffs(T freq, T Q, T gainLinear, T sampleRate,
 
 /**
  * @brief Compute high shelf biquad filter coefficients.
- * @param freq Transition frequency in Hz
+ * @param normFreq Normalized transition frequency (0..0.5, where 0.5 = Nyquist)
  * @param Q Quality factor (shelf slope)
  * @param gainLinear Linear gain (not dB)
- * @param sampleRate Sample rate in Hz
  * @param b0 Feedforward coefficient 0 (output)
  * @param b1 Feedforward coefficient 1 (output)
  * @param b2 Feedforward coefficient 2 (output)
@@ -227,16 +206,15 @@ inline void computeLowshelfCoeffs(T freq, T Q, T gainLinear, T sampleRate,
  * @param a2 Feedback coefficient 2 (output)
  */
 template<typename T>
-inline void computeHighshelfCoeffs(T freq, T Q, T gainLinear, T sampleRate,
+inline void computeHighshelfCoeffs(T normFreq, T Q, T gainLinear,
                                     T& b0, T& b1, T& b2, T& a1, T& a2)
 {
     T A = std::sqrt(gainLinear);
-    T w0 = two_pi<T> * freq / sampleRate;
+    T w0 = two_pi<T> * normFreq;
     T cosw0 = std::cos(w0);
     T sinw0 = std::sin(w0);
     T alpha = sinw0 / (T(2) * Q);
     T sqrtA = std::sqrt(A);
-    
     T a0 = (A + T(1)) - (A - T(1)) * cosw0 + T(2) * sqrtA * alpha;
     b0 = (A * ((A + T(1)) + (A - T(1)) * cosw0 + T(2) * sqrtA * alpha)) / a0;
     b1 = (-T(2) * A * ((A - T(1)) + (A + T(1)) * cosw0)) / a0;

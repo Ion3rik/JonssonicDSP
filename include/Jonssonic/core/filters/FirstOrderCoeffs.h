@@ -10,15 +10,14 @@ namespace Jonssonic {
 
 /**
  * @brief Compute first-order lowpass filter coefficients.
- * @param freq Cutoff frequency in Hz
- * @param sampleRate Sample rate in Hz
+ * @param normFreq Normalized cutoff frequency (0..0.5, where 0.5 = Nyquist)
  * @param b0 Feedforward coefficient 0 (output)
  * @param b1 Feedforward coefficient 1 (output)
  * @param a1 Feedback coefficient 1 (output)
  */
 template<typename T>
-inline void computeFirstOrderLowpassCoeffs(T freq, T sampleRate, T& b0, T& b1, T& a1) {
-    T x = std::exp(-two_pi<T> * freq / sampleRate);
+inline void computeFirstOrderLowpassCoeffs(T normFreq, T& b0, T& b1, T& a1) {
+    T x = std::exp(-two_pi<T> * normFreq);
     b0 = T(1) - x;
     b1 = T(0);
     a1 = x;
@@ -28,8 +27,8 @@ inline void computeFirstOrderLowpassCoeffs(T freq, T sampleRate, T& b0, T& b1, T
  * @brief Compute first-order highpass filter coefficients.
  */
 template<typename T>
-inline void computeFirstOrderHighpassCoeffs(T freq, T sampleRate, T& b0, T& b1, T& a1) {
-    T x = std::exp(-two_pi<T> * freq / sampleRate);
+inline void computeFirstOrderHighpassCoeffs(T normFreq, T& b0, T& b1, T& a1) {
+    T x = std::exp(-two_pi<T> * normFreq);
     b0 = (T(1) + x) / 2;
     b1 = -(T(1) + x) / 2;
     a1 = x;
@@ -39,8 +38,8 @@ inline void computeFirstOrderHighpassCoeffs(T freq, T sampleRate, T& b0, T& b1, 
  * @brief Compute first-order allpass filter coefficients.
  */
 template<typename T>
-inline void computeFirstOrderAllpassCoeffs(T freq, T sampleRate, T& b0, T& b1, T& a1) {
-    T x = std::exp(-two_pi<T> * freq / sampleRate);
+inline void computeFirstOrderAllpassCoeffs(T normFreq, T& b0, T& b1, T& a1) {
+    T x = std::exp(-two_pi<T> * normFreq);
     b0 = x;
     b1 = T(1);
     a1 = x;
@@ -51,8 +50,8 @@ inline void computeFirstOrderAllpassCoeffs(T freq, T sampleRate, T& b0, T& b1, T
  * @param gainLinear Linear gain (not dB)
  */
 template<typename T>
-inline void computeFirstOrderLowshelfCoeffs(T freq, T gainLinear, T sampleRate, T& b0, T& b1, T& a1) {
-    T x = std::exp(-two_pi<T> * freq / sampleRate);
+inline void computeFirstOrderLowshelfCoeffs(T normFreq, T gainLinear, T& b0, T& b1, T& a1) {
+    T x = std::exp(-two_pi<T> * normFreq);
     b0 = (T(1) - x) * gainLinear;
     b1 = T(0);
     a1 = x;
@@ -63,8 +62,8 @@ inline void computeFirstOrderLowshelfCoeffs(T freq, T gainLinear, T sampleRate, 
  * @param gainLinear Linear gain (not dB)
  */
 template<typename T>
-inline void computeFirstOrderHighshelfCoeffs(T freq, T gainLinear, T sampleRate, T& b0, T& b1, T& a1) {
-    T x = std::exp(-two_pi<T> * freq / sampleRate);
+inline void computeFirstOrderHighshelfCoeffs(T normFreq, T gainLinear, T& b0, T& b1, T& a1) {
+    T x = std::exp(-two_pi<T> * normFreq);
     b0 = ((T(1) + x) / 2) * gainLinear;
     b1 = -((T(1) + x) / 2) * gainLinear;
     a1 = x;
