@@ -2,7 +2,7 @@
 // Unit tests for the OverSamplerFilters classes
 // SPDX-License-Identifier: MIT
 
-#include "../../../include/Jonssonic/core/oversampling/OverSamplerFilters.h"
+#include "../../../include/Jonssonic/core/oversampling/OversamplerFilters.h"
 #include <gtest/gtest.h>
 
 #include <algorithm>

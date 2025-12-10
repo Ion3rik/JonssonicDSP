@@ -1,10 +1,10 @@
 // Jonssonic - A C++ audio DSP library
-// Unit tests for the SOSFilter class
+// Unit tests for the BiquadCore class
 // SPDX-License-Identifier: MIT
 
 #include <gtest/gtest.h>
 #include <cmath>
-#include "Jonssonic/core/filters/SOSFilter.h"
+#include "Jonssonic/core/filters/BiquadCore.h"
 
 namespace Jonssonic {
 
@@ -17,13 +17,13 @@ protected:
         multiSectionFilter.prepare(2, 2); // 2 channels, 2 sections
     }
     
-    SOSFilter<float> filter;
-    SOSFilter<float> multiSectionFilter;
+    BiquadCore<float> filter;
+    BiquadCore<float> multiSectionFilter;
 };
 
 // Test basic preparation
 TEST_F(SOSFilterTest, Prepare) {
-    SOSFilter<float> f;
+    BiquadCore<float> f;
     EXPECT_NO_THROW(f.prepare(2, 1));
     EXPECT_NO_THROW(f.prepare(1, 3));
     EXPECT_NO_THROW(f.prepare(8, 4));
@@ -154,8 +154,8 @@ TEST_F(SOSFilterTest, FeedbackBehavior) {
 
 // Test constants are correct
 TEST_F(SOSFilterTest, Constants) {
-    EXPECT_EQ(SOSFilter<float>::COEFFS_PER_SECTION, 5);
-    EXPECT_EQ(SOSFilter<float>::STATE_VARS_PER_SECTION, 4);
+    EXPECT_EQ(BiquadCore<float>::COEFFS_PER_SECTION, 5);
+    EXPECT_EQ(BiquadCore<float>::STATE_VARS_PER_SECTION, 4);
 }
 
 } // namespace Jonssonic

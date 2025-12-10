@@ -1,5 +1,5 @@
 // Jonssonic - A C++ audio DSP library
-// SOS (Second-Order Section) Filter header file
+// BiquadCore header file
 // SPDX-License-Identifier: MIT
 
 #pragma once
@@ -8,11 +8,11 @@
 namespace Jonssonic
 {
 /**
- * @brief Second-Order Section (SOS) Filter
+ * @brief BiquadCore filter class implementing a multi-channel, multi-section biquad filter.
  * @param T Sample data type (e.g., float, double)
  */
 template<typename T>
-class SOSFilter
+class BiquadCore
 {
 public:
     // Constants
@@ -20,18 +20,18 @@ public:
     static constexpr size_t STATE_VARS_PER_SECTION = 4; // x1, x2, y1, y2
 
     // Constructor and Destructor
-    SOSFilter() = default; // Default constructor
-    SOSFilter(size_t newNumChannels, size_t newNumSections) // Parameterized constructor (for the faint hearted)
+    BiquadCore() = default; // Default constructor
+    BiquadCore(size_t newNumChannels, size_t newNumSections) // Parameterized constructor (for the faint hearted)
     {
         prepare(newNumChannels, newNumSections);
     }
-    ~SOSFilter() = default;
+    ~BiquadCore() = default;
 
     // No copy or move semantics
-    SOSFilter(const SOSFilter&) = delete;
-    SOSFilter& operator=(const SOSFilter&) = delete;
-    SOSFilter(SOSFilter&&) = delete;
-    SOSFilter& operator=(SOSFilter&&) = delete;
+    BiquadCore(const BiquadCore&) = delete;
+    BiquadCore& operator=(const BiquadCore&) = delete;
+    BiquadCore(BiquadCore&&) = delete;
+    BiquadCore& operator=(BiquadCore&&) = delete;
 
     /**
      * @brief Prepare the SOS filter for processing.

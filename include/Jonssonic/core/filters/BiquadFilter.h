@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include "SOSFilter.h"
+#include "BiquadCore.h"
 #include "BiquadCoeffs.h"
 #include "../../utils/MathUtils.h"
 #include <algorithm>
@@ -60,7 +60,7 @@ public:
         type = BiquadType::Lowpass; // default to lowpass
 
         // Prepare underlying SOS filter first
-        sosFilter.prepare(newNumChannels, 1); // single second-order section
+        BiquadCore.prepare(newNumChannels, 1); // single second-order section
         
         // Then update coefficients
         updateCoeffs();
@@ -68,7 +68,7 @@ public:
 
     void clear()
     {
-        sosFilter.clear();
+        BiquadCore.clear();
     }
 
     /**
@@ -79,7 +79,7 @@ public:
      */
     T processSample(size_t ch, T input)
     {
-        return sosFilter.processSample(ch, input);
+        return BiquadCore.processSample(ch, input);
     }
 
     /**
@@ -90,7 +90,7 @@ public:
      */
     void processBlock(const T* const* input, T* const* output, size_t numSamples)
     {
-        sosFilter.processBlock(input, output, numSamples);
+        BiquadCore.processBlock(input, output, numSamples);
     }
 
     void setGainDb(T newGainDb)
@@ -112,7 +112,7 @@ public:
     void setFreq(T newFreq)
     {
         // clamp frequency to stable range
-        freq = std::clamp(newFreq, T(1), sampleRate / T(2));
+        freq = std::clamp(newFreq, T(10), sampleRate / T(2));
         updateCoeffs();
     }
 
@@ -137,7 +137,7 @@ private:
     T Q;    // quality factor
     T gain; // linear gain for shelving/peak filters
     BiquadType type; // filter type
-    SOSFilter<T> sosFilter;
+    BiquadCore<T> BiquadCore;
 
     /**
      * @brief Update filter coefficients based on current parameters.
@@ -151,42 +151,42 @@ private:
             case BiquadType::Lowpass:
                 Jonssonic::computeLowpassCoeffs<T>(freq, Q, sampleRate,
                     b0, b1, b2, a1, a2);
-                sosFilter.setSectionCoeffs(0, b0, b1, b2, a1, a2);
+                BiquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
                 break;
             case BiquadType::Highpass:
                 Jonssonic::computeHighpassCoeffs<T>(freq, Q, sampleRate,
                     b0, b1, b2, a1, a2);
-                sosFilter.setSectionCoeffs(0, b0, b1, b2, a1, a2);
+                BiquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
                 break;
             case BiquadType::Bandpass:
                 Jonssonic::computeBandpassCoeffs<T>(freq, Q, sampleRate,
                     b0, b1, b2, a1, a2);
-                sosFilter.setSectionCoeffs(0, b0, b1, b2, a1, a2);
+                BiquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
                 break;
             case BiquadType::Allpass:
                 Jonssonic::computeAllpassCoeffs<T>(freq, Q, sampleRate,
                     b0, b1, b2, a1, a2);
-                sosFilter.setSectionCoeffs(0, b0, b1, b2, a1, a2);
+                BiquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
                 break;
             case BiquadType::Notch:
                 Jonssonic::computeNotchCoeffs<T>(freq, Q, sampleRate,
                     b0, b1, b2, a1, a2);
-                sosFilter.setSectionCoeffs(0, b0, b1, b2, a1, a2);
+                BiquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
                 break;
             case BiquadType::Peak:
                 Jonssonic::computePeakCoeffs<T>(freq, Q, gain, sampleRate,
                     b0, b1, b2, a1, a2);
-                sosFilter.setSectionCoeffs(0, b0, b1, b2, a1, a2);
+                BiquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
                 break;
             case BiquadType::Lowshelf:
                 Jonssonic::computeLowshelfCoeffs<T>(freq, Q, gain, sampleRate,
                     b0, b1, b2, a1, a2);
-                sosFilter.setSectionCoeffs(0, b0, b1, b2, a1, a2);
+                BiquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
                 break;
             case BiquadType::Highshelf:
                 Jonssonic::computeHighshelfCoeffs<T>(freq, Q, gain, sampleRate,
                     b0, b1, b2, a1, a2);
-                sosFilter.setSectionCoeffs(0, b0, b1, b2, a1, a2);
+                BiquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
                 break;
             default:
                 // Handle unsupported types or add implementations
