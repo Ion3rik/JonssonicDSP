@@ -104,6 +104,9 @@ private:
     FirstOrderCore<T> FirstOrderCore;
 
     void updateCoeffs() {
+        // Skip if filter not prepared (numSections == 0)
+        if (FirstOrderCore.getNumSections() == 0) return;
+        
         T b0 = T(0), b1 = T(0), a1 = T(0);
         switch (type) {
             case FirstOrderType::Lowpass:

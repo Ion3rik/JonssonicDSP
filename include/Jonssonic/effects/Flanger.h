@@ -6,8 +6,8 @@
 
 #include "../core/delays/DelayLine.h"
 #include "../core/generators/Oscillator.h"
-#include "../core/common/Interpolators.h"
-#include "../core/common/AudioBuffer.h"
+#include "../core/common/DspParam.h"
+#include "../core/filters/UtilityFilters.h"
 #include "../utils/MathUtils.h"
 #include <vector>
 #include <algorithm>
@@ -64,8 +64,6 @@ public:
         
         // DC blocker setup
         dcBlocker.prepare(newNumChannels, newSampleRate);
-        dcBlocker.setType(FirstOrderType::Highpass);
-        dcBlocker.setFreqNormalized(T(0.0005)); // ~22 Hz at 44.1kHz
 
         // Set parameter safety bounds
         phaseOffset.setBounds(T(0), T(1));
@@ -204,6 +202,7 @@ private:
     // Core processors
     DelayLine<T, LagrangeInterpolator<T>, SmootherType::OnePole, 1, SMOOTHING_TIME_MS> delayLine;
     Oscillator<T, SmootherType::OnePole, 1, SMOOTHING_TIME_MS> lfo;
+    DCBlocker<T> dcBlocker;
 
     // DSP parameters
     DspParam<T> phaseOffset;

@@ -7,21 +7,35 @@
 
 namespace Jonssonic {
 
-class UtilityFilters {
+/**
+ * @brief DC Blocker - A first-order highpass filter with very low cutoff
+ * @param T Sample data type (e.g., float, double)
+ */
+template<typename T>
+class DCBlocker {
 public:
-    /**
-     * @brief Create a DC blocker (first-order highpass with very low cutoff)
-     * @param numChannels Number of channels
-     * @param sampleRate Sample rate in Hz
-     * @param cutoffHz Cutoff frequency in Hz (default: 20 Hz)
-     */
-    template<typename T>
-    static FirstOrderFilter<T> DCBlocker() {
-        FirstOrderFilter<T> filter(); // construct a first-order filter
-        filter.setType(FirstOrderType::Highpass); // select highpass
-        filter.setFreqNormalized(T(0.0005)); // set very low cutoff
-        return filter;
+    DCBlocker() = default;
+    
+    void prepare(size_t newNumChannels, T newSampleRate) {
+        filter.prepare(newNumChannels, newSampleRate);
+        filter.setType(FirstOrderType::Highpass);
+        filter.setFreqNormalized(T(0.0005)); // Very low cutoff for DC blocking
     }
+    
+    void clear() {
+        filter.clear();
+    }
+    
+    T processSample(size_t ch, T input) {
+        return filter.processSample(ch, input);
+    }
+    
+    void processBlock(const T* const* input, T* const* output, size_t numSamples) {
+        filter.processBlock(input, output, numSamples);
+    }
+
+private:
+    FirstOrderFilter<T> filter;
 };
 
 } // namespace Jonssonic

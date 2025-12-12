@@ -5,10 +5,12 @@
 #pragma once
 #include "../core/delays/DelayLine.h"
 #include "../core/filters/FirstOrderFilter.h"
+#include "../core/filters/UtilityFilters.h"
 #include "../core/common/DspParam.h"
 #include "../core/generators/Oscillator.h"
 #include "../utils/MathUtils.h"
 #include "../core/nonlinear/WaveShaper.h"
+#include <cmath>
 
 namespace Jonssonic {
 /**
@@ -19,9 +21,11 @@ template<typename T>
 class Delay {
 public:
     // Tunable constants
-    static constexpr T MAX_MODULATION_MS = T(3.0);          // Maximum modulation depth in milliseconds 
-    static constexpr T WOW_PORTION_OF_MODULATION = T(0.7);  // Portion of modulation depth for wow effect
-    static constexpr int SMOOTHING_TIME_MS = 100;           // Smoothing time for parameter changes in milliseconds
+    static constexpr T MAX_MODULATION_MS = T(2.0);          // Maximum modulation depth in milliseconds 
+    static constexpr T WOW_PORTION_OF_MODULATION = T(0.9);  // Portion of modulation depth for wow effect
+    static constexpr int SMOOTHING_TIME_MS = 500;           // Smoothing time for parameter changes in milliseconds
+    static constexpr T DAMPING_MIN_HZ = T(2000);            // Minimum damping frequency in Hz
+
 
 
     // Constructor and Destructor
@@ -57,7 +61,7 @@ public:
         dampingFilter.setType(FirstOrderType::Lowpass);
         dampingFilter.setFreq(T(20000)); // Default: no damping
         
-        // DC blocker setup
+        // Prepare DC blocker
         dcBlocker.prepare(newNumChannels, newSampleRate);
         
         // LFO setup
@@ -70,7 +74,7 @@ public:
         flutterLfo.setFrequency(T(6.0)); // 6 Hz for flutter
 
         // Set parameter bounds
-        //feedback.setBounds(T(0), T(1));
+        feedback.setBounds(T(0), T(0.99));
         pingPong.setBounds(T(0), T(1));
         modDepth.setBounds(T(0), T(1));
 
@@ -80,11 +84,11 @@ public:
         modDepth.prepare(newNumChannels, newSampleRate, SMOOTHING_TIME_MS);
 
         // Set default parameter values
-        delayLine.setDelayMs(T(500), true);
-        feedback.setTarget(T(0), true);
-        dampingFilter.setFreq(T(20000)); // no damping
-        pingPong.setTarget(T(0), true);
-        modDepth.setTarget(T(0), true);
+        setFeedback(T(0), true);
+        setPingPong(T(0), true);
+        setModDepth(T(0), true);
+        setDelayMs(T(500), true); // 500 ms default delay
+        setDamping(T(0), true); // No damping by default
     }
 
     void clear() {
@@ -117,19 +121,19 @@ public:
                 // Apply damping filter to delayed sample
                 T dampedSample = dampingFilter.processSample(ch, delayedSample);
 
+                // Apply DC blocker to feedback path
+                dampedSample = dcBlocker.processSample(ch, dampedSample);
+
                 // Compute feedback: mix own channel with opposite channel (ping-pong)
                 size_t oppositeCh = (ch + 1) % numChannels;
                 T oppositeDelayed = delayLine.readSample(oppositeCh, totalModulation);
-                
                 T pingPongAmount = pingPong.getNextValue(ch);
                 T mixedSample = (dampedSample * (T(1) - pingPongAmount) + oppositeDelayed * pingPongAmount);
-                
-                // Apply DC blocking to feedback path BEFORE soft clipping
-                mixedSample = dcBlocker.processSample(ch, mixedSample);
-                
+                mixedSample /= numChannels * 2; // scaling
+            
                 // Soft-clip first, then apply feedback gain
-                T clippedSample = softClipper.processSample(mixedSample);
-                T feedbackSample = clippedSample * feedback.getNextValue(ch);
+                //T clippedSample = softClipper.processSample(mixedSample);
+                T feedbackSample = mixedSample * feedback.getNextValue(ch);
 
                 // For ping-pong: scale input by (1 - pingPong) so at max pingPong,
                 // only channel 0 receives input, creating true ping-pong effect
@@ -157,7 +161,8 @@ public:
         feedback.setTarget(newFeedback, skipSmoothing);
     }
 
-    void setDamping(T newDampingHz, bool skipSmoothing = false) {
+    void setDamping(T newDamping, bool skipSmoothing = false) {
+        T newDampingHz = DAMPING_MIN_HZ * std::pow(T(20000) / DAMPING_MIN_HZ, T(1) - newDamping);
         dampingFilter.setFreq(newDampingHz);
     }
 
@@ -186,7 +191,7 @@ private:
     // PROCESSORS
     DelayLine<T, LagrangeInterpolator<T>, SmootherType::OnePole, 1, SMOOTHING_TIME_MS> delayLine;
     FirstOrderFilter<T> dampingFilter; // damping lowpass filter
-    FirstOrderFilter<T> dcBlocker; // DC blocker for feedback path
+    DCBlocker<T> dcBlocker; // DC blocker for feedback path
     Oscillator<T> wowLfo; // Slower LFO for wow effect
     Oscillator<T> flutterLfo; // Faster LFO for flutter effect
     WaveShaper<T, WaveShaperType::Atan> softClipper; // Soft clipper for feedback
