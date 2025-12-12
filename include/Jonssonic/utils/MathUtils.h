@@ -42,6 +42,9 @@ template<typename T>
 inline constexpr T sqrt2 = T(1.414213562373095048801688724209698079);
 
 template<typename T>
+inline constexpr T sqrtHalf = T(0.707106781186547524400844362104849039);
+
+template<typename T>
 inline constexpr T inv_sqrt2 = T(1) / sqrt2<T>;
 
 /**

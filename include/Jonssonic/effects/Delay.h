@@ -23,7 +23,7 @@ public:
     // Tunable constants
     static constexpr T MAX_MODULATION_MS = T(2.0);          // Maximum modulation depth in milliseconds 
     static constexpr T WOW_PORTION_OF_MODULATION = T(0.9);  // Portion of modulation depth for wow effect
-    static constexpr int SMOOTHING_TIME_MS = 500;           // Smoothing time for parameter changes in milliseconds
+    static constexpr int SMOOTHING_TIME_MS = 300;           // Smoothing time for parameter changes in milliseconds
     static constexpr T DAMPING_MIN_HZ = T(2000);            // Minimum damping frequency in Hz
 
 
@@ -52,6 +52,7 @@ public:
         // Store global parameters
         numChannels = newNumChannels;
         sampleRate = newSampleRate;
+        maxModsamples = msToSamples(MAX_MODULATION_MS, sampleRate);
 
         // Prepare DSP components
         delayLine.prepare(newNumChannels, newSampleRate, maxDelayMs);
@@ -59,7 +60,7 @@ public:
         // Damping filter setup
         dampingFilter.prepare(newNumChannels, newSampleRate);
         dampingFilter.setType(FirstOrderType::Lowpass);
-        dampingFilter.setFreq(T(20000)); // Default: no damping
+        dampingFilter.setFreq(T(18000)); // Default: no damping
         
         // Prepare DC blocker
         dcBlocker.prepare(newNumChannels, newSampleRate);
@@ -74,7 +75,7 @@ public:
         flutterLfo.setFrequency(T(6.0)); // 6 Hz for flutter
 
         // Set parameter bounds
-        feedback.setBounds(T(0), T(0.99));
+        feedback.setBounds(T(0), T(1));
         pingPong.setBounds(T(0), T(1));
         modDepth.setBounds(T(0), T(1));
 
@@ -110,36 +111,35 @@ public:
             for (size_t ch = 0; ch < numChannels; ++ch) 
             {  
                 // Compute modulation value (wow + flutter)
-                T modAmount = modDepth.getNextValue(ch) * MAX_MODULATION_MS;
+                T modAmount = modDepth.getNextValue(ch) * maxModsamples;
                 T wowValue = wowLfo.processSample(ch) * WOW_PORTION_OF_MODULATION * modAmount;
                 T flutterValue = flutterLfo.processSample(ch) * (T(1) - WOW_PORTION_OF_MODULATION) * modAmount;
-                T totalModulation = msToSamples(wowValue + flutterValue, sampleRate); // total modulation in samples
+                T totalModulation = wowValue + flutterValue;
 
                 // Read delayed sample with modulation
                 T delayedSample = delayLine.readSample(ch, totalModulation);
-
+                
                 // Apply damping filter to delayed sample
                 T dampedSample = dampingFilter.processSample(ch, delayedSample);
 
-                // Apply DC blocker to feedback path
-                dampedSample = dcBlocker.processSample(ch, dampedSample);
-
-                // Compute feedback: mix own channel with opposite channel (ping-pong)
+                // Compute feedback: mix this channel with opposite channel (ping-pong)
                 size_t oppositeCh = (ch + 1) % numChannels;
                 T oppositeDelayed = delayLine.readSample(oppositeCh, totalModulation);
                 T pingPongAmount = pingPong.getNextValue(ch);
                 T mixedSample = (dampedSample * (T(1) - pingPongAmount) + oppositeDelayed * pingPongAmount);
-                mixedSample /= numChannels * 2; // scaling
-            
-                // Soft-clip first, then apply feedback gain
-                //T clippedSample = softClipper.processSample(mixedSample);
-                T feedbackSample = mixedSample * feedback.getNextValue(ch);
+                
+                // Apply normalized feedback gain
+                T fbGain = feedback.getNextValue(ch) * ((T(1) - pingPongAmount) + std::sqrt(T(0.5)) * pingPongAmount);// normalize for the cross-feedback
+                T feedbackSample = mixedSample * fbGain;
+
+                // Apply DC blocker to feedback path
+                feedbackSample = dcBlocker.processSample(ch, feedbackSample);
 
                 // For ping-pong: scale input by (1 - pingPong) so at max pingPong,
                 // only channel 0 receives input, creating true ping-pong effect
                 T inputGain = (ch == 0) ? T(1) : (T(1) - pingPongAmount);
 
-                // Write input + soft-clipped feedback into delay line
+                // Write input + feedback back into delay line
                 delayLine.writeSample(ch, input[ch][n] * inputGain + feedbackSample);
 
                 // Output the damped delayed sample
@@ -162,7 +162,7 @@ public:
     }
 
     void setDamping(T newDamping, bool skipSmoothing = false) {
-        T newDampingHz = DAMPING_MIN_HZ * std::pow(T(20000) / DAMPING_MIN_HZ, T(1) - newDamping);
+        T newDampingHz = DAMPING_MIN_HZ * std::pow(T(18000) / DAMPING_MIN_HZ, T(1) - newDamping);
         dampingFilter.setFreq(newDampingHz);
     }
 
@@ -187,6 +187,7 @@ private:
     // GLOBAL PARAMETERS
     size_t numChannels = 0;
     T sampleRate = T(44100);
+    T maxModsamples;
 
     // PROCESSORS
     DelayLine<T, LagrangeInterpolator<T>, SmootherType::OnePole, 1, SMOOTHING_TIME_MS> delayLine;

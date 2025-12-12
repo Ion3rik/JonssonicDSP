@@ -67,7 +67,7 @@ public:
 
         // Set parameter safety bounds
         phaseOffset.setBounds(T(0), T(1));
-        feedback.setBounds(T(-0.99), T(0.99));
+        feedback.setBounds(T(-0.95), T(0.95));
 
         // Initialize parameters
         phaseOffset.prepare(newNumChannels, newSampleRate, SMOOTHING_TIME_MS);
@@ -124,7 +124,7 @@ public:
         
                 // Compute feedback with DC blocking
                 T feedbackSignal = delayedSample * feedback.getNextValue(ch);
-                feedbackSignal = dcBlocker.processSample(ch, feedbackSignal);
+                //feedbackSignal = dcBlocker.processSample(ch, feedbackSignal);
                 
                 // Compute what to write back (input + delayed feedback)
                 T toWrite = input[ch][n] + feedbackSignal;
