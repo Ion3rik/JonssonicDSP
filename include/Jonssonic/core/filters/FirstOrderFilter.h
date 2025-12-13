@@ -3,22 +3,12 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
+#include "FilterTypes.h"
 #include "FirstOrderCore.h"
 #include "FirstOrderCoeffs.h"
 #include <algorithm>
 
 namespace Jonssonic {
-
-/**
- * @brief First-order filter types
- */
-enum class FirstOrderType {
-    Lowpass,
-    Highpass,
-    Allpass,
-    Lowshelf,
-    Highshelf
-};
 
 /**
  * @brief First-order filter wrapper

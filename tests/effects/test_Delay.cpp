@@ -16,7 +16,7 @@ TEST(DelayTest, BasicMonoImpulse)
     delay.setDelaySamples(100.0f, true); // 100 samples delay
     delay.setFeedback(0.0f, true);
     delay.setDamping(20000.0f, true);
-    delay.setCrossTalk(0.0f, true);
+    delay.setPingPong(0.0f, true);
     delay.setModDepth(0.0f, true);
 
     constexpr size_t numSamples = 256;
@@ -47,7 +47,7 @@ TEST(DelayTest, StereoImpulseWithCrossTalk)
     delay.setDelaySamples(50.0f, true); // 50 samples delay
     delay.setFeedback(0.0f, true);
     delay.setDamping(20000.0f, true);
-    delay.setCrossTalk(1.0f, true); // Max cross-talk
+    delay.setPingPong(1.0f, true); // Max cross-talk
     delay.setModDepth(0.0f, true);
 
     constexpr size_t numSamples = 256;
@@ -78,7 +78,7 @@ TEST(DelayTest, FeedbackAndDamping)
     delay.setDelaySamples(100.0f, true); // 100 samples delay
     delay.setFeedback(0.5f, true);
     delay.setDamping(1000.0f, true); // Strong damping
-    delay.setCrossTalk(0.0f, true);
+    delay.setPingPong(0.0f, true);
     delay.setModDepth(0.0f, true);
 
     constexpr size_t numSamples = 512;

@@ -4,25 +4,13 @@
 
 #pragma once
 #include "BiquadCore.h"
+#include "FilterTypes.h"
 #include "BiquadCoeffs.h"
 #include "../../utils/MathUtils.h"
 #include <algorithm>
 
 namespace Jonssonic
 {
-/**
- * @brief Biquad Filter Types
- */
-enum class BiquadType {
-    Lowpass,
-    Highpass,
-    Bandpass,
-    Allpass,
-    Notch,
-    Peak,
-    Lowshelf,
-    Highshelf
-};
 
 /**
  * @brief Biquad Filter
@@ -37,7 +25,6 @@ public:
     BiquadFilter(size_t newNumChannels, T newSampleRate) // Parameterized constructor (for the faint hearted)
     {
         prepare(newNumChannels, newSampleRate);
-    
     }
     ~BiquadFilter() = default;
 
