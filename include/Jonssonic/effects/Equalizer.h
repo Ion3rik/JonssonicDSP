@@ -4,6 +4,7 @@
 
 #pragma once
 #include "../core/filters/BiquadChain.h"
+#include "../core/nonlinear/WaveShaper.h"
 
 namespace Jonssonic {
 /**
@@ -14,12 +15,14 @@ template<typename T>
 class Equalizer {
 public:
     // Tunable constants
-    static constexpr T VARIABLE_Q_WEIGHT = T(2.0); // Weighting factor for variable Q calculation
+    static constexpr T VARIABLE_Q_WEIGHT = T(0.1); // Weighting factor for variable Q calculation (higher = more Q change per dB)
+    static constexpr T BASE_Q = T(1.4);              // Base Q factor for mid bands
+    static constexpr size_t HIGH_SHELF_CUTOFF = T(5000);   // High shelf fixed cutoff frequency in Hz
 
     // Constructor and Destructor
     Equalizer() = default;
-    Equalizer(size_t newNumChannels, T newSampleRate, T maxDelayMs) {
-        prepare(newNumChannels, newSampleRate, maxDelayMs);
+    Equalizer(size_t newNumChannels, T newSampleRate) {
+        prepare(newNumChannels, newSampleRate);
     }
     ~Equalizer() = default;
 
@@ -35,7 +38,7 @@ public:
      * @param newSampleRate Sample rate in Hz
      * @param maxDelayMs Maximum Equalizer in milliseconds
      */
-    void prepare(size_t newNumChannels, T newSampleRate, T maxDelayMs) {
+    void prepare(size_t newNumChannels, T newSampleRate) {
 
         // Store global parameters
         numChannels = newNumChannels;
@@ -47,10 +50,15 @@ public:
         equalizer.setType(1, BiquadType::Peak);     // LowMid
         equalizer.setType(2, BiquadType::Peak);     // HighMid
         equalizer.setType(3, BiquadType::Highshelf); // HighShelf
+
+        // Fixed parameters
+        equalizer.setFreq(3, HIGH_SHELF_CUTOFF); // HighShelf fixed freq
+
+        togglePrepared = true;
     }
 
     void clear() {
-
+        equalizer.clear();
     }
 
     /**
@@ -61,7 +69,12 @@ public:
      */
     void processBlock(const T* const* input, T* const* output, size_t numSamples)
     {
+        // Process EQ
         equalizer.processBlock(input, output, numSamples);
+
+        // Apply soft clipping if enabled
+        if (toggleSoftClipper)
+            softClipper.processBlock(output, output, numChannels, numSamples);
     }
 
     // SETTERS FOR PARAMETERS
@@ -90,6 +103,10 @@ public:
         equalizer.setFreq(2, newFreqHz);
     }
 
+    void setSoftClipper(bool enabled) {
+        toggleSoftClipper = enabled;
+    }
+
     // GETTERS FOR GLOBAL PARAMETERS
     size_t getNumChannels() const {
         return numChannels;
@@ -97,15 +114,22 @@ public:
     T getSampleRate() const {
         return sampleRate;
     }
+    bool isPrepared() const {
+        return togglePrepared;
+    }
 
 private:
     
     // GLOBAL PARAMETERS
     size_t numChannels = 0;
     T sampleRate = T(44100);
+    bool togglePrepared = false;
+    bool toggleSoftClipper = false;
 
     // PROCESSORS
     BiquadChain<T> equalizer;
+    WaveShaper<T,WaveShaperType::Tanh> softClipper;
+
 
     /**
      * @brief Compute variable Q factor based on gain in dB.
@@ -114,12 +138,10 @@ private:
      */
     T computeVariableQ(T gainDb)
     {
-        // VARIABLE_Q_WEIGHT is a tunable constant, e.g., 0.1
-        T baseQ = T(0.707);
         if (gainDb < 0)
-            return baseQ * (T(1) + VARIABLE_Q_WEIGHT * std::abs(gainDb));
+            return BASE_Q * (T(1) + VARIABLE_Q_WEIGHT * std::abs(gainDb));
         else
-            return baseQ / (T(1) + VARIABLE_Q_WEIGHT * gainDb);
+            return BASE_Q / (T(1) + VARIABLE_Q_WEIGHT * gainDb);
     }
 
 };

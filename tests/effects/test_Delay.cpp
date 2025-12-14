@@ -13,7 +13,7 @@ TEST(DelayTest, BasicMonoImpulse)
 {
     Delay<float> delay;
     delay.prepare(1, 48000.0f, 100.0f); // 100ms max delay
-    delay.setDelaySamples(10.0f, true); // 100 samples delay
+    delay.setDelaySamples(100.0f, true); // 100 samples delay
     delay.setFeedback(0.0f, true);
     delay.setDamping(20000.0f, true);
     delay.setPingPong(0.0f, true);

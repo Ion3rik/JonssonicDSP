@@ -133,7 +133,7 @@ private:
      * @brief Update filter coefficients based on current parameters.
      */
     void updateCoeffs()
-    {
+    {   
         // Initialize coefficients variables
         T b0 = T(0), b1 = T(0), b2 = T(0), a1 = T(0), a2 = T(0);
         switch (type)

@@ -23,12 +23,12 @@ enum class WaveShaperType {
 
 /**
  * @brief A waveshaper class for nonlinear distortion effects
- * @tparam SampleType Sample data type (e.g., float, double)
+ * @tparam T Sample data type (e.g., float, double)
  * @tparam Type Type of waveshaper (from WaveShaperType enum)
  */
 
 // Template declaration
-template<typename SampleType, WaveShaperType Type>
+template<typename T, WaveShaperType Type>
 class WaveShaper;
 
 // =====================================================================
@@ -38,11 +38,19 @@ class WaveShaper;
  * @brief Hard clipper specialization.
  *        Clamps the signal to [-1, 1].
  */
-template<typename SampleType>
-class WaveShaper<SampleType, WaveShaperType::HardClip> {
+template<typename T>
+class WaveShaper<T, WaveShaperType::HardClip> {
 public:
-	SampleType processSample(SampleType x) const {
-		return std::max<SampleType>(-1, std::min<SampleType>(1, x));
+	T processSample(T x) const {
+		return std::max<T>(-1, std::min<T>(1, x));
+	}
+
+	void processBlock(const T* const* input, T* const* output, size_t numChannels, size_t numSamples) const {
+		for (size_t ch = 0; ch < numChannels; ++ch) {
+			for (size_t n = 0; n < numSamples; ++n) {
+				output[ch][n] = processSample(input[ch][n]);
+			}
+		}
 	}
 };
 // =====================================================================
@@ -52,13 +60,21 @@ public:
  * @brief Atan shaper specialization.
  *        Applies atan(x) for smooth limiting, normalized to [-1, 1].
  */
-template<typename SampleType>
-class WaveShaper<SampleType, WaveShaperType::Atan> {
+template<typename T>
+class WaveShaper<T, WaveShaperType::Atan> {
 public:
-	SampleType processSample(SampleType x) const {
+	T processSample(T x) const {
 		// Normalize: atan(x) * (2/π) maps [-∞,∞] → [-1,1]
-		constexpr SampleType scale = SampleType(2) / pi<SampleType>;
+		constexpr T scale = T(2) / pi<T>;
 		return std::atan(x) * scale;
+	}
+
+	void processBlock(const T* const* input, T* const* output, size_t numChannels, size_t numSamples) const {
+		for (size_t ch = 0; ch < numChannels; ++ch) {
+			for (size_t n = 0; n < numSamples; ++n) {
+				output[ch][n] = processSample(input[ch][n]);
+			}
+		}
 	}
 };
 
@@ -69,11 +85,19 @@ public:
  * @brief Tanh shaper specialization.
  *        Applies std::tanh(x) for smooth saturation.
  */
-template<typename SampleType>
-class WaveShaper<SampleType, WaveShaperType::Tanh> {
+template<typename T>
+class WaveShaper<T, WaveShaperType::Tanh> {
 public:
-	SampleType processSample(SampleType x) const {
+	T processSample(T x) const {
 		return std::tanh(x);
+	}
+
+	void processBlock(const T* const* input, T* const* output, size_t numChannels, size_t numSamples) const {
+		for (size_t ch = 0; ch < numChannels; ++ch) {
+			for (size_t n = 0; n < numSamples; ++n) {
+				output[ch][n] = processSample(input[ch][n]);
+			}
+		}
 	}
 };
 
@@ -84,11 +108,19 @@ public:
  * @brief Full-wave rectifier specialization.
  *        Outputs the absolute value of the input.
  */
-template<typename SampleType>
-class WaveShaper<SampleType, WaveShaperType::FullWaveRectifier> {
+template<typename T>
+class WaveShaper<T, WaveShaperType::FullWaveRectifier> {
 public:
-	SampleType processSample(SampleType x) const {
+	T processSample(T x) const {
 		return std::abs(x);
+	}
+
+	void processBlock(const T* const* input, T* const* output, size_t numChannels, size_t numSamples) const {
+		for (size_t ch = 0; ch < numChannels; ++ch) {
+			for (size_t n = 0; n < numSamples; ++n) {
+				output[ch][n] = processSample(input[ch][n]);
+			}
+		}
 	}
 };
 
@@ -99,11 +131,19 @@ public:
  * @brief Half-wave rectifier specialization.
  *        Outputs zero for negative input, passes positive input.
  */
-template<typename SampleType>
-class WaveShaper<SampleType, WaveShaperType::HalfWaveRectifier> {
+template<typename T>
+class WaveShaper<T, WaveShaperType::HalfWaveRectifier> {
 public:
-	SampleType processSample(SampleType x) const {
+	T processSample(T x) const {
 		return x < 0 ? 0 : x;
+	}
+
+	void processBlock(const T* const* input, T* const* output, size_t numChannels, size_t numSamples) const {
+		for (size_t ch = 0; ch < numChannels; ++ch) {
+			for (size_t n = 0; n < numSamples; ++n) {
+				output[ch][n] = processSample(input[ch][n]);
+			}
+		}
 	}
 };
 
@@ -116,13 +156,21 @@ public:
  *
  * @note  Requires a function to be provided at construction.
  */
-template<typename SampleType>
-class WaveShaper<SampleType, WaveShaperType::Custom> {
+template<typename T>
+class WaveShaper<T, WaveShaperType::Custom> {
 public:
-	using FnType = std::function<SampleType(SampleType)>;
+	using FnType = std::function<T(T)>;
 	WaveShaper(FnType fn) : customFn(std::move(fn)) {}
-	SampleType processSample(SampleType x) const {
+	T processSample(T x) const {
 		return customFn ? customFn(x) : x;
+	}
+
+	void processBlock(const T* const* input, T* const* output, size_t numChannels, size_t numSamples) const {
+		for (size_t ch = 0; ch < numChannels; ++ch) {
+			for (size_t n = 0; n < numSamples; ++n) {
+				output[ch][n] = processSample(input[ch][n]);
+			}
+		}
 	}
 private:
 	FnType customFn;
