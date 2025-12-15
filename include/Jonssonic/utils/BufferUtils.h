@@ -6,6 +6,23 @@
 
 namespace Jonssonic {
 
+    /**
+     * @brief Applies gain to a multi-channel audio buffer.
+     *
+     * @tparam T Sample type (e.g., float, double)
+     * @param buffer Array of pointers to channel data (T* const*)
+     * @param numChannels Number of channels
+     * @param numSamples Number of samples per channel
+     * @param gain Gain factor to apply
+     */
+    template<typename T>
+    inline void applyGain(T* const* buffer, size_t numChannels, size_t numSamples, T gain)
+    {
+        for (int ch = 0; ch < numChannels; ++ch)
+            for (int i = 0; i < numSamples; ++i)
+                buffer[ch][i] *= gain;
+    }
+
         /**
          * @brief Maps input channels to output channels for raw audio buffers.
          * Jonssonic DSP processors map N -> N channels. 

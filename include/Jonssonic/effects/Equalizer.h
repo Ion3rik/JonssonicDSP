@@ -5,6 +5,7 @@
 #pragma once
 #include "../core/filters/BiquadChain.h"
 #include "../core/nonlinear/WaveShaper.h"
+#include "../utils/BufferUtils.h"
 
 namespace Jonssonic {
 /**
@@ -14,10 +15,31 @@ namespace Jonssonic {
 template<typename T>
 class Equalizer {
 public:
-    // Tunable constants
-    static constexpr T VARIABLE_Q_WEIGHT = T(0.1); // Weighting factor for variable Q calculation (higher = more Q change per dB)
-    static constexpr T BASE_Q = T(1.4);              // Base Q factor for mid bands
-    static constexpr size_t HIGH_SHELF_CUTOFF = T(5000);   // High shelf fixed cutoff frequency in Hz
+    // TUNABLE CONSTANTS
+    /**
+     * @brief Weighting factor for variable Q calculation (higher = more Q change per dB).
+     */
+    static constexpr T VARIABLE_Q_WEIGHT = T(0.1);
+
+    /**
+     * @brief Base Q factor for mid bands. Controls bell curve base width.
+     */
+    static constexpr T BASE_Q = T(1.4);
+
+    /**
+     * @brief High shelf fixed cutoff frequency in Hz.
+     */
+    static constexpr size_t HIGH_SHELF_CUTOFF = T(5000);
+
+    /**
+     * @brief Operating gain for nonlinear EQ. Controls how hard the soft clipper works.
+     */
+    static constexpr T NONLINEAR_OPERATING_GAIN = T(0.25);
+
+    /** 
+     * @brief Makeup gain for nonlinear EQ. Compensates the operating gain reduction.
+     */
+    static constexpr T NONLINEAR_MAKEUP_GAIN = T(4); 
 
     // Constructor and Destructor
     Equalizer() = default;
@@ -44,21 +66,16 @@ public:
         numChannels = newNumChannels;
         sampleRate = newSampleRate;
 
-        // Prepare Filter Chain
-        equalizer.prepare(newNumChannels, 4, newSampleRate); // 4 sections: LowCut, LowMid, HighMid, HighShelf
-        equalizer.setType(0, BiquadType::Highpass); // LowCut
-        equalizer.setType(1, BiquadType::Peak);     // LowMid
-        equalizer.setType(2, BiquadType::Peak);     // HighMid
-        equalizer.setType(3, BiquadType::Highshelf); // HighShelf
-
-        // Fixed parameters
-        equalizer.setFreq(3, HIGH_SHELF_CUTOFF); // HighShelf fixed freq
+        // Prepare Equalizer chains
+        prepareEqualizer(equalizerLinear, newNumChannels, newSampleRate);
+        prepareEqualizer(equalizerNonlinear, newNumChannels, newSampleRate);
 
         togglePrepared = true;
     }
 
     void clear() {
-        equalizer.clear();
+        equalizerLinear.clear();
+        equalizerNonlinear.clear();
     }
 
     /**
@@ -69,38 +86,53 @@ public:
      */
     void processBlock(const T* const* input, T* const* output, size_t numSamples)
     {
-        // Process EQ
-        equalizer.processBlock(input, output, numSamples);
+        // Run Linear EQ
+        if (!toggleSoftClipper) 
+            equalizerLinear.processBlock(input, output, numSamples);
+        
+        // Run Nonlinear EQ with soft clipping
+        else { 
+            applyGain<T>(output, numChannels, numSamples, NONLINEAR_OPERATING_GAIN); // lower the operating point
+            equalizerNonlinear.processBlock(input, output, numSamples);
+            applyGain<T>(output, numChannels, numSamples, NONLINEAR_MAKEUP_GAIN); // bring back to ~ unity gain
+        }
 
-        // Apply soft clipping if enabled
-        if (toggleSoftClipper)
-            softClipper.processBlock(output, output, numChannels, numSamples);
     }
 
     // SETTERS FOR PARAMETERS
     void setLowCutFreq(T newFreqHz, bool skipSmoothing) {
-        equalizer.setFreq(0, newFreqHz);
+        equalizerLinear.setFreq(0, newFreqHz);
+        equalizerNonlinear.setFreq(0, newFreqHz);
         
     }
     void setLowMidGainDb(T newGainDb, bool skipSmoothing) {
-        equalizer.setGainDb(1, newGainDb);
+        equalizerLinear.setGainDb(1, newGainDb);
+        equalizerNonlinear.setGainDb(1, newGainDb);
+
         T newQ = computeVariableQ(newGainDb);
-        equalizer.setQ(1, newQ);
+        equalizerLinear.setQ(1, newQ);
+        equalizerNonlinear.setQ(1, newQ);
         
     }
     void setHighMidGainDb(T newGainDb, bool skipSmoothing) {
-        equalizer.setGainDb(2, newGainDb);
+        equalizerLinear.setGainDb(2, newGainDb);
+        equalizerNonlinear.setGainDb(2, newGainDb);
+
         T newQ = computeVariableQ(newGainDb);
-        equalizer.setQ(2, newQ);
+        equalizerLinear.setQ(2, newQ);
+        equalizerNonlinear.setQ(2, newQ);
     }
     void setHighShelfGainDb(T newGainDb, bool skipSmoothing) {
-        equalizer.setGainDb(3, newGainDb);
+        equalizerLinear.setGainDb(3, newGainDb);
+        equalizerNonlinear.setGainDb(3, newGainDb);
     }
     void setLowMidFreq(T newFreqHz, bool skipSmoothing) {
-        equalizer.setFreq(1, newFreqHz);
+        equalizerLinear.setFreq(1, newFreqHz);
+        equalizerNonlinear.setFreq(1, newFreqHz);
     }
     void setHighMidFreq(T newFreqHz, bool skipSmoothing) {
-        equalizer.setFreq(2, newFreqHz);
+        equalizerLinear.setFreq(2, newFreqHz);
+        equalizerNonlinear.setFreq(2, newFreqHz);
     }
 
     void setSoftClipper(bool enabled) {
@@ -127,8 +159,8 @@ private:
     bool toggleSoftClipper = false;
 
     // PROCESSORS
-    BiquadChain<T> equalizer;
-    WaveShaper<T,WaveShaperType::Tanh> softClipper;
+    BiquadChain<T> equalizerLinear;
+    BiquadChain<T, WaveShaperType::Tanh> equalizerNonlinear;
 
 
     /**
@@ -142,6 +174,26 @@ private:
             return BASE_Q * (T(1) + VARIABLE_Q_WEIGHT * std::abs(gainDb));
         else
             return BASE_Q / (T(1) + VARIABLE_Q_WEIGHT * gainDb);
+    }
+
+    /**
+     * @brief Helper function to prepare Equalizer BiquadChain with default settings.
+     * @param eqChain Reference to BiquadChain to prepare
+     * @param newNumChannels Number of channels
+     * @param newSampleRate Sample rate in Hz
+     */
+    template<WaveShaperType shaper>
+    void prepareEqualizer(BiquadChain<T, shaper>& eqChain, size_t newNumChannels, T newSampleRate)
+    {
+        // Prepare Filter Chain
+        eqChain.prepare(newNumChannels, 4, newSampleRate); // 4 sections: LowCut, LowMid, HighMid, HighShelf
+        eqChain.setType(0, BiquadType::Highpass); // LowCut
+        eqChain.setType(1, BiquadType::Peak);     // LowMid
+        eqChain.setType(2, BiquadType::Peak);     // HighMid
+        eqChain.setType(3, BiquadType::Highshelf); // HighShelf
+
+        // Fixed parameters
+        eqChain.setFreq(3, HIGH_SHELF_CUTOFF); // HighShelf fixed freq
     }
 
 };

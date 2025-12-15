@@ -13,6 +13,7 @@
 namespace Jonssonic {
 
 enum class WaveShaperType {
+	None,
 	HardClip,
 	Atan,
 	Tanh,
@@ -30,6 +31,26 @@ enum class WaveShaperType {
 // Template declaration
 template<typename T, WaveShaperType Type>
 class WaveShaper;
+
+// =====================================================================
+// Passthrough specialization
+// =====================================================================
+/**
+ * @brief Passthrough specialization (no processing). Outputs input directly.
+ */
+template<typename T>
+class WaveShaper<T, WaveShaperType::None> {
+public:
+	T processSample(T x) const {
+		return x;
+	}
+
+	void processBlock(const T* const* input, T* const* output, size_t numChannels, size_t numSamples) const {
+		for (size_t ch = 0; ch < numChannels; ++ch) {
+			std::memcpy(output[ch], input[ch], numSamples * sizeof(T));
+		}
+	}
+};
 
 // =====================================================================
 // HardClip specialization
@@ -65,8 +86,7 @@ class WaveShaper<T, WaveShaperType::Atan> {
 public:
 	T processSample(T x) const {
 		// Normalize: atan(x) * (2/π) maps [-∞,∞] → [-1,1]
-		constexpr T scale = T(2) / pi<T>;
-		return std::atan(x) * scale;
+		return std::atan(x) * two_over_pi<T>;
 	}
 
 	void processBlock(const T* const* input, T* const* output, size_t numChannels, size_t numSamples) const {

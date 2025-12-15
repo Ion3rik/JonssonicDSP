@@ -4,14 +4,17 @@
 
 #pragma once
 #include "../common/AudioBuffer.h"
+#include "../nonlinear/WaveShaper.h"
 
 namespace Jonssonic
 {
 /**
  * @brief BiquadCore filter class implementing a multi-channel, multi-section biquad filter.
  * @param T Sample data type (e.g., float, double)
+ * @param ShaperType Type of waveshaper to apply after each section (from WaveShaperType enum)
+ * @note Default ShaperType is WaveShaperType::None (linear biquad)
  */
-template<typename T>
+template<typename T, WaveShaperType ShaperType = WaveShaperType::None>
 class BiquadCore
 {
 public:
@@ -87,8 +90,8 @@ public:
             state[ch][stateBase + 3] = y1;  // y2 = y1
             state[ch][stateBase + 2] = output;  // y1 = output
 
-            // Output of this section becomes input to next section
-            input = output;
+            // Apply waveshaper and feed to next section
+            input = waveShaper.processSample(output);
         }
 
         return input;
@@ -155,5 +158,8 @@ private:
     //   y1 = state[ch][s*4 + 2];
     //   y2 = state[ch][s*4 + 3];
     AudioBuffer<T> state;
+
+    // Waveshaper instance
+    WaveShaper<T, ShaperType> waveShaper;
 };
 } // namespace Jonssonic

@@ -6,6 +6,7 @@
 #include "BiquadCore.h"
 #include "FilterTypes.h"
 #include "BiquadCoeffs.h"
+#include "../nonlinear/WaveShaper.h"
 #include "../../utils/MathUtils.h"
 #include <algorithm>
 
@@ -15,8 +16,9 @@ namespace Jonssonic
 /**
  * @brief Biquad Filter
  * @param T Sample data type (e.g., float, double)
+ * @param ShaperType Type of waveshaper for nonlinear processing (default: None)
  */
-template<typename T>
+template<typename T, WaveShaperType ShaperType = WaveShaperType::None>
 class BiquadFilter
 {
 public:
@@ -127,7 +129,7 @@ private:
     T Q;    // quality factor
     T gain; // linear gain for shelving/peak filters
     BiquadType type; // filter type
-    BiquadCore<T> BiquadCore;
+    BiquadCore<T, ShaperType> BiquadCore;
 
     /**
      * @brief Update filter coefficients based on current parameters.

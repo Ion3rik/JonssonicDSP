@@ -7,6 +7,7 @@
 #include "FilterTypes.h"
 #include "BiquadCoeffs.h"
 #include "../../utils/MathUtils.h"
+#include "../nonlinear/WaveShaper.h"
 #include <algorithm>
 
 namespace Jonssonic
@@ -17,7 +18,7 @@ namespace Jonssonic
  * @brief This class implements a chain of biquad filters, with each section configurable independently.
  * @param T Sample data type (e.g., float, double)
  */
-template<typename T>
+template<typename T, WaveShaperType ShaperType = WaveShaperType::None>
 class BiquadChain
 {
 public:
@@ -149,12 +150,12 @@ public:
     }
 
 private:
-    T sampleRate = T(44100);            // default sample rate
-    std::vector<T> freqNormalized;      // normalized frequency
-    std::vector<T> Q;                   // quality factor
-    std::vector<T> gain;                // linear gain for shelving/peak filters
-    std::vector<BiquadType> type;       // filter type
-    BiquadCore<T> BiquadCore;           // underlying biquad core processor 
+    T sampleRate = T(44100);                // default sample rate
+    std::vector<T> freqNormalized;          // normalized frequency
+    std::vector<T> Q;                       // quality factor
+    std::vector<T> gain;                    // linear gain for shelving/peak filters
+    std::vector<BiquadType> type;           // filter type
+    BiquadCore<T, ShaperType> BiquadCore;   // underlying biquad core processor 
 
     /**
      * @brief Update filter coefficients of single section.

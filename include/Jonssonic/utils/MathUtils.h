@@ -36,6 +36,9 @@ template<typename T>
 inline constexpr T two_pi = pi<T> * T(2);
 
 template<typename T>
+inline constexpr T two_over_pi = T(2) / pi<T>;
+
+template<typename T>
 inline constexpr T inv_pi = T(1) / pi<T>;
 
 template<typename T>
