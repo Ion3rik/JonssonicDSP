@@ -6,42 +6,81 @@
 
 namespace Jonssonic {
 
+    //==============================================================================
+    // MACROS
+    //==============================================================================
+
     /**
-     * @brief Applies gain to a multi-channel audio buffer.
-     *
+     * @brief Macro to swap argument order for interleaved processing.
+     */
+    #define INTERLEAVED(f, a, b, ...) f(b, a, ##__VA_ARGS__)
+
+
+    //==============================================================================
+    // FUNCTIONS
+    //==============================================================================
+
+    /**
+     * @brief Maps input channels to output channels for raw audio buffers.
+     *        Supports both upmixing and downmixing.
+     *        Dow
      * @tparam T Sample type (e.g., float, double)
-     * @param buffer Array of pointers to channel data (T* const*)
-     * @param numChannels Number of channels
+     * @param input Array of pointers to input channel data (const T* const*)
+     * @param output Array of pointers to output channel data (T* const*)
+     * @param numInputChannels Number of input channels
+     * @param numOutputChannels Number of output channels
      * @param numSamples Number of samples per channel
-     * @param gain Gain factor to apply
      */
     template<typename T>
-    inline void applyGain(T* const* buffer, size_t numChannels, size_t numSamples, T gain)
+    inline void mapChannels(const T* const* input, T* const* output, int numInputChannels, int numOutputChannels, int numSamples)
     {
-        for (int ch = 0; ch < numChannels; ++ch)
-            for (int i = 0; i < numSamples; ++i)
-                buffer[ch][i] *= gain;
-    }
-
-        /**
-         * @brief Maps input channels to output channels for raw audio buffers.
-         * Jonssonic DSP processors map N -> N channels. 
-         * This utility can be used at the call site to duplicate or map channels as needed.
-         *
-         * @tparam T Sample type (e.g., float, double)
-         * @param input Array of pointers to input channel data (const T* const*)
-         * @param output Array of pointers to output channel data (T* const*)
-         * @param numInputChannels Number of input channels
-         * @param numOutputChannels Number of output channels
-         * @param numSamples Number of samples per channel
-         */
-        template<typename T>
-        inline void mapChannels(const T* const* input, T* const* output, int numInputChannels, int numOutputChannels, int numSamples)
+        for (int outCh = 0; outCh < numOutputChannels; ++outCh)
         {
-            for (int channel = 0; channel < numOutputChannels; ++channel)
+            if (numInputChannels == numOutputChannels)
             {
-                int inputChannel = channel < numInputChannels ? channel : numInputChannels - 1;
-                std::memcpy(output[channel], input[inputChannel], sizeof(T) * numSamples);
+                // Direct copy
+                std::memcpy(output[outCh], input[outCh], sizeof(T) * numSamples);
+            }
+            else if (numInputChannels > numOutputChannels)
+            {
+                // Downmix: average groups of input channels
+                int groupSize = numInputChannels / numOutputChannels;
+                for (int n = 0; n < numSamples; ++n)
+                {
+                    T sum = 0;
+                    for (int i = 0; i < groupSize; ++i)
+                        sum += input[outCh * groupSize + i][n];
+                    output[outCh][n] = sum / groupSize;
+                }
+            }
+            else
+            {
+                // Upmix: wrap or duplicate
+                int inCh = outCh % numInputChannels;
+                std::memcpy(output[outCh], input[inCh], sizeof(T) * numSamples);
             }
         }
-}
+    }
+
+
+    /**
+     * @brief Planar to interleaved buffer conversion: planarBuffer [ch][samp] -> interleavedBuffer [samp][ch]
+     */
+    template<typename T>
+    void planarToInterleaved(const T* const* planarBuffer, T* const* interleavedBuffer, size_t numChannels, size_t numSamples) {
+        for (size_t n = 0; n < numSamples; ++n) // outer loop over samples for better cache performance for writing
+            for (size_t ch = 0; ch < numChannels; ++ch)
+                interleavedBuffer[n][ch] = planarBuffer[ch][n];
+    }
+
+    /**
+     * @brief Interleaved to planar buffer conversion: interleavedBuffer [samp][ch] -> planarBuffer [ch][samp]
+     */
+    template<typename T>
+    void interleavedToPlanar(const T* const* interleavedBuffer, T* const* planarBuffer, size_t numChannels, size_t numSamples) {
+        for (size_t ch = 0; ch < numChannels; ++ch) // outer loop over channels for better cache performance for writing
+            for (size_t n = 0; n < numSamples; ++n)
+                planarBuffer[ch][n] = interleavedBuffer[n][ch];
+    }
+
+} // namespace Jonssonic
