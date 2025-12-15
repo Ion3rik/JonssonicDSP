@@ -67,7 +67,17 @@ public:
         }
     }
 
+    /**
+     * @brief Upsample input buffer by the oversampling factor.
+     * @param input Input audio buffer (array of channel pointers)
+     * @param output Output audio buffer (array of channel pointers)
+     * @param numInputSamples Number of input samples per channel
+     * @return Number of output samples per channel
+     * @note Output buffer must have space for numInputSamples * Factor samples.
+     */
+
     size_t upsample(const T* const* input, T* const* output, size_t numInputSamples) {
+        
         // Factor 2
         if constexpr (Factor == 2) {
             stage1.upsample(input, output, numInputSamples); // stage1 1x to 2x
@@ -104,6 +114,13 @@ public:
         }
         return numInputSamples * Factor;
     }
+    /**
+     * @brief Downsample input buffer by the oversampling factor.
+     * @param input Input audio buffer (array of channel pointers)
+     * @param output Output audio buffer (array of channel pointers)
+     * @param numOutputSamples Number of output samples per channel
+     * @note Input buffer must have numOutputSamples * Factor samples.
+     */
     void downsample(const T* const* input, T* const* output, size_t numOutputSamples) {
         // Factor 2
         if constexpr (Factor == 2) {

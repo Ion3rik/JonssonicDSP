@@ -178,6 +178,13 @@ public:
     bool isPrepared() const {
         return togglePrepared;
     }
+    size_t getLatencySamples() const {
+        if (toggleSoftClipper) {
+            return oversampler.getLatencySamples(); // latency due to oversampling
+        } else {
+            return 0; // no latency in linear EQ
+        }
+    }
 
 private:
     
