@@ -14,7 +14,7 @@ namespace Jonssonic {
  * @brief First-order filter wrapper
  * @param T Sample data type (e.g., float, double)
  */
-template<typename T>
+template<typename T, BufferLayout Layout = BufferLayout::Planar>
 class FirstOrderFilter {
 public:
     // Constructor and Destructor
@@ -91,7 +91,7 @@ private:
     T gain = T(1); // linear gain for shelf filters
 
     FirstOrderType type;
-    FirstOrderCore<T> FirstOrderCore;
+    FirstOrderCore<T, Layout> FirstOrderCore;
 
     void updateCoeffs() {
         // Skip if filter not prepared (numSections == 0)
