@@ -19,6 +19,7 @@ enum class WaveShaperType {
 	Tanh,
 	FullWaveRectifier,
 	HalfWaveRectifier,
+	Cubic,
 	Custom
 };
 
@@ -85,8 +86,7 @@ template<typename T>
 class WaveShaper<T, WaveShaperType::Atan> {
 public:
 	T processSample(T x) const {
-		// Normalize: atan(x) * (2/π) maps [-∞,∞] → [-1,1]
-		return std::atan(x) * two_over_pi<T>;
+		return std::atan(x) * inv_atan_1<T>;
 	}
 
 	void processBlock(const T* const* input, T* const* output, size_t numChannels, size_t numSamples) const {
@@ -156,6 +156,30 @@ class WaveShaper<T, WaveShaperType::HalfWaveRectifier> {
 public:
 	T processSample(T x) const {
 		return x < 0 ? 0 : x;
+	}
+
+	void processBlock(const T* const* input, T* const* output, size_t numChannels, size_t numSamples) const {
+		for (size_t ch = 0; ch < numChannels; ++ch) {
+			for (size_t n = 0; n < numSamples; ++n) {
+				output[ch][n] = processSample(input[ch][n]);
+			}
+		}
+	}
+};
+
+// =====================================================================
+// Cubic specialization
+// =====================================================================
+/**
+ * @brief Cubic shaper specialization.
+ *        Applies a cubic nonlinearity for soft clipping.
+ * 	  f(x) = x - (1/3)x^3
+ */
+template<typename T>
+class WaveShaper<T, WaveShaperType::Cubic> {
+public:
+	T processSample(T x) const {
+		return x - (T(1)/T(3)) * x * x * x;
 	}
 
 	void processBlock(const T* const* input, T* const* output, size_t numChannels, size_t numSamples) const {

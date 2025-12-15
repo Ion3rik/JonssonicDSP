@@ -42,6 +42,9 @@ template<typename T>
 inline constexpr T inv_pi = T(1) / pi<T>;
 
 template<typename T>
+inline constexpr T inv_atan_1 = T(1) / T(0.785398163397448309615660845819875721);
+
+template<typename T>
 inline constexpr T sqrt2 = T(1.414213562373095048801688724209698079);
 
 template<typename T>

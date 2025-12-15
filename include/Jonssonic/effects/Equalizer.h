@@ -6,6 +6,8 @@
 #include "../core/filters/BiquadChain.h"
 #include "../core/nonlinear/WaveShaper.h"
 #include "../utils/BufferUtils.h"
+#include "../core/oversampling/Oversampler.h"
+#include "../core//common/AudioBuffer.h"
 
 namespace Jonssonic {
 /**
@@ -34,17 +36,22 @@ public:
     /**
      * @brief Operating gain for nonlinear EQ. Controls how hard the soft clipper works.
      */
-    static constexpr T NONLINEAR_OPERATING_GAIN = T(0.25);
+    static constexpr T NONLINEAR_OPERATING_GAIN = T(0.5);
 
     /** 
      * @brief Makeup gain for nonlinear EQ. Compensates the operating gain reduction.
      */
-    static constexpr T NONLINEAR_MAKEUP_GAIN = T(4); 
+    static constexpr T NONLINEAR_MAKEUP_GAIN = T(2); 
+
+    /**
+     * @brief Oversampling factor for nonlinear EQ.
+     */
+    static constexpr size_t OVERSAMPLING_FACTOR = 4;
 
     // Constructor and Destructor
     Equalizer() = default;
-    Equalizer(size_t newNumChannels, T newSampleRate) {
-        prepare(newNumChannels, newSampleRate);
+    Equalizer(size_t newNumChannels, size_t newMaxBlockSize, T newSampleRate) {
+        prepare(newNumChannels, newMaxBlockSize, newSampleRate);
     }
     ~Equalizer() = default;
 
@@ -60,7 +67,7 @@ public:
      * @param newSampleRate Sample rate in Hz
      * @param maxDelayMs Maximum Equalizer in milliseconds
      */
-    void prepare(size_t newNumChannels, T newSampleRate) {
+    void prepare(size_t newNumChannels, size_t newMaxBlockSize, T newSampleRate) {
 
         // Store global parameters
         numChannels = newNumChannels;
@@ -68,7 +75,11 @@ public:
 
         // Prepare Equalizer chains
         prepareEqualizer(equalizerLinear, newNumChannels, newSampleRate);
-        prepareEqualizer(equalizerNonlinear, newNumChannels, newSampleRate);
+        prepareEqualizer(equalizerNonlinear, newNumChannels, newSampleRate * OVERSAMPLING_FACTOR); // note: higher sample rate for nonlinear EQ
+
+        // Prepare oversampler and oversampled buffer
+        oversampler.prepare(newNumChannels, newMaxBlockSize);
+        oversampledBuffer.resize(newNumChannels, newMaxBlockSize * OVERSAMPLING_FACTOR);
 
         togglePrepared = true;
     }
@@ -92,9 +103,27 @@ public:
         
         // Run Nonlinear EQ with soft clipping
         else { 
-            applyGain<T>(output, numChannels, numSamples, NONLINEAR_OPERATING_GAIN); // lower the operating point
-            equalizerNonlinear.processBlock(input, output, numSamples);
-            applyGain<T>(output, numChannels, numSamples, NONLINEAR_MAKEUP_GAIN); // bring back to ~ unity gain
+            // Lower the operating gain for nonlinear processing
+            applyGain<T>(output, numChannels, numSamples, NONLINEAR_OPERATING_GAIN); 
+
+            // Upsample
+            oversampler.upsample(input, oversampledBuffer.writePtrs(), numSamples);
+
+            // Process nonlinear EQ at higher sample rate
+            equalizerNonlinear.processBlock(oversampledBuffer.readPtrs(), 
+                                            oversampledBuffer.writePtrs(), 
+                                            numSamples * OVERSAMPLING_FACTOR); 
+
+            // Apply soft clipping at higher sample rate
+            outputSaturator.processBlock(oversampledBuffer.readPtrs(),
+                                         oversampledBuffer.writePtrs(),
+                                         numChannels, 
+                                         numSamples * OVERSAMPLING_FACTOR); 
+            // Downsample
+            oversampler.downsample(oversampledBuffer.readPtrs(), output, numSamples); 
+
+            // Apply makeup gain to compensate operating gain reduction
+            applyGain<T>(output, numChannels, numSamples, NONLINEAR_MAKEUP_GAIN); 
         }
 
     }
@@ -161,6 +190,11 @@ private:
     // PROCESSORS
     BiquadChain<T> equalizerLinear;
     BiquadChain<T, WaveShaperType::Tanh> equalizerNonlinear;
+    WaveShaper<T, WaveShaperType::Atan> outputSaturator;
+    Oversampler<T, OVERSAMPLING_FACTOR> oversampler; // oversampler for nonlinear EQ
+    AudioBuffer<T> oversampledBuffer; // buffer for oversampling
+    
+
 
 
     /**
