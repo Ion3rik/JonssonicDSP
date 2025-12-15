@@ -64,10 +64,9 @@ public:
         sampleRate = newSampleRate;
 
         // Prepare internal interleaved buffer
-        INTERLEAVED(interleavedBuffer.resize, numChannels, maxBlockSize);
 
         // Prepare FDN components
-        INTERLEAVED(fdnDelays.prepare, FDN_SIZE, newSampleRate, MAX_DELAY_MS);
+       
     }
 
     /**
@@ -169,9 +168,9 @@ private:
     T sampleRate = T(44100);
 
     // Processor components
-    AudioBuffer<T> interleavedBuffer; // Temporary interleaved buffer for processing
-    DelayLine<T, LinearInterpolator<T>, SmootherType::OnePole, 1, SMOOTHING_TIME_MS> fdnDelays; // FDN delay lines
-    DelayLine<T, LinearInterpolator<T>, SmootherType::OnePole, 1, SMOOTHING_TIME_MS> preDelay; // Pre-delay line
+    AudioBuffer<T, BufferLayout::Interleaved> interleavedBuffer; // Temporary interleaved buffer for processing
+    DelayLine<T, LinearInterpolator<T>, SmootherType::OnePole, 1, SMOOTHING_TIME_MS, BufferLayout::Interleaved> fdnDelays; // FDN delay lines
+    DelayLine<T, LinearInterpolator<T>, SmootherType::OnePole, 1, SMOOTHING_TIME_MS, BufferLayout::Interleaved> preDelay; // Pre-delay line
     FirstOrderFilter<T> dampingFilter; // Low cut filter for damping
 
 
