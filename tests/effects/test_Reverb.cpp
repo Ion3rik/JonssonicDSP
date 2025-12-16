@@ -31,12 +31,26 @@ TEST(ReverbTest, MonoImpulseResponse)
 
 	reverb.processBlock(inPtrs, outPtrs, numSamples);
 
-	// Output should not be all zeros
-	bool hasNonZero = false;
-	for (float v : output) {
-		if (std::abs(v) > 1e-6f) { hasNonZero = true; break; }
-	}
-	EXPECT_TRUE(hasNonZero);
+	   // Stricter: Check for decaying impulse response
+	   // Find the peak (should be at or near the start)
+	   float peak = 0.0f;
+	   size_t peakIdx = 0;
+	   for (size_t i = 0; i < output.size(); ++i) {
+		   if (std::abs(output[i]) > peak) {
+			   peak = std::abs(output[i]);
+			   peakIdx = i;
+		   }
+	   }
+	   // Require peak is near the start
+	   EXPECT_LT(peakIdx, 10u);
+	   EXPECT_GT(peak, 0.1f);
+
+	   // Check that the envelope decays: last 10% of samples should be much lower than the peak
+	   float tailMax = 0.0f;
+	   for (size_t i = output.size() * 9 / 10; i < output.size(); ++i) {
+		   tailMax = std::max(tailMax, std::abs(output[i]));
+	   }
+	   EXPECT_LT(tailMax, peak * 0.1f);
 }
 
 TEST(ReverbTest, ParameterSetters)

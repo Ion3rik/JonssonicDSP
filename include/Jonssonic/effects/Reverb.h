@@ -178,18 +178,12 @@ public:
      */
     void processBlock(const T* const* input, T* const* output, size_t numSamples)
     {   
-        // Process pre-delay
-        preDelay.processBlock(input, output, numSamples);
-
-        // Process highpass filter for low cut
-        lowCutFilter.processBlock(output, output, numSamples);
-
         
         // FDN PROCESSING LOOP
         for (size_t n = 0; n < numSamples; ++n) {
-            // Gather pre-delayed input for this sample
+            // Gather input for this sample
             for (size_t ch = 0; ch < numChannels; ++ch)
-                inputFrame[ch] = output[ch][n];
+                inputFrame[ch] = input[ch][n];
 
             // Input mixing: inputFrame (numChannels) -> fdnInput (FDN_SIZE)
             B.mix(inputFrame.data(), fdnInput.data());
@@ -215,6 +209,13 @@ public:
             for (size_t ch = 0; ch < numChannels; ++ch)
                 output[ch][n] = outputFrame[ch];
         }
+
+        // Process pre-delay
+        preDelay.processBlock(input, output, numSamples);
+
+        // Process highpass filter for low cut
+        lowCutFilter.processBlock(output, output, numSamples);
+
         
     }
 
