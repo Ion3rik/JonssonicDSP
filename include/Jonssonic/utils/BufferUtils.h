@@ -73,4 +73,18 @@ namespace Jonssonic {
                 planarBuffer[ch][n] = interleavedBuffer[n][ch];
     }
 
+    /**
+     * @brief Apply gain to a buffer.
+     * @param buffer Array of pointers to channel data
+     * @param numChannels Number of channels
+     * @param numSamples Number of samples per channel
+     * @param gain Gain factor to apply
+     */
+
+    template<typename T>
+    void applyGain(T* const* buffer, size_t numChannels, size_t numSamples, T gain) {
+        for (size_t ch = 0; ch < numChannels; ++ch)
+            for (size_t n = 0; n < numSamples; ++n)
+                buffer[ch][n] *= gain;
+    }
 } // namespace Jonssonic

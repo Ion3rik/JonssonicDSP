@@ -6,6 +6,7 @@
 #include "../core/delays/DelayLine.h" 
 #include "../core/common/DspParam.h"
 #include "../core/filters/FirstOrderFilter.h"
+#include "../core/filters/BiquadFilter.h"
 #include "../core/mixing/MixingMatrix.h"
 
 
@@ -129,7 +130,7 @@ public:
         dampingFilter.setType(FirstOrderType::Lowpass);
 
         lowCutFilter.prepare(numChannels, sampleRate);
-        lowCutFilter.setType(FirstOrderType::Highpass);
+        lowCutFilter.setType(BiquadType::Highpass);
 
         // Prepare mixing matrices and decay gains
         A.resize(FDN_SIZE); // Feedback matrix
@@ -143,7 +144,14 @@ public:
         fdnInput.assign(FDN_SIZE, T(0));
         fdnState.assign(FDN_SIZE, T(0));
 
-       
+        // Initialize parameters to defaults
+        setReverbTimeS(T(2.0), true);
+        setSize(T(0.5), true);
+        setPreDelayTimeMs(T(0.0), true);
+        setLowCutFreqHz(T(1000.0));
+        setDamping(T(0.5), true);
+
+        togglePrepared = true;
     }
 
     /**
@@ -176,6 +184,7 @@ public:
         // Process highpass filter for low cut
         lowCutFilter.processBlock(output, output, numSamples);
 
+        
         // FDN PROCESSING LOOP
         for (size_t n = 0; n < numSamples; ++n) {
             // Gather pre-delayed input for this sample
@@ -206,6 +215,7 @@ public:
             for (size_t ch = 0; ch < numChannels; ++ch)
                 output[ch][n] = outputFrame[ch];
         }
+        
     }
 
     //==============================================================================
@@ -286,17 +296,20 @@ public:
      */
     T getSampleRate() const { return sampleRate; }
 
+    bool isPrepared() const { return togglePrepared; }
+
 
 private:
     // Global parameters
     size_t numChannels = 0;
     T sampleRate = T(44100);
+    bool togglePrepared = false;
 
     // Core processor components
     DelayLine<T, LinearInterpolator<T>, SmootherType::OnePole, 1, SMOOTHING_TIME_MS> fdnDelays; // FDN delay lines
     DelayLine<T, LinearInterpolator<T>, SmootherType::OnePole, 1, SMOOTHING_TIME_MS> preDelay; // Pre-delay line
     FirstOrderFilter<T> dampingFilter; // Low cut filter for damping
-    FirstOrderFilter<T> lowCutFilter; // Highpass filter for low cut
+    BiquadFilter<T> lowCutFilter; // Highpass filter for low cut
 
     // FDN Parameters
     MixingMatrix<T, MixingMatrixType::RandomOrthogonal> A; // FDN feedback matrix
@@ -322,6 +335,7 @@ private:
      */
     void updateFDNparams(bool skipSmoothing = false)
     {
+        if (!togglePrepared) return;
         // Map the size parameter to delay length scale (MIN_DELAY_SCALE .. MAX_DELAY_SCALE)
         T sizeScale =std::clamp(reverbSize * (MAX_DELAY_SCALE - MIN_DELAY_SCALE) + MIN_DELAY_SCALE, MIN_DELAY_SCALE, MAX_DELAY_SCALE);
 

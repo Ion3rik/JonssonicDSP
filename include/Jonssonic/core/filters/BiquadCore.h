@@ -47,6 +47,8 @@ public:
         numSections = newNumSections;
         coeffs.resize(numSections * COEFFS_PER_SECTION, T(0)); // 5 coefficients per section
         state.resize(numChannels, numSections * STATE_VARS_PER_SECTION); // 4 state variables per section
+
+        togglePrepared = true;
     }
 
     void clear()
@@ -120,6 +122,7 @@ public:
 
     void setSectionCoeffs(size_t section, T b0, T b1, T b2, T a1, T a2)
     {
+        if (!togglePrepared) return; // Safety check
         assert(section < numSections && "Section index out of bounds");
         size_t baseIdx = section * COEFFS_PER_SECTION;
         coeffs[baseIdx + 0] = b0;
@@ -131,10 +134,12 @@ public:
 
     size_t getNumChannels() const { return numChannels; }
     size_t getNumSections() const { return numSections; }
+    bool isPrepared() const { return togglePrepared; }
 
 private:
     size_t numChannels = 0;
     size_t numSections = 0;
+    bool togglePrepared = false;
 
     // Coefficient layout:
     // Sections: second-order sections

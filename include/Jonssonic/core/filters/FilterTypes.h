@@ -3,6 +3,8 @@
 // Filter type enumerations are defined here
 // SPDX-License-Identifier: MIT
 
+#pragma once
+
 namespace Jonssonic
 {  
 
