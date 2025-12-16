@@ -12,7 +12,7 @@ namespace Jonssonic {
  * @brief FirstOrderCore filter class implementing a multi-channel, multi-section first-order filter.
  * @param T Sample data type (e.g., float, double)
  */
-template<typename T, BufferLayout Layout = BufferLayout::Planar>
+template<typename T>
 class FirstOrderCore {
 public:
     static constexpr size_t COEFFS_PER_SECTION = 3; // b0, b1, a1
@@ -54,32 +54,16 @@ public:
             T a1 = coeffs[coeffBase + 2];
 
             // Fetch state variables
-            T x1, y1;
-            if constexpr (Layout == BufferLayout::Planar) {
-                // Planar layout
-                x1 = state[ch][stateBase + 0];
-                y1 = state[ch][stateBase + 1];
-            } 
-            else if constexpr (Layout == BufferLayout::Interleaved) {
-                // Interleaved layout
-                x1 = state[stateBase + 0][ch];
-                y1 = state[stateBase + 1][ch];
-            }
-
+            T x1 = state[ch][stateBase + 0];
+            T y1 = state[ch][stateBase + 1];
+        
             // Direct Form I
             T output = b0 * input + b1 * x1 - a1 * y1;
 
             // Update state variables
-            if constexpr (Layout == BufferLayout::Planar) {
-                // Planar layout
-                state[ch][stateBase + 0] = input;  // x1 = input
-                state[ch][stateBase + 1] = output; // y1 = output
-            } 
-            else if constexpr (Layout == BufferLayout::Interleaved) {
-                // Interleaved layout
-                state[stateBase + 0][ch] = input;  // x1 = input
-                state[stateBase + 1][ch] = output; // y1 = output
-            }
+            state[ch][stateBase + 0] = input;  // x1 = input
+            state[ch][stateBase + 1] = output; // y1 = output
+
 
             input = output;
         }
@@ -88,18 +72,9 @@ public:
 
     void processBlock(const T* const* input, T* const* output, size_t numSamples) {
         assert(numChannels > 0 && "Filter not prepared");
-
-        // PLANAR LAYOUT PROCESSING
-        if constexpr (Layout == BufferLayout::Planar)
             for (size_t ch = 0; ch < numChannels; ++ch) 
                 for (size_t n = 0; n < numSamples; ++n) 
                     output[ch][n] = processSample(ch, input[ch][n]);
-                
-        // INTERLEAVED LAYOUT PROCESSING
-        else if constexpr (Layout == BufferLayout::Interleaved)
-            for (size_t n = 0; n < numSamples; ++n) {
-                for (size_t ch = 0; ch < numChannels; ++ch) {
-                    output[n][ch] = processSample(ch, input[n][ch]);
     }
 
     void setSectionCoeffs(size_t section, T b0, T b1, T a1) {
@@ -117,7 +92,7 @@ private:
     size_t numChannels = 0;
     size_t numSections = 0;
     std::vector<T> coeffs; // [b0, b1, a1] per section
-    AudioBuffer<T, BufferLayout::Planar> state;  // [x1, y1] per section, per channel
+    AudioBuffer<T> state;  // [x1, y1] per section, per channel
 };
 
 } // namespace Jonssonic
