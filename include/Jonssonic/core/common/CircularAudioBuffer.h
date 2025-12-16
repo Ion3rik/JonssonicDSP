@@ -18,16 +18,9 @@ namespace Jonssonic {
 /**
  * @brief A multi-channel circular audio buffer with power-of-two size for efficient wrap-around.
  * @tparam T Sample type (typically float or double)
- * @tparam Layout Buffer layout type (default: Planar)
  */
-template<typename T, BufferLayout Layout = BufferLayout::Planar>
-class CircularAudioBuffer;
-
-//==============================================================================
-// PLANAR SPECIALIZATION
-//==============================================================================
 template<typename T>
-class CircularAudioBuffer<T, BufferLayout::Planar>{
+class CircularAudioBuffer{
 public:
     CircularAudioBuffer() = default;
     ~CircularAudioBuffer() = default;
@@ -38,7 +31,6 @@ public:
         buffer.resize(newNumChannels, bufferSize);
         writeIndex.assign(newNumChannels, 0);
     }
-
 
     // Write a sample to a channel (advances write index)
     void write(size_t channel, T value) {
@@ -81,67 +73,5 @@ private:
     std::vector<size_t> writeIndex; // per-channel write index
     size_t bufferSize = 0;
 };
-
-//==============================================================================
-// INTERLEAVED SPECIALIZATION
-//==============================================================================
-template<typename T>
-class CircularAudioBuffer<T, BufferLayout::Interleaved>{
-public:
-    CircularAudioBuffer() = default;
-    ~CircularAudioBuffer() = default;
-
-
-    void resize(size_t newNumChannels, size_t newNumSamples) {
-        bufferSize = nextPowerOfTwo(newNumSamples); // ensure power-of-two size for efficient wrap-around
-        buffer.resize(newNumChannels, bufferSize);
-        writeIndex.assign(newNumChannels, 0);
-    }
-
-
-    // Write a sample to a channel (advances write index)
-    void write(size_t channel, T value) {
-        assert(channel < buffer.getNumChannels());
-        buffer[writeIndex[channel]][channel] = value;
-        writeIndex[channel] = (writeIndex[channel] + 1) & (bufferSize - 1);
-    }
-
-    // Read sample at delay (0 = most recent, 1 = previous, ...)
-    T read(size_t channel, size_t delay) const {
-        assert(channel < buffer.getNumChannels());
-        assert(delay < bufferSize);
-        size_t readIndex = (writeIndex[channel] + bufferSize - delay - 1) & (bufferSize - 1);
-        return buffer[readIndex][channel];
-    }
-
-    /**
-     * @brief Get a pointer to the start of a sample's data (all channels at that sample, for write access).
-     * @param sampleIdx Sample index
-     */
-    T* writeSamplePtr(size_t sampleIdx) {
-        return buffer.writeSamplePtr(sampleIdx);
-    }
-
-    /**
-     * @brief Get a pointer to the start of a sample's data (all channels at that sample, for read-only access).
-     * @param sampleIdx Sample index
-     */
-    const T* readSamplePtr(size_t sampleIdx) const {
-        return buffer.readSamplePtr(sampleIdx);
-    }
-
-    size_t getNumChannels() const { return buffer.getNumChannels(); }
-    size_t getBufferSize() const { return bufferSize; }
-    size_t getChannelWriteIndex(size_t channel) const { return writeIndex[channel]; }
-
-    void reset() { writeIndex.assign(buffer.getNumChannels(), 0); }
-    void clear() { buffer.clear(); }
-
-private:
-    AudioBuffer<T> buffer;
-    std::vector<size_t> writeIndex; // per-channel write index
-    size_t bufferSize = 0;
-};
-
 
 } // namespace Jonssonic

@@ -25,8 +25,7 @@ template<
     typename Interpolator = LinearInterpolator<T>,
     SmootherType SmootherType = SmootherType::OnePole,
     int SmootherOrder = 1,
-    int SmoothingTimeMs = 20,
-    BufferLayout Layout = BufferLayout::Planar
+    int SmoothingTimeMs = 20
 >
 class DelayLine
 {
@@ -109,17 +108,9 @@ public:
      */
     void processBlock(const T* const* input, T* const* output, size_t numSamples)
     {   
-        // PROCESS PLANAR LAYOUT (Channel-major order)
-        if constexpr (Layout == BufferLayout::Planar)
-            for (size_t ch = 0; ch < numChannels; ++ch)  
-                for (size_t n = 0; n < numSamples; ++n)
-                    output[ch][n] = processSample(ch, input[ch][n]);
-
-        // PROCESS INTERLEAVED LAYOUT (Sample-major order)
-        else if constexpr (Layout == BufferLayout::Interleaved)
+        for (size_t ch = 0; ch < numChannels; ++ch)  
             for (size_t n = 0; n < numSamples; ++n)
-                for (size_t ch = 0; ch < numChannels; ++ch)
-                    output[n][ch] = processSample(ch, input[n][ch]);
+                output[ch][n] = processSample(ch, input[ch][n]);
     }
 
     /**
@@ -136,17 +127,9 @@ public:
     void processBlock(const T* const* input, T* const* output, 
                      const T* const* modulation, size_t numSamples)
     {
-        // PROCESS PLANAR LAYOUT (Channel-major order)
-        if constexpr (Layout == BufferLayout::Planar)
-            for (size_t ch = 0; ch < numChannels; ++ch)  
-                for (size_t n = 0; n < numSamples; ++n)
-                    output[ch][n] = processSample(ch, input[ch][n], modulation[ch][n]);
-
-        // PROCESS INTERLEAVED LAYOUT (Sample-major order)
-        else if constexpr (Layout == BufferLayout::Interleaved)
+        for (size_t ch = 0; ch < numChannels; ++ch)  
             for (size_t n = 0; n < numSamples; ++n)
-                for (size_t ch = 0; ch < numChannels; ++ch)
-                    output[n][ch] = processSample(ch, input[n][ch], modulation[n][ch]);
+                output[ch][n] = processSample(ch, input[ch][n], modulation[ch][n]);
     }
 
     /**
@@ -239,7 +222,7 @@ private:
     size_t bufferSize;                                      // Maximum delay in samples (always power of two)
 
     // DSP Components
-    CircularAudioBuffer<T, Layout> circularBuffer;          // Multi-channel circular buffer
+    CircularAudioBuffer<T> circularBuffer;                  // Multi-channel circular buffer
     DspParam<T, SmootherType, SmootherOrder> delaySamples;  // Multi-channel Delay time in samples
 
 
