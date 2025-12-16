@@ -17,7 +17,7 @@ namespace Jonssonic
  * @tparam T Sample data type (e.g., float, double)
  */
 
-template<typename T>
+template<typename T, size_t FDN_SIZE = 8>
 class Reverb
 {
 public:
@@ -25,22 +25,12 @@ public:
     /**
      * @brief Smoothing time for parameter changes in milliseconds.
      */
-    static constexpr int SMOOTHING_TIME_MS = 100;
-
-    /**
-     * @brief Maximum delay buffer size in milliseconds.
-     */
-    static constexpr T MAX_DELAY_MS = T(2000.0);    
+    static constexpr int SMOOTHING_TIME_MS = 100;   
 
     /**
      * @brief Maximum pre-delay time in milliseconds.
      */
-    static constexpr T MAX_PRE_DELAY_MS = T(500.0);
-
-    /**
-     * @brief Number of delay lines in the FDN (2,4,8,16 and 32 supported).
-     */
-    static constexpr size_t FDN_SIZE = 8;     
+    static constexpr T MAX_PRE_DELAY_MS = T(500.0); 
     
     /**
      * @brief Delay line minimum length scale factor.
@@ -69,6 +59,14 @@ public:
     template <size_t N>
     struct FDNBaseDelays;
 
+    
+    template <>
+    struct FDNBaseDelays<2> {
+        static constexpr int values[2] = {
+            1, 2 // ONLY FOR TESTING PURPOSES
+        };
+    };
+
     template <>
     struct FDNBaseDelays<4> {
         static constexpr int values[4] = {
@@ -78,14 +76,18 @@ public:
     template <>
     struct FDNBaseDelays<8> {
         static constexpr int values[8] = {
-            149, 211, 263, 293, 337, 379, 421, 463
+            1493, 1789, 2131, 2467, 
+            2927, 3253, 3697, 4211
+
         };
     };
     template <>
     struct FDNBaseDelays<16> {
         static constexpr int values[16] = {
-            149, 211, 263, 293, 337, 379, 421, 463, 
-            509, 557, 601, 647, 691, 733, 787, 829
+            887,  1039,  1217,  1429,
+            1667,  1951,  2281,  2663,
+            3109,  3631,  4231,  4937,
+            5779,  6761,  7907,  9241
         };
     };
     template <>
@@ -122,8 +124,13 @@ public:
         numChannels = newNumChannels;
         sampleRate = newSampleRate;
 
+        // Compute maximum delay time for FDN delay lines
+        T maxDelaySamples = T(0);
+        for (size_t d = 0; d < FDN_SIZE; ++d)
+            maxDelaySamples = std::max(maxDelaySamples, MAX_DELAY_SCALE * static_cast<T>(FDNBaseDelays<FDN_SIZE>::values[d]));
+
         // Prepare DSP components
-        fdnDelays.prepare(FDN_SIZE, sampleRate, MAX_DELAY_MS);
+        fdnDelays.prepare(FDN_SIZE, sampleRate, msToSamples(maxDelaySamples, sampleRate));
         preDelay.prepare(numChannels, sampleRate, MAX_PRE_DELAY_MS);
 
         dampingFilter.prepare(FDN_SIZE, sampleRate);
@@ -211,7 +218,7 @@ public:
         }
 
         // Process pre-delay
-        preDelay.processBlock(input, output, numSamples);
+        preDelay.processBlock(output, output, numSamples);
 
         // Process highpass filter for low cut
         lowCutFilter.processBlock(output, output, numSamples);
@@ -233,7 +240,6 @@ public:
         // Set reverb time parameter
         T60 = std::clamp(timeInSeconds, T(0.1), T(20.0));
         updateFDNparams(skipSmoothing);
-
     }
 
     /**
@@ -280,8 +286,8 @@ public:
         // Set damping parameter
         T clampedDamping = std::clamp(dampingNormalized, T(0.0), T(1.0));
         // Map to cutoff frequency (100 Hz .. 20 kHz)
-        T cutoffFreq = clampedDamping * (MAX_DAMPING_HZ - MIN_DAMPING_HZ) + MIN_DAMPING_HZ;
-        dampingFilter.setFreq(cutoffFreq);
+        T newDampingHz = MIN_DAMPING_HZ * std::pow(MAX_DAMPING_HZ / MIN_DAMPING_HZ, T(1) - clampedDamping);
+        dampingFilter.setFreq(newDampingHz);
     }
 
     //==============================================================================
@@ -313,7 +319,7 @@ private:
     BiquadFilter<T> lowCutFilter; // Highpass filter for low cut
 
     // FDN Parameters
-    MixingMatrix<T, MixingMatrixType::RandomOrthogonal> A; // FDN feedback matrix
+    MixingMatrix<T, MixingMatrixType::Hadamard> A; // FDN feedback matrix
     MixingMatrix<T, MixingMatrixType::DecorrelatedSum> B; // Input mixing matrix
     MixingMatrix<T, MixingMatrixType::DecorrelatedSum> C; // Output mixing matrix
     DspParam<T, SmootherType::OnePole, 1> g; // Decay gains per delay line (smoothed)

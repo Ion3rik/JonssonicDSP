@@ -14,10 +14,10 @@ TEST(ReverbTest, ConstructionAndPrepare)
 
 TEST(ReverbTest, MonoImpulseResponse)
 {
-	Reverb<float> reverb;
+	Reverb<float, 2> reverb; // Using FDN_SIZE = 2 for testing (delays of 1 and 2 samples)
 	reverb.prepare(1, 48000.0f);
 	reverb.setReverbTimeS(1.0f, true);
-	reverb.setSize(0.5f, true);
+	reverb.setSize(0.5f, true); // results in delay lengths of 1 and 2 samples
 	reverb.setPreDelayTimeMs(0.0f, true);
 	reverb.setDamping(0.5f, true);
 	reverb.setLowCutFreqHz(20.0f);
@@ -31,26 +31,25 @@ TEST(ReverbTest, MonoImpulseResponse)
 
 	reverb.processBlock(inPtrs, outPtrs, numSamples);
 
-	   // Stricter: Check for decaying impulse response
-	   // Find the peak (should be at or near the start)
-	   float peak = 0.0f;
-	   size_t peakIdx = 0;
-	   for (size_t i = 0; i < output.size(); ++i) {
-		   if (std::abs(output[i]) > peak) {
-			   peak = std::abs(output[i]);
-			   peakIdx = i;
-		   }
+	   // Stricter: Check for echoes at expected sample indices for FDN_SIZE=2 (delays 1 and 2 samples)
+	   // The first echo should be at sample 1, the second at sample 2, etc.
+	   // We expect nonzero output at indices 0, 1, 2, ...
+	   // Check first few echoes
+	   EXPECT_NEAR(output[0], 0.0f, 1e-6f); // FDN output is zero at n=0 (impulse enters delay lines)
+	   EXPECT_NEAR(output[1], 1.0f, 1e-3f); // First echo (delay=1)
+	   EXPECT_NEAR(output[2], 1.0f, 1e-3f); // Second echo (delay=2)
+	   // Check that subsequent echoes decay (roughly)
+	   float prev = std::abs(output[1]);
+	   for (size_t i = 2; i < 10; ++i) {
+		   EXPECT_LT(std::abs(output[i]), prev + 1e-2f); // Should not grow
+		   prev = std::abs(output[i]);
 	   }
-	   // Require peak is near the start
-	   EXPECT_LT(peakIdx, 10u);
-	   EXPECT_GT(peak, 0.1f);
-
-	   // Check that the envelope decays: last 10% of samples should be much lower than the peak
+	   // Check that the tail is much lower than the first echo
 	   float tailMax = 0.0f;
 	   for (size_t i = output.size() * 9 / 10; i < output.size(); ++i) {
 		   tailMax = std::max(tailMax, std::abs(output[i]));
 	   }
-	   EXPECT_LT(tailMax, peak * 0.1f);
+	   EXPECT_LT(tailMax, 0.1f);
 }
 
 TEST(ReverbTest, ParameterSetters)
