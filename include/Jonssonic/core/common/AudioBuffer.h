@@ -33,6 +33,7 @@ enum class BufferLayout {
  *
  * @tparam T Sample type (typically float or double)
  * @tparam BufferLayout Layout of the buffer (default: Planar)
+ * @note All the Jonssonic DSP processors use planar layout internally for simplicity and performance.
  */
 
 template<typename T, BufferLayout Layout = BufferLayout::Planar>
