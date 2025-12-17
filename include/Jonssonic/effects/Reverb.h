@@ -25,7 +25,7 @@ public:
     /**
      * @brief Smoothing time for parameter changes in milliseconds.
      */
-    static constexpr int SMOOTHING_TIME_MS = 100;   
+    static constexpr int SMOOTHING_TIME_MS = 50;   
 
     /**
      * @brief Maximum pre-delay time in milliseconds.
@@ -35,22 +35,12 @@ public:
     /**
      * @brief Delay line minimum length scale factor.
      */
-    static constexpr T MIN_DELAY_SCALE = T(0.2);
+    static constexpr T MIN_DELAY_SCALE = T(0.7);
 
     /**
      * @brief Delay line maximum length scale factor.
      */
-    static constexpr T MAX_DELAY_SCALE = T(2.0);
-
-    /**
-     * @brief Damping filter minimum cutoff frequency in Hz.
-     */
-    static constexpr T MIN_DAMPING_HZ = T(1000.0);
-
-    /**
-     * @brief Damping filter maximum cutoff frequency in Hz.
-     */
-    static constexpr T MAX_DAMPING_HZ = T(20000.0);           
+    static constexpr T MAX_DELAY_SCALE = T(1.5);        
     
     /**
      * @brief Coprime base delay lengths in milliseconds for the FDN.
@@ -70,7 +60,7 @@ public:
     template <>
     struct FDNBaseDelays<4> {
         static constexpr int values[4] = {
-            149, 211, 263, 293
+            443, 601, 809, 1031
         };
     };
     template <>
@@ -93,10 +83,10 @@ public:
     template <>
     struct FDNBaseDelays<32> {
         static constexpr int values[32] = {
-            149, 211, 263, 293, 337, 379, 421, 463,
-            509, 557, 601, 647, 691, 733, 787, 829,
-            877, 919, 967, 1009, 1061, 1103, 1151, 1201,
-            1237, 1291, 1327, 1381, 1423, 1459, 1511, 1543
+            673, 809, 887, 1039, 1217, 1429, 1667, 1951,
+            2027, 2089, 2137, 2203, 2269, 2339, 2411, 2477,
+            2539, 2593, 2657, 2719, 2789, 2851, 2909, 2971,
+            3109, 3631, 4231, 4937, 5779, 6761, 7907, 9241
         };
     };
 
