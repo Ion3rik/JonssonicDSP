@@ -5,7 +5,7 @@
 #pragma once
 #include "../core/delays/DelayLine.h" 
 #include "../core/common/DspParam.h"
-#include "../core/filters/FirstOrderFilter.h"
+#include "../core/filters/DampingFilter.h"
 #include "../core/filters/BiquadFilter.h"
 #include "../core/mixing/MixingMatrix.h"
 
@@ -134,7 +134,6 @@ public:
         preDelay.prepare(numChannels, sampleRate, MAX_PRE_DELAY_MS);
 
         dampingFilter.prepare(FDN_SIZE, sampleRate);
-        dampingFilter.setType(FirstOrderType::Lowpass);
 
         lowCutFilter.prepare(numChannels, sampleRate);
         lowCutFilter.setType(BiquadType::Highpass);
@@ -143,7 +142,6 @@ public:
         A.resize(FDN_SIZE); // Feedback matrix
         B.resize(numChannels, FDN_SIZE); // Input mixing matrix
         C.resize(FDN_SIZE, numChannels); // Output mixing matrix
-        g.prepare(FDN_SIZE, sampleRate, SMOOTHING_TIME_MS); // Decay gains with smoother (use same smoothing time as the delays)
 
         // Prepare state variables
         inputFrame.assign(numChannels, T(0));
@@ -152,11 +150,12 @@ public:
         fdnState.assign(FDN_SIZE, T(0));
 
         // Initialize parameters to defaults
-        setReverbTimeS(T(2.0), true);
+        setReverbTimeLowS(T(2.0), true);
+        setReverbTimeHighS(T(1.0), true);
         setSize(T(0.5), true);
         setPreDelayTimeMs(T(0.0), true);
         setLowCutFreqHz(T(1000.0));
-        setDamping(T(0.5), true);
+
 
         togglePrepared = true;
     }
@@ -170,7 +169,6 @@ public:
         preDelay.reset();
         dampingFilter.reset();
         lowCutFilter.reset();
-        g.reset();
         std::fill(inputFrame.begin(), inputFrame.end(), T(0));
         std::fill(outputFrame.begin(), outputFrame.end(), T(0));
         std::fill(fdnInput.begin(), fdnInput.end(), T(0));
@@ -195,7 +193,7 @@ public:
             // Input mixing: inputFrame (numChannels) -> fdnInput (FDN_SIZE)
             B.mix(inputFrame.data(), fdnInput.data());
 
-            // Read FDN delay line outputs and filter into fdnState
+            // Read FDN delay line outputs and apply damping into fdnState
             for (size_t d = 0; d < FDN_SIZE; ++d)
             {
                 fdnState[d] = fdnDelays.readSample(d);
@@ -207,7 +205,7 @@ public:
       
             // Write input + feedback scaled with decay gains to the delay lines
             for (size_t d = 0; d < FDN_SIZE; ++d)
-                fdnDelays.writeSample(d, fdnInput[d] + g.getNextValue(d) * fdnState[d]);
+                fdnDelays.writeSample(d, fdnInput[d] + fdnState[d]);
 
             // Output mixing: fdnState -> outputFrame (numChannels)
             C.mix(fdnState.data(), outputFrame.data());
@@ -231,14 +229,24 @@ public:
     //==============================================================================
 
     /**
-     * @brief Set the reverb time in seconds.
+     * @brief Set the reverb time at DC in seconds.
      * @param timeInSeconds Reverb time in seconds
      * @param skipSmoothing If true, skip smoothing of parameter change
      */
-    void setReverbTimeS(T timeInSeconds, bool skipSmoothing = false)
+    void setReverbTimeLowS(T timeInSeconds, bool skipSmoothing = false)
     {
         // Set reverb time parameter
-        T60 = std::clamp(timeInSeconds, T(0.1), T(20.0));
+        T60_DC = std::clamp(timeInSeconds, T(0.1), T(20.0));
+        updateFDNparams(skipSmoothing);
+    }
+
+    /**
+     * @brief Set the reverb time at Nyquist in seconds.
+     */
+    void setReverbTimeHighS(T timeInSeconds, bool skipSmoothing = false)
+    {
+        // Set reverb time parameter
+        T60_NYQ = std::clamp(timeInSeconds, T(0.1), T(20.0));
         updateFDNparams(skipSmoothing);
     }
 
@@ -276,19 +284,6 @@ public:
         lowCutFilter.setFreq(freqHz);
     }
 
-    /**
-     * @brief Set the damping amount.
-     * @param dampingNormalized Damping amount normalized [0.0, 1.0]
-     * @param skipSmoothing If true, skip smoothing of parameter change
-     */
-    void setDamping(T dampingNormalized, bool skipSmoothing = false)
-    {
-        // Set damping parameter
-        T clampedDamping = std::clamp(dampingNormalized, T(0.0), T(1.0));
-        // Map to cutoff frequency (100 Hz .. 20 kHz)
-        T newDampingHz = MIN_DAMPING_HZ * std::pow(MAX_DAMPING_HZ / MIN_DAMPING_HZ, T(1) - clampedDamping);
-        dampingFilter.setFreq(newDampingHz);
-    }
 
     //==============================================================================
     // GETTERS
@@ -315,14 +310,13 @@ private:
     // Core processor components
     DelayLine<T, LinearInterpolator<T>, SmootherType::OnePole, 1, SMOOTHING_TIME_MS> fdnDelays; // FDN delay lines
     DelayLine<T, LinearInterpolator<T>, SmootherType::OnePole, 1, SMOOTHING_TIME_MS> preDelay; // Pre-delay line
-    FirstOrderFilter<T> dampingFilter; // Low cut filter for damping
+    DampingFilter<T, DampingType::OnePole> dampingFilter; // Loop filter for damping
     BiquadFilter<T> lowCutFilter; // Highpass filter for low cut
 
-    // FDN Parameters
+    // FDN Matrices
     MixingMatrix<T, MixingMatrixType::Hadamard> A; // FDN feedback matrix
     MixingMatrix<T, MixingMatrixType::DecorrelatedSum> B; // Input mixing matrix
     MixingMatrix<T, MixingMatrixType::DecorrelatedSum> C; // Output mixing matrix
-    DspParam<T, SmootherType::OnePole, 1> g; // Decay gains per delay line (smoothed)
 
     // State variables
     std::vector<T> fdnState;        // FDN state (size FDN_SIZE)
@@ -332,7 +326,8 @@ private:
 
     // User parameters
     T reverbSize;       // Size parameter normalized [0 .. 1]
-    T T60;              // Reverb time in seconds (RT60)
+    T T60_DC;           // Reverb time at DC in seconds
+    T T60_NYQ;          // Reverb time at Nyquist in seconds
 
     /**
      * @brief Update FDN parameters based on size and reverb time.
@@ -351,9 +346,8 @@ private:
             int delaySamples = static_cast<int>(FDNBaseDelays<FDN_SIZE>::values[d] * sizeScale);
             fdnDelays.setDelaySamples(d, delaySamples, skipSmoothing);
 
-            // update decay gains to achieve desired T60
-            T decayConstant = T(-3) * delaySamples / (T60 * sampleRate); 
-            g.setTarget(d, std::pow(T(10), decayConstant), skipSmoothing);
+            // Update the damping filter based on delay length and desired reverb time at DC and Nyquist
+            dampingFilter.setByT60(d, T60_DC, T60_NYQ, delaySamples);
         }
     }
 

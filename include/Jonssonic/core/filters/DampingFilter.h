@@ -8,7 +8,7 @@ namespace Jonssonic {
 // =============================================================================
 // Template Declaration
 // =============================================================================
-template<typename T, DampingType Type>
+template<typename T, DampingType Type = DampingType::OnePole>
 class DampingFilter;
 
 // =============================================================================
@@ -38,6 +38,8 @@ public:
         numChannels = newNumChannels;
         sampleRate = newSampleRate;
         z1.assign(numChannels, T(0));
+        a.assign(numChannels, T(0));
+        b.assign(numChannels, T(0));
     }
 
     /**
@@ -46,11 +48,11 @@ public:
      * @param T60_NYQ Desired decay time (seconds) at Nyquist (fs/2 Hz)
      * @note Must call prepare() before this.
      */
-    void setByT60(T T60_DC, T T60_NYQ) {
-        T g0 = std::pow(T(10), -3.0 / (T60_DC * sampleRate));
-        T g1 = std::pow(T(10), -3.0 / (T60_NYQ * sampleRate));
-        a = (g0 + g1) / 2;
-        b = (g0 - g1) / 2;
+    void setByT60(size_t ch, T T60_DC, T T60_NYQ, size_t delaySamples) {
+        T g0 = std::pow(T(10), -3.0 * delaySamples / (T60_DC * sampleRate));
+        T g1 = std::pow(T(10), -3.0 * delaySamples / (T60_NYQ * sampleRate));
+        a[ch] = (g0 + g1) / 2;
+        b[ch] = (g0 - g1) / 2;
     }
 
     /**
@@ -61,7 +63,7 @@ public:
      */
     T processSample(size_t ch, T x) {
         assert(ch < numChannels && "Channel index out of bounds");
-        T y = a * x + b * z1[ch];
+        T y = a[ch] * x + b[ch] * z1[ch];
         z1[ch] = y;
         return y;
     }
@@ -71,8 +73,8 @@ public:
 private:
     T sampleRate = T(44100);
     size_t numChannels = 0;
-    T a = T(0.99); // feedforward
-    T b = T(0.0);  // feedback
+    std::vector<T> a; // feedforward coefficient
+    std::vector<T> b;  // feedback coefficient
     std::vector<T> z1;   // state per channel
 };
 

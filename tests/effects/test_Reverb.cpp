@@ -16,10 +16,10 @@ TEST(ReverbTest, MonoImpulseResponse)
 {
 	Reverb<float, 2> reverb; // Using FDN_SIZE = 2 for testing (delays of 1 and 2 samples)
 	reverb.prepare(1, 48000.0f);
-	reverb.setReverbTimeS(1.0f, true);
+	reverb.setReverbTimeLowS(1.0f, true);
+	reverb.setReverbTimeHighS(0.5f, true);
 	reverb.setSize(0.5f, true); // results in delay lengths of 1 and 2 samples
 	reverb.setPreDelayTimeMs(0.0f, true);
-	reverb.setDamping(0.5f, true);
 	reverb.setLowCutFreqHz(20.0f);
 
 	constexpr size_t numSamples = 48000;
@@ -56,9 +56,9 @@ TEST(ReverbTest, ParameterSetters)
 {
 	Reverb<float> reverb;
 	reverb.prepare(2, 44100.0f);
-	EXPECT_NO_THROW(reverb.setReverbTimeS(2.5f));
+	EXPECT_NO_THROW(reverb.setReverbTimeLowS(2.5f));
+	EXPECT_NO_THROW(reverb.setReverbTimeHighS(2.0f));
 	EXPECT_NO_THROW(reverb.setSize(0.8f));
 	EXPECT_NO_THROW(reverb.setPreDelayTimeMs(100.0f));
-	EXPECT_NO_THROW(reverb.setDamping(0.3f));
 	EXPECT_NO_THROW(reverb.setLowCutFreqHz(200.0f));
 }
