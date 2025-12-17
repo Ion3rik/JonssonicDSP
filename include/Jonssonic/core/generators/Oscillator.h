@@ -1,7 +1,6 @@
 // Jonssonic - A C++ audio DSP library
-// Waveform generator class header file
-// Author: Jon Fagerström
-// Update: 18.11.2025
+// Oscillator class header file
+// SPDX-License-Identifier: MIT
 
 #pragma once
 
