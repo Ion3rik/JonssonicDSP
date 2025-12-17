@@ -92,10 +92,10 @@ public:
         setDamping(T(0), true); // No damping by default
     }
 
-    void clear() {
-        delayLine.clear();
-        dampingFilter.clear();
-        dcBlocker.clear();
+    void reset() {
+        delayLine.reset();
+        dampingFilter.reset();
+        dcBlocker.reset();
     }
 
     /**

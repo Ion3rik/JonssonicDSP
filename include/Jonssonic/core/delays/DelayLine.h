@@ -50,7 +50,7 @@ public:
         delaySamples.setBounds(T(0), static_cast<T>(maxDelaySamples)); // set bounds to actual max delay requested
     }
 
-    void clear()
+    void reset()
     {
         circularBuffer.clear();
     }

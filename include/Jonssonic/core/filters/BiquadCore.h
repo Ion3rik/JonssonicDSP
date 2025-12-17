@@ -51,7 +51,7 @@ public:
         togglePrepared = true;
     }
 
-    void clear()
+    void reset()
     {
         state.clear();
     }

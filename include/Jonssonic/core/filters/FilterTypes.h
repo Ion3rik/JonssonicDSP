@@ -32,4 +32,13 @@ enum class BiquadType {
     Lowshelf,
     Highshelf
 };
+
+/**
+ * @brief Damping filter types
+ */
+enum class DampingType {
+    OnePole,
+    Shelving 
+};
+
 } // namespace Jonssonic

@@ -46,8 +46,8 @@ public:
     }
 
     void reset() {
-        upsamplerBuffer.reset();
-        downsamplerBuffer.reset();
+        upsamplerBuffer.clear();
+        downsamplerBuffer.clear();
     }
 
     /** 

@@ -65,8 +65,10 @@ public:
     size_t getBufferSize() const { return bufferSize; }
     size_t getChannelWriteIndex(size_t channel) const { return writeIndex[channel]; }
 
-    void reset() { writeIndex.assign(buffer.getNumChannels(), 0); }
-    void clear() { buffer.clear(); }
+    void clear() {
+        buffer.clear(); // zero the buffer, does not deallocate
+        writeIndex.assign(buffer.getNumChannels(), 0); // reset indices
+    }
 
 private:
     AudioBuffer<T> buffer;

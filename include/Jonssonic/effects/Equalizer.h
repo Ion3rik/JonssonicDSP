@@ -84,9 +84,9 @@ public:
         togglePrepared = true;
     }
 
-    void clear() {
-        equalizerLinear.clear();
-        equalizerNonlinear.clear();
+    void reset() {
+        equalizerLinear.reset();
+        equalizerNonlinear.reset();
     }
 
     /**

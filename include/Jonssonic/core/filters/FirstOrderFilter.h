@@ -37,8 +37,8 @@ public:
         updateCoeffs();
     }
 
-    void clear() {
-        FirstOrderCore.clear();
+    void reset() {
+        FirstOrderCore.reset();
     }
 
     T processSample(size_t ch, T input) {

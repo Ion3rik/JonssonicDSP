@@ -54,9 +54,9 @@ public:
         updateCoeffs();
     }
 
-    void clear()
+    void reset()
     {
-        BiquadCore.clear();
+        BiquadCore.reset();
     }
 
     /**

@@ -33,7 +33,7 @@ public:
         y1.assign(numChannels, T(0));
     }
 
-    void clear() {
+    void reset() {
         std::fill(x1.begin(), x1.end(), T(0));
         std::fill(y1.begin(), y1.end(), T(0));
     }

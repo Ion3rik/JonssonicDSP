@@ -58,7 +58,7 @@ TEST_F(FirstOrderCoreTest, ClearResetsState) {
     filter.setSectionCoeffs(0, 0.0f, 1.0f, 0.0f);
     filter.processSample(0, 1.0f);
     filter.processSample(0, 2.0f);
-    filter.clear();
+    filter.reset();
     float out = filter.processSample(0, 3.0f);
     EXPECT_FLOAT_EQ(out, 0.0f);
 }
@@ -69,7 +69,7 @@ TEST_F(FirstOrderCoreTest, MultiChannelIndependence) {
     float out1 = filter.processSample(1, 2.0f);
     EXPECT_FLOAT_EQ(out0, 1.0f);
     EXPECT_FLOAT_EQ(out1, 2.0f);
-    filter.clear();
+    filter.reset();
     filter.setSectionCoeffs(0, 0.0f, 1.0f, 0.0f);
     filter.processSample(0, 5.0f);
     float out0_delayed = filter.processSample(0, 0.0f);

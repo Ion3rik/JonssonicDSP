@@ -185,8 +185,8 @@ TEST_F(AllpassFilterTest, ProcessBlock_WithModulation) {
     EXPECT_TRUE(hasNonZero);
 }
 
-// Test clear functionality
-TEST_F(AllpassFilterTest, ClearFunctionality) {
+// Test reset functionality
+TEST_F(AllpassFilterTest, ResetFunctionality) {
     AllpassFilter<float> allpass;
     allpass.prepare(numChannels, sampleRate, maxDelayMs);
     
@@ -199,10 +199,10 @@ TEST_F(AllpassFilterTest, ClearFunctionality) {
         allpass.processSample(1, 1.0f);
     }
     
-    // Clear
-    allpass.clear();
+    // Reset
+    allpass.reset();
     
-    // Output should be based on current input after clear (no history)
+    // Output should be based on current input after reset (no history)
     float output = allpass.processSample(0, 1.0f);
     EXPECT_TRUE(std::isfinite(output));
 }

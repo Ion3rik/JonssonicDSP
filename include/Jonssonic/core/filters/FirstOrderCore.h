@@ -38,7 +38,7 @@ public:
         state.resize(numChannels, numSections * STATE_VARS_PER_SECTION);
     }
 
-    void clear() {
+    void reset() {
         state.clear();
     }
 

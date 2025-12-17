@@ -233,7 +233,7 @@ TEST_F(CombFilterTest, FeedbackBehavior) {
 }
 
 // Test clear functionality
-TEST_F(CombFilterTest, ClearFunctionality) {
+TEST_F(CombFilterTest, ResetFunctionality) {
     CombFilter<float> comb;
     comb.prepare(numChannels, sampleRate, maxDelayMs);
     
@@ -247,8 +247,8 @@ TEST_F(CombFilterTest, ClearFunctionality) {
         comb.processSample(1, 1.0f);
     }
     
-    // Clear
-    comb.clear();
+    // Reset
+    comb.reset();
     
     // Output should be close to input after clear (no history)
     float output = comb.processSample(0, 1.0f);

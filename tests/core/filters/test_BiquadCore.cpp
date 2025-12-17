@@ -71,14 +71,14 @@ TEST_F(SOSFilterTest, StatePersistence) {
     EXPECT_FLOAT_EQ(out3, 2.0f); // Third output is previous input
 }
 
-// Test clear resets state
-TEST_F(SOSFilterTest, ClearResetsState) {
+// Test reset resets state
+TEST_F(SOSFilterTest, ResetResetsState) {
     filter.setSectionCoeffs(0, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f);
     
     filter.processSample(0, 1.0f);
     filter.processSample(0, 2.0f);
     
-    filter.clear();
+    filter.reset();
     
     float out = filter.processSample(0, 3.0f);
     EXPECT_FLOAT_EQ(out, 0.0f); // State should be reset
@@ -96,7 +96,7 @@ TEST_F(SOSFilterTest, MultiChannelIndependence) {
     EXPECT_FLOAT_EQ(out1, 2.0f);
     
     // Check state independence with a fresh filter
-    filter.clear(); // Reset state
+    filter.reset(); // Reset state
     filter.setSectionCoeffs(0, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f);
     
     // Process only on channel 0

@@ -236,7 +236,7 @@ TEST_F(BiquadFilterTest, HighshelfBoost) {
     EXPECT_GT(maxOut, 1.5f);
 }
 
-// Test clear resets state
+// Test reset resets state
 TEST_F(BiquadFilterTest, ClearResetsState) {
     filter.setType(BiquadType::Lowpass);
     filter.setFreq(100.0f);
@@ -247,7 +247,7 @@ TEST_F(BiquadFilterTest, ClearResetsState) {
         filter.processSample(0, 1.0f);
     }
     
-    filter.clear();
+    filter.reset();
     
     // Process impulse
     float out1 = filter.processSample(0, 1.0f);

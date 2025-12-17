@@ -85,11 +85,11 @@ public:
     /**
      * @brief Reset the effect state and clear buffers.
      */
-    void clear()
+    void reset()
     {
-        delayLine.clear();
+        delayLine.reset();
         lfo.reset();
-        dcBlocker.clear();
+        dcBlocker.reset();
         phaseOffset.reset();
         depthInSamples.reset();
         feedback.reset();

@@ -164,17 +164,17 @@ public:
     /**
      * @brief Reset the effect state and clear buffers.
      */
-    void clear()
+    void reset()
     {
-        fdnDelays.clear();
-        preDelay.clear();
-        dampingFilter.clear();
-        lowCutFilter.clear();
+        fdnDelays.reset();
+        preDelay.reset();
+        dampingFilter.reset();
+        lowCutFilter.reset();
         g.reset();
-        inputFrame.clear();
-        outputFrame.clear();
-        fdnInput.clear();
-        fdnState.clear();
+        std::fill(inputFrame.begin(), inputFrame.end(), T(0));
+        std::fill(outputFrame.begin(), outputFrame.end(), T(0));
+        std::fill(fdnInput.begin(), fdnInput.end(), T(0));
+        std::fill(fdnState.begin(), fdnState.end(), T(0));
     }
 
     /**

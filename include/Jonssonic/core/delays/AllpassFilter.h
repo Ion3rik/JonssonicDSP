@@ -67,9 +67,9 @@ public:
 		gain.setTarget(T(0), true);
 	}
 
-	void clear()
+	void reset()
 	{
-		delayLine.clear();
+		delayLine.reset();
 		gain.reset();
 	}
 

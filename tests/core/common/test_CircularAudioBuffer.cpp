@@ -31,12 +31,12 @@ TEST(CircularAudioBufferTest, WrapAround) {
     EXPECT_FLOAT_EQ(buffer.read(0, 3), 2.0f);
 }
 
-TEST(CircularAudioBufferTest, Reset) {
+TEST(CircularAudioBufferTest, Clear) {
     CircularAudioBuffer<float> buffer;
     buffer.resize(1, 4);
     buffer.write(0, 1.0f);
     buffer.write(0, 2.0f);
-    buffer.reset();
+    buffer.clear();
     buffer.write(0, 3.0f);
     EXPECT_FLOAT_EQ(buffer.read(0, 0), 3.0f);
 }
