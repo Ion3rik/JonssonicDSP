@@ -22,7 +22,7 @@ namespace Jonssonic {
      * @param numSamples Number of samples per channel
      */
     template<typename T>
-    inline void mapChannels(const T* const* input, T* const* output, int numInputChannels, int numOutputChannels, int numSamples)
+    inline void mapChannels(const T* const* input, T* const* output, size_t numInputChannels, size_t numOutputChannels, size_t numSamples)
     {
         for (int outCh = 0; outCh < numOutputChannels; ++outCh)
         {
@@ -74,7 +74,7 @@ namespace Jonssonic {
     }
 
     /**
-     * @brief Apply gain to a buffer.
+     * @brief Apply fixed gain to a buffer.
      * @param buffer Array of pointers to channel data
      * @param numChannels Number of channels
      * @param numSamples Number of samples per channel

@@ -36,22 +36,22 @@ public:
     /**
      * @brief Delay line minimum length scale factor.
      */
-    static constexpr T MIN_DELAY_SCALE = T(0.5);
+    static constexpr T MIN_DELAY_SCALE = T(0.7);
 
     /**
      * @brief Delay line maximum length scale factor.
      */
-    static constexpr T MAX_DELAY_SCALE = T(1.5);  
+    static constexpr T MAX_DELAY_SCALE = T(2.0);  
     
     /**
      * @brief Noise modulator depth in samples.
      */
-    static constexpr T MODULATION_DEPTH_SAMPLES = T(5.0);
+    static constexpr T MODULATION_DEPTH_SAMPLES = T(10.0);
 
     /**
      * @brief Noise modulator lowpass cutoff frequency in Hz.
      */
-    static constexpr T MODULATION_CUTOFF_HZ = T(5.0);
+    static constexpr T MODULATION_CUTOFF_HZ = T(10.0);
 
     /**
      * @brief Coprime base delay lengths in milliseconds for the FDN.

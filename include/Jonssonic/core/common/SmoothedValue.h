@@ -20,7 +20,7 @@ enum class SmootherType {
 };
 
 // Forward declaration for template specializations
-template<typename T, SmootherType Type, size_t Order>
+template<typename T, SmootherType Type = SmootherType::OnePole, size_t Order = 1>
 class SmoothedValue;
 
 /**
@@ -60,6 +60,13 @@ public:
     T process(size_t ch, T target) {
         value[ch] = target;
         return value[ch];
+    }
+
+    // Apply smoothed value to buffer (no smoothing, just apply target value)
+    void applyToBuffer(T* const* buffer, size_t numChannels, size_t numSamples) {
+        for (size_t ch = 0; ch < numChannels; ++ch)
+            for (size_t n = 0; n < numSamples; ++n)
+                buffer[ch][n] *= value[ch];
     }
 
     // Set all channels to the same target value (no smoothing, just set value)
@@ -137,6 +144,15 @@ public:
         return getNextValue(ch);
     }
 
+    // Apply smoothed value to buffer
+    void applyToBuffer(T* const* buffer, size_t numChannels, size_t numSamples) {
+        for (size_t ch = 0; ch < numChannels; ++ch) {
+            for (size_t n = 0; n < numSamples; ++n) {
+                buffer[ch][n] *= getNextValue(ch);
+            }
+        }
+    }
+
     // Set all channels to the same target value
     void setTarget(T value, bool skipSmoothing = false) {
         if (skipSmoothing) {
@@ -196,7 +212,7 @@ private:
     T sampleRate = 44100;
     std::vector<T> current;
     std::vector<T> target;
-    T timeMs = 10;
+    T timeMs = 20;
     T alpha = 0;
     std::vector<std::array<T, Order>> stage; // stage[channel][order]
 };
@@ -243,6 +259,15 @@ public:
     T process(size_t ch, T target) {
         setTarget(ch, target);
         return getNextValue(ch);
+    }
+
+    // Apply smoothed value to buffer
+    void applyToBuffer(T* const* buffer, size_t numChannels, size_t numSamples) {
+        for (size_t ch = 0; ch < numChannels; ++ch) {
+            for (size_t n = 0; n < numSamples; ++n) {
+                buffer[ch][n] *= getNextValue(ch);
+            }
+        }
     }
 
     // Set all channels to the same target value

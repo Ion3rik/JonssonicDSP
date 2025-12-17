@@ -13,7 +13,7 @@
 namespace Jonssonic {
 
 /**
- * @brief Modular distortion stage with gain, bias, and asymmetry.
+ * @brief Parametric wave shaping stage with gain, bias, and asymmetry.
  *
  * @tparam SampleType   Sample data type (e.g., float, double)
  * @tparam ShaperType   Nonlinear shaping type (from WaveShaperType)
@@ -92,7 +92,7 @@ public:
                 T sign = (T(0) < sample) - (sample < T(0)); // 1 if input>0, -1 if input<0, 0 if input==0
                 sample *= (T(1) + asym * sign);
                 // Apply waveshaping
-                output[ch][n] = shaper.processSample(sample);
+                output[ch][n] = shaper.processSample(sample, shape.getNextValue(ch));
                 // Apply output gain
                 output[ch][n] *= outputGain.getNextValue(ch);
             }
@@ -154,12 +154,20 @@ public:
         asymmetry.setTarget(ch, asymValue, skipSmoothing);
     }
 
+    /**
+     * @brief Set shape for a specific channel (only functional with Dynamic shaper).
+     */
+    void setShape(size_t ch, T shapeValue, bool skipSmoothing = false) {
+        shape.setTarget(ch, shapeValue, skipSmoothing);
+    }
+
 private:
     size_t numChannels = 0;
     DspParam<T, SmootherType, SmootherOrder> inputGain;
     DspParam<T, SmootherType, SmootherOrder> outputGain;
     DspParam<T, SmootherType, SmootherOrder> bias;
     DspParam<T, SmootherType, SmootherOrder> asymmetry;
+    DspParam<T, SmootherType, SmootherOrder> shape; // Only functional with Dynamic shaper
     WaveShaper<T, ShaperType> shaper;
 };
 
