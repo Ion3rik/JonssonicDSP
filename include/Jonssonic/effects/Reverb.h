@@ -8,6 +8,7 @@
 #include "../core/filters/DampingFilter.h"
 #include "../core/filters/BiquadFilter.h"
 #include "../core/mixing/MixingMatrix.h"
+#include "../core/generators/FilteredNoise.h"
 
 
 namespace Jonssonic
@@ -35,16 +36,26 @@ public:
     /**
      * @brief Delay line minimum length scale factor.
      */
-    static constexpr T MIN_DELAY_SCALE = T(0.7);
+    static constexpr T MIN_DELAY_SCALE = T(0.5);
 
     /**
      * @brief Delay line maximum length scale factor.
      */
-    static constexpr T MAX_DELAY_SCALE = T(1.5);        
+    static constexpr T MAX_DELAY_SCALE = T(1.5);  
     
     /**
+     * @brief Noise modulator depth in samples.
+     */
+    static constexpr T MODULATION_DEPTH_SAMPLES = T(5.0);
+
+    /**
+     * @brief Noise modulator lowpass cutoff frequency in Hz.
+     */
+    static constexpr T MODULATION_CUTOFF_HZ = T(5.0);
+
+    /**
      * @brief Coprime base delay lengths in milliseconds for the FDN.
-     *        Actual lengths will be scaled based on size parameter.
+     *        Actual lengths will be scaled based on diffusion parameter.
      */
     template <size_t N>
     struct FDNBaseDelays;
@@ -128,6 +139,9 @@ public:
         lowCutFilter.prepare(numChannels, sampleRate);
         lowCutFilter.setType(BiquadType::Highpass);
 
+        delayLineMod.prepare(FDN_SIZE, sampleRate);
+        delayLineMod.setCutoff(MODULATION_CUTOFF_HZ);
+
         // Prepare mixing matrices and decay gains
         A.resize(FDN_SIZE); // Feedback matrix
         B.resize(numChannels, FDN_SIZE); // Input mixing matrix
@@ -142,7 +156,7 @@ public:
         // Initialize parameters to defaults
         setReverbTimeLowS(T(2.0), true);
         setReverbTimeHighS(T(1.0), true);
-        setSize(T(0.5), true);
+        setDiffusion(T(0.5), true);
         setPreDelayTimeMs(T(0.0), true);
         setLowCutFreqHz(T(1000.0));
 
@@ -183,11 +197,12 @@ public:
             // Input mixing: inputFrame (numChannels) -> fdnInput (FDN_SIZE)
             B.mix(inputFrame.data(), fdnInput.data());
 
-            // Read FDN delay line outputs and apply damping into fdnState
+            // Read FDN delay line outputs with modulation and apply damping into fdnState
             for (size_t d = 0; d < FDN_SIZE; ++d)
             {
-                fdnState[d] = fdnDelays.readSample(d);
-                fdnState[d] = dampingFilter.processSample(d, fdnState[d]);
+                T modSignal = diffusion * MODULATION_DEPTH_SAMPLES * delayLineMod.processSample(d); // Get modulation signal scaled by diffusion (more diffusion -> more modulation)
+                fdnState[d] = fdnDelays.readSample(d, modSignal);                       // Read delay line with modulation
+                fdnState[d] = dampingFilter.processSample(d, fdnState[d]);              // Apply damping filter
             }
 
             // Feedback mixing: fdnState -> fdnFeedback
@@ -241,15 +256,16 @@ public:
     }
 
     /**
-     * @brief Set the size of the reverb space.
+     * @brief Set the diffusion amount.
      *        In practise scales the FDN delay lengths.
-     * @param sizeNormalized Size parameter normalized [0.0, 1.0]
+     *        High diffusion -> shorter delays, Low diffusion -> longer delays
+     * @param diffusionNormalized Diffusion parameter normalized [0.0, 1.0]
      * @param skipSmoothing If true, skip smoothing of parameter change
      */
-    void setSize(T sizeNormalized, bool skipSmoothing = false)
+    void setDiffusion(T diffusionNormalized, bool skipSmoothing = false)
     {
-        // Set size parameter
-        reverbSize = std::clamp(sizeNormalized, T(0.0), T(1.0));
+        // Set diffusion parameter
+        diffusion = std::clamp(diffusionNormalized, T(0.0), T(1.0));
         updateFDNparams(skipSmoothing);
     }
 
@@ -302,6 +318,7 @@ private:
     DelayLine<T, LinearInterpolator<T>, SmootherType::OnePole, 1, SMOOTHING_TIME_MS> preDelay; // Pre-delay line
     DampingFilter<T, DampingType::OnePole> dampingFilter; // Loop filter for damping
     BiquadFilter<T> lowCutFilter; // Highpass filter for low cut
+    FilteredNoise<T> delayLineMod; // Lowpassed noise generator for delay line modulation
 
     // FDN Matrices
     MixingMatrix<T, MixingMatrixType::Hadamard> A; // FDN feedback matrix
@@ -315,12 +332,12 @@ private:
     std::vector<T> outputFrame;     // output frame accross audio output channels
 
     // User parameters
-    T reverbSize;       // Size parameter normalized [0 .. 1]
+    T diffusion;       // Diffusion parameter normalized [0 .. 1]
     T T60_DC;           // Reverb time at DC in seconds
     T T60_NYQ;          // Reverb time at Nyquist in seconds
 
     /**
-     * @brief Update FDN parameters based on size and reverb time.
+     * @brief Update FDN parameters based on diffusion and reverb time.
      * @param skipSmoothing If true, skip smoothing of parameter changes
      * @note The smoothers of the delay line and the gains should use same smoothing
      *       to avoid artifacts.
@@ -328,8 +345,8 @@ private:
     void updateFDNparams(bool skipSmoothing = false)
     {
         if (!togglePrepared) return;
-        // Map the size parameter to delay length scale (MIN_DELAY_SCALE .. MAX_DELAY_SCALE)
-        T sizeScale =std::clamp(reverbSize * (MAX_DELAY_SCALE - MIN_DELAY_SCALE) + MIN_DELAY_SCALE, MIN_DELAY_SCALE, MAX_DELAY_SCALE);
+        // Map the diffusion parameter to delay length scale (MIN_DELAY_SCALE .. MAX_DELAY_SCALE)
+        T sizeScale =std::clamp((1 - diffusion) * (MAX_DELAY_SCALE - MIN_DELAY_SCALE) + MIN_DELAY_SCALE, MIN_DELAY_SCALE, MAX_DELAY_SCALE);
 
         for (size_t d = 0; d < FDN_SIZE; ++d) {
             // Compute scaled delay length
