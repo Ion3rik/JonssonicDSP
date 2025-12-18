@@ -87,4 +87,18 @@ namespace Jonssonic {
             for (size_t n = 0; n < numSamples; ++n)
                 buffer[ch][n] *= gain;
     }
+
+    /**
+     * @brief copyToBuffer - Copy data from source buffer to destination buffer
+     * @param src Source buffer (array of channel pointers)
+     * @param dest Destination buffer (array of channel pointers)
+     * @param numChannels Number of channels
+     * @param numSamples Number of samples per channel
+     */
+
+    template<typename T>
+    void copyToBuffer(const T* const* src, T* const* dest, size_t numChannels, size_t numSamples) {
+        for (size_t ch = 0; ch < numChannels; ++ch)
+            std::memcpy(dest[ch], src[ch], numSamples * sizeof(T));
+    }
 } // namespace Jonssonic

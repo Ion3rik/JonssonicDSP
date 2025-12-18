@@ -9,6 +9,9 @@
 #include "../core/filters/FirstOrderFilter.h"
 #include "../core/filters/UtilityFilters.h"
 #include "../utils/MathUtils.h"
+#include "../core/mixing/DryWetMixer.h"
+#include "../core/common/SmoothedValue.h"
+#include "../utils/BufferUtils.h"
 
 namespace Jonssonic::effects {
 /**
@@ -79,8 +82,13 @@ public:
         toneFilter.setType(FirstOrderType::Lowpass);
         dcBlocker.prepare(newNumChannels, newSampleRate);
 
+        // Prepare dry/wet mixer with latency compensation and output gain
+        size_t oversamplerLatencySamples = oversampler.getLatencySamples(); 
+        dryWetMixer.prepare(newNumChannels, newSampleRate, PARAM_SMOOTH_TIME_MS, oversamplerLatencySamples);
+        outputGain.prepare(newNumChannels, newSampleRate, PARAM_SMOOTH_TIME_MS);
 
-        // Prepare oversampler and oversampled buffer
+        // Prepare internal buffers and oversampler
+        fxBuffer.resize(newNumChannels, newMaxBlockSize);
         oversampler.prepare(newNumChannels, newMaxBlockSize);
         oversampledBuffer.resize(newNumChannels, newMaxBlockSize * OVERSAMPLING_FACTOR);
 
@@ -99,6 +107,11 @@ public:
         shaper.reset();
         toneFilter.reset();
         oversampler.reset();
+        dcBlocker.reset();
+        dryWetMixer.reset();
+        outputGain.reset();
+        fxBuffer.clear();
+        oversampledBuffer.clear();
     }
 
     /**
@@ -109,27 +122,38 @@ public:
      */
     void processBlock(const T* const* input, T* const* output, size_t numSamples)
     {   
+        // Copy input to fxBuffer for processing
+        Jonssonic::copyToBuffer<T>(input, fxBuffer.writePtrs(), numChannels, numSamples);
+
         // Process waveshaper with oversampling
         if (toggleOversampling) {
             // Upsample
-            size_t numOversampledSamples = oversampler.upsample(input, oversampledBuffer.writePtrs(), numSamples);
+            size_t numOversampledSamples = oversampler.upsample(fxBuffer.readPtrs(), oversampledBuffer.writePtrs(), numSamples);
 
             // Process waveshaper
             shaper.processBlock(oversampledBuffer.readPtrs(), oversampledBuffer.writePtrs(), numOversampledSamples);
 
             // Downsample
-            oversampler.downsample(oversampledBuffer.readPtrs(), output, numSamples);
+            oversampler.downsample(oversampledBuffer.readPtrs(), fxBuffer.writePtrs(), numSamples);
+
         } 
         // Process waveshaper without oversampling
         else{
-            shaper.processBlock(input, output, numSamples);
+            shaper.processBlock(fxBuffer.readPtrs(), fxBuffer.writePtrs(), numSamples);
         }
 
         // Apply tone control always at base sample rate
-        toneFilter.processBlock(output, output, numSamples);
+        toneFilter.processBlock(fxBuffer.readPtrs(), fxBuffer.writePtrs(), numSamples);
 
         // Apply DC blocker to counter act possible asymmetry induced DC offset
-        dcBlocker.processBlock(output, output, numSamples);
+        dcBlocker.processBlock(fxBuffer.readPtrs(), fxBuffer.writePtrs(), numSamples);
+
+        // Apply dry/wet mixing (with delay compensation if oversampling)
+        size_t dryDelaySamples = toggleOversampling ? oversampler.getLatencySamples() : 0;
+        dryWetMixer.processBlock(input, fxBuffer.readPtrs(), output, numSamples, dryDelaySamples);
+
+        // Apply output gain
+        outputGain.applyToBuffer(output, numSamples);
     }
 
     // SETTERS FOR PARAMETERS
@@ -163,6 +187,22 @@ public:
      */
     void setToneFrequency(T frequencyHz, bool /*skipSmoothing*/) {
         toneFilter.setFreq(frequencyHz);
+    }
+
+    /**
+     * @brief Set mix between dry and wet signal.
+     * @param mixNormalized Mix amount in normalized range [0, 1] (0 = full dry, 1 = full wet).
+     */
+    void setMix(T mixNormalized, bool skipSmoothing) {
+        dryWetMixer.setMix(mixNormalized, skipSmoothing);
+    }
+
+    /**
+     * @brief Set output gain in dB.
+     */
+    void setOutputGainDb(T gainDb, bool skipSmoothing = false) {
+        T gainLinear = dB2Mag(gainDb); // Convert dB to linear
+        outputGain.setTarget(gainLinear, skipSmoothing);
     }
 
     /**
@@ -203,9 +243,12 @@ private:
     WaveShaperProcessor<T, WaveShaperType::Dynamic> shaper; // waveshaper processor with dynamic type
     FirstOrderFilter<T> toneFilter; // tone control filter
     DCBlocker<T> dcBlocker; // DC blocker after distortion
+    DryWetMixer<T> dryWetMixer; // dry/wet mixer
+    SmoothedValue<float> outputGain; // Smoothed output gain parameter
 
     Oversampler<T, OVERSAMPLING_FACTOR> oversampler; // oversampler for nonlinear EQ
     AudioBuffer<T> oversampledBuffer; // buffer for oversampling
+    AudioBuffer<T> fxBuffer; // buffer for the effect processing
     
 
 };

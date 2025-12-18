@@ -44,7 +44,7 @@ public:
         shape.prepare(newNumChannels, sampleRate, smoothTimeMs); // only functional with Dynamic shaper
 
         // Set bounds for parameters
-        inputGain.setBounds(T(0.001), T(100)); // -60 dB to +40 dB
+        inputGain.setBounds(T(0.001), T(1000)); // -60 dB to +60 dB
         outputGain.setBounds(T(0.001), T(10)); // -60 dB to +20 dB
         bias.setBounds(T(-1), T(1)); // -1 to +1
         asymmetry.setBounds(T(-1), T(1)); // -1 to +1

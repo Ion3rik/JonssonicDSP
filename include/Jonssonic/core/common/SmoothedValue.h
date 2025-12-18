@@ -48,7 +48,8 @@ public:
 
     // Resize for number of channels
     void prepare(size_t newNumChannels, T /*newTimeMs*/,T /*newSampleRate*/) {
-        value.assign(newNumChannels, T(0));
+        numChannels = newNumChannels;
+        value.assign(numChannels, T(0));
     }
 
     // Reset values to zero
@@ -63,7 +64,7 @@ public:
     }
 
     // Apply smoothed value to buffer (no smoothing, just apply target value)
-    void applyToBuffer(T* const* buffer, size_t numChannels, size_t numSamples) {
+    void applyToBuffer(T* const* buffer, size_t numSamples) {
         for (size_t ch = 0; ch < numChannels; ++ch)
             for (size_t n = 0; n < numSamples; ++n)
                 buffer[ch][n] *= value[ch];
@@ -97,6 +98,7 @@ public:
     }
 
 private:
+    size_t numChannels = 0;
     std::vector<T> value;
 };
 // =============================================================
@@ -121,10 +123,11 @@ public:
 
     void prepare(size_t newNumChannels, T newSampleRate,  T newTimeMs = T(10)) {
         sampleRate = newSampleRate;
+        numChannels = newNumChannels;
         timeMs = newTimeMs;
-        current.resize(newNumChannels, T(0));
-        target.resize(newNumChannels, T(0));
-        stage.resize(newNumChannels);
+        current.resize(numChannels, T(0));
+        target.resize(numChannels, T(0));
+        stage.resize(numChannels);
         for (auto& s : stage)
             s.fill(T(0));
         updateSmoothingParams();
@@ -145,7 +148,7 @@ public:
     }
 
     // Apply smoothed value to buffer
-    void applyToBuffer(T* const* buffer, size_t numChannels, size_t numSamples) {
+    void applyToBuffer(T* const* buffer, size_t numSamples) {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t n = 0; n < numSamples; ++n) {
                 buffer[ch][n] *= getNextValue(ch);
@@ -156,7 +159,7 @@ public:
     // Set all channels to the same target value
     void setTarget(T value, bool skipSmoothing = false) {
         if (skipSmoothing) {
-            for (size_t ch = 0; ch < current.size(); ++ch) {
+            for (size_t ch = 0; ch < numChannels; ++ch) {
                 current[ch] = value;
                 target[ch] = value;
                 for (int i = 0; i < Order; ++i) {
@@ -210,6 +213,7 @@ private:
     }
 
     T sampleRate = 44100;
+    size_t numChannels = 0;
     std::vector<T> current;
     std::vector<T> target;
     T timeMs = 20;
@@ -240,10 +244,11 @@ public:
     // Prepare for a given number of channels, sample rate, and ramp time
     void prepare(size_t newNumChannels, T newSampleRate,  T newTimeMs = T(10)) {
         sampleRate = newSampleRate;
+        numChannels = newNumChannels;
         timeMs = newTimeMs;
-        current.resize(newNumChannels, T(0));
-        target.resize(newNumChannels, T(0));
-        rampStep.resize(newNumChannels, T(0));
+        current.resize(numChannels, T(0));
+        target.resize(numChannels, T(0));
+        rampStep.resize(numChannels, T(0));
         rampSamples = 0;
         updateSmoothingParams();
     }
@@ -262,7 +267,7 @@ public:
     }
 
     // Apply smoothed value to buffer
-    void applyToBuffer(T* const* buffer, size_t numChannels, size_t numSamples) {
+    void applyToBuffer(T* const* buffer, size_t numSamples) {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t n = 0; n < numSamples; ++n) {
                 buffer[ch][n] *= getNextValue(ch);
@@ -273,7 +278,7 @@ public:
     // Set all channels to the same target value
     void setTarget(T value, bool skipSmoothing = false) {
         if (skipSmoothing) {
-            for (size_t ch = 0; ch < current.size(); ++ch) {
+            for (size_t ch = 0; ch < numChannels; ++ch) {
                 current[ch] = value;
                 target[ch] = value;
                 rampStep[ch] = T(0);
@@ -321,12 +326,13 @@ public:
 private:
     void updateSmoothingParams() {
         rampSamples = std::max<size_t>(1, static_cast<size_t>(timeMs * 0.001 * sampleRate));
-        for (size_t ch = 0; ch < rampStep.size(); ++ch) {
+        for (size_t ch = 0; ch < numChannels; ++ch) {
             rampStep[ch] = (target[ch] - current[ch]) / static_cast<T>(rampSamples);
         }
     }
 
     T sampleRate = 44100;
+    size_t numChannels = 0;
     T timeMs = 10;
     std::vector<T> current;
     std::vector<T> target;

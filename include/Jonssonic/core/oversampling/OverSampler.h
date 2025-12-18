@@ -4,6 +4,7 @@
 
 #pragma once
 #include "../common/AudioBuffer.h"
+#include "../common/CircularAudioBuffer.h"
 #include "../common/Interpolators.h"
 #include "OversamplerFilters.h"
 
@@ -11,6 +12,7 @@
 namespace Jonssonic {
 /**
  * @brief Oversampler class for upsampling and downsampling audio signals.
+ *        Additionally integrated latency compensation (e.g. for alligning dry/wet signals).
  * @tparam T Sample data type (e.g., float, double)
  * @tparam Factor Oversampling factor (supported: 2, 4, 8, 16)
  * @note Currently Fixed FIR halfband filters are used for each stage.
@@ -49,7 +51,6 @@ public:
             stage4.prepare(newNumChannels); // prepare stage 4
             intermediateBuffer4to8.resize(newNumChannels, newMaxBlockSize*8); // buffer for factor 4 to 8 oversampling
         }
-
     }
 
     void reset() {
@@ -191,7 +192,6 @@ private:
     AudioBuffer<T> intermediateBuffer1to2; // for 1x to 2x oversampling
     AudioBuffer<T> intermediateBuffer2to4; // for 2x to 4x oversampling
     AudioBuffer<T> intermediateBuffer4to8; // for 4x to 8x oversampling
-
 };
 
 } // namespace Jonssonic

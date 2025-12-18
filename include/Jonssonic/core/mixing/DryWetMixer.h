@@ -6,6 +6,7 @@
 
 #include "../common/DspParam.h"
 #include "../../utils/MathUtils.h"
+#include "../common/CircularAudioBuffer.h"
 #include <cmath>
 
 namespace Jonssonic
@@ -35,12 +36,13 @@ public:
      * @param newSampleRate Sample rate in Hz
      * @param smoothingTimeMs Smoothing time for mix parameter changes (default: 15ms)
      */
-    void prepare(size_t newNumChannels, T newSampleRate, T smoothingTimeMs = T(15))
+    void prepare(size_t newNumChannels, T newSampleRate, T smoothingTimeMs = T(15), size_t maxDryDelaySamples = 0)
     {
         numChannels = newNumChannels;
         mix.prepare(newNumChannels, newSampleRate, smoothingTimeMs);
         mix.setBounds(T(0), T(1)); // Clamp between 0 and 1
         mix.setTarget(T(1), true); // Default to full wet
+        dryDelayBuffer.resize(newNumChannels, maxDryDelaySamples);
     }
 
     /**
@@ -82,7 +84,7 @@ public:
      * @note Uses equal-power crossfading law for perceptually smooth transitions.
      *       All arrays must have the same number of channels as prepared.
      */
-    void processBlock(const T* const* dryInput, const T* const* wetInput, T* const* output, size_t numSamples)
+    void processBlock(const T* const* dryInput, const T* const* wetInput, T* const* output, size_t numSamples, size_t dryDelaySamples = 0)
     {
         for (size_t ch = 0; ch < numChannels; ++ch)
         {
@@ -93,8 +95,14 @@ public:
                 // Equal-power crossfade: cos(x) for dry, sin(x) for wet
                 T dryGain = std::cos(mixValue * pi_over_2<T>);
                 T wetGain = std::sin(mixValue * pi_over_2<T>);
+
+                // Apply dry delay if needed
+                T drySample = dryInput[ch][n];
+                dryDelayBuffer.write(ch, drySample);
+                drySample = dryDelayBuffer.read(ch, dryDelaySamples);
                 
-                output[ch][n] = dryInput[ch][n] * dryGain + wetInput[ch][n] * wetGain;
+                // Mix dry and wet signals
+                output[ch][n] = drySample * dryGain + wetInput[ch][n] * wetGain;
             }
         }
     }
@@ -116,6 +124,7 @@ public:
 private:
     size_t numChannels = 0;
     DspParam<T, SmootherType::OnePole, 1> mix; // Mix parameter with smoothing
+    CircularAudioBuffer<T> dryDelayBuffer; // Circular buffer for dry signal delay compensation
 };
 
 } // namespace Jonssonic
