@@ -17,10 +17,13 @@ namespace Jonssonic {
  */
 template<typename T>
 inline void computeFirstOrderLowpassCoeffs(T normFreq, T& b0, T& b1, T& a1) {
-    T x = std::exp(-two_pi<T> * normFreq);
-    b0 = T(1) - x;
-    b1 = T(0);
-    a1 = x;
+    // Standard first-order lowpass (bilinear transform)
+    // normFreq: normalized cutoff (0..0.5, where 0.5 = Nyquist)
+    T theta = two_pi<T> * normFreq;
+    T gamma = std::cos(theta) / (1.0 + std::sin(theta));
+    a1 = -gamma;
+    b0 = (1.0 - gamma) / 2.0;
+    b1 = (1.0 - gamma) / 2.0;
 }
 
 /**

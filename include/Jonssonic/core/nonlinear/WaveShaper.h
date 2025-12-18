@@ -206,11 +206,9 @@ class WaveShaper<T, WaveShaperType::Dynamic> {
 public:
 	/**
 	 * @param x     Input sample
-	 * @param shapeNormalized Normalized shape parameter [0, 1]:
+	 * @param shape Raw shape parameter (usable range ~ [2, 20])
 	 */
-	T processSample(T x, T shapeNormalized) const {
-		// Map normalized shape [0,1] to shape factor [0.1, 10]
-		T shape = T(0.1) + shapeNormalized * T(9.9);
+	T processSample(T x, T shape) const {
 		return x * T(1) / std::pow(T(1) + std::pow(std::abs(x), shape), T(1)/shape);
 	}
 

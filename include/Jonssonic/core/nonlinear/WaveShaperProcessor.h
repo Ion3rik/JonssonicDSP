@@ -41,12 +41,20 @@ public:
         outputGain.prepare(newNumChannels, sampleRate, smoothTimeMs);
         bias.prepare(newNumChannels, sampleRate, smoothTimeMs);
         asymmetry.prepare(newNumChannels, sampleRate, smoothTimeMs);
+        shape.prepare(newNumChannels, sampleRate, smoothTimeMs); // only functional with Dynamic shaper
+
+        // Set bounds for parameters
+        inputGain.setBounds(T(0.001), T(100)); // -60 dB to +40 dB
+        outputGain.setBounds(T(0.001), T(10)); // -60 dB to +20 dB
+        bias.setBounds(T(-1), T(1)); // -1 to +1
+        asymmetry.setBounds(T(-1), T(1)); // -1 to +1
 
         // Set default values
         inputGain.setTarget(T(1), true);
         outputGain.setTarget(T(1), true);
         bias.setTarget(T(0), true);
         asymmetry.setTarget(T(0), true);
+        shape.setTarget(T(1), true); // Only functional with Dynamic shaper
     }
 
     void reset() {
@@ -159,6 +167,12 @@ public:
      */
     void setShape(size_t ch, T shapeValue, bool skipSmoothing = false) {
         shape.setTarget(ch, shapeValue, skipSmoothing);
+    }
+    /**
+     * @brief Set shape for all channels (only functional with Dynamic shaper).
+     */
+    void setShape(T shapeValue, bool skipSmoothing = false) {
+        shape.setTarget(shapeValue, skipSmoothing);
     }
 
 private:

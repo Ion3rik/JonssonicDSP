@@ -23,7 +23,7 @@ public:
         numChannels = newNumChannels;
         sampleRate = newSampleRate;
         // Hardcoded cutoff frequency for DC blocking
-        constexpr T cutoffHz = T(5);
+        constexpr T cutoffHz = T(10);
         if (sampleRate > T(0)) {
             R = T(1) - (T(2) * T(M_PI) * cutoffHz / sampleRate);
             if (R < T(0)) R = T(0);
