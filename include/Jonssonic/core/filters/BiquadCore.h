@@ -83,8 +83,8 @@ public:
             T y1 = state[ch][stateBase + 2];
             T y2 = state[ch][stateBase + 3];
 
-            // Apply waveshaper
-            input = waveShaper.processSample(input);
+            // Apply waveshaper 
+            input = waveShaper.processSample(input, T(0));
 
             // Compute output sample (Direct Form I)
             T output = b0 * input + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;

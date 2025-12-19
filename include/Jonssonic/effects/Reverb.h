@@ -18,11 +18,18 @@ namespace Jonssonic
  * @tparam T Sample data type (e.g., float, double)
  */
 
-template<typename T, size_t FDN_SIZE = 8>
+template<typename T>
 class Reverb
 {
 public:
     // Tunable constants
+
+    /** 
+     * @brief Size of the Feedback Delay Network (FDN).
+     *        Supported sizes: 2, 4, 8, 16, 32
+     */
+    static constexpr size_t FDN_SIZE = 16;
+    
     /**
      * @brief Smoothing time for parameter changes in milliseconds.
      */

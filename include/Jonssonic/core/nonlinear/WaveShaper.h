@@ -72,7 +72,7 @@ public:
 	void processBlock(const T* const* input, T* const* output, size_t numChannels, size_t numSamples) const {
 		for (size_t ch = 0; ch < numChannels; ++ch) {
 			for (size_t n = 0; n < numSamples; ++n) {
-				output[ch][n] = processSample(input[ch][n]);
+				output[ch][n] = processSample(input[ch][n], T(0));
 			}
 		}
 	}
@@ -94,7 +94,7 @@ public:
 	void processBlock(const T* const* input, T* const* output, size_t numChannels, size_t numSamples) const {
 		for (size_t ch = 0; ch < numChannels; ++ch) {
 			for (size_t n = 0; n < numSamples; ++n) {
-				output[ch][n] = processSample(input[ch][n]);
+				output[ch][n] = processSample(input[ch][n], T(0));
 			}
 		}
 	}
@@ -117,7 +117,7 @@ public:
 	void processBlock(const T* const* input, T* const* output, size_t numChannels, size_t numSamples) const {
 		for (size_t ch = 0; ch < numChannels; ++ch) {
 			for (size_t n = 0; n < numSamples; ++n) {
-				output[ch][n] = processSample(input[ch][n]);
+				output[ch][n] = processSample(input[ch][n], T(0));
 			}
 		}
 	}
@@ -140,7 +140,7 @@ public:
 	void processBlock(const T* const* input, T* const* output, size_t numChannels, size_t numSamples) const {
 		for (size_t ch = 0; ch < numChannels; ++ch) {
 			for (size_t n = 0; n < numSamples; ++n) {
-				output[ch][n] = processSample(input[ch][n]);
+				output[ch][n] = processSample(input[ch][n], T(0));
 			}
 		}
 	}
@@ -163,7 +163,7 @@ public:
 	void processBlock(const T* const* input, T* const* output, size_t numChannels, size_t numSamples) const {
 		for (size_t ch = 0; ch < numChannels; ++ch) {
 			for (size_t n = 0; n < numSamples; ++n) {
-				output[ch][n] = processSample(input[ch][n]);
+				output[ch][n] = processSample(input[ch][n], T(0));
 			}
 		}
 	}
@@ -187,7 +187,7 @@ public:
 	void processBlock(const T* const* input, T* const* output, size_t numChannels, size_t numSamples) const {
 		for (size_t ch = 0; ch < numChannels; ++ch) {
 			for (size_t n = 0; n < numSamples; ++n) {
-				output[ch][n] = processSample(input[ch][n]);
+				output[ch][n] = processSample(input[ch][n], T(0));
 			}
 		}
 	}
@@ -242,7 +242,7 @@ public:
 	void processBlock(const T* const* input, T* const* output, size_t numChannels, size_t numSamples) const {
 		for (size_t ch = 0; ch < numChannels; ++ch) {
 			for (size_t n = 0; n < numSamples; ++n) {
-				output[ch][n] = processSample(input[ch][n]);
+				output[ch][n] = processSample(input[ch][n], T(0));
 			}
 		}
 	}
