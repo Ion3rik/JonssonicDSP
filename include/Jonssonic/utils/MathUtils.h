@@ -12,18 +12,13 @@
 
 namespace Jonssonic
 {
-
-// Mathematical constants (C++20 std::numbers or fallback)
-#ifdef __cpp_lib_math_constants
-using std::numbers::pi;
-using std::numbers::e;
-#else
+// Mathematical constants
 template<typename T>
 inline constexpr T pi = T(3.141592653589793238462643383279502884);
 
 template<typename T>
 inline constexpr T e = T(2.718281828459045235360287471352662498);
-#endif
+
 
 // Commonly used derived constants
 template<typename T>
@@ -235,6 +230,18 @@ int measureLatency(const std::vector<T>& reference, const std::vector<T>& delaye
     // Convert from xcorr convention to delay: negate and adjust for signal length
     int delay = (static_cast<int>(reference.size()) - 1) + rawLag;
     return delay;
+}
+
+
+// Returns 1 if the number of set bits in x is even, -1 if odd (cross-platform)
+inline int parity_sign(uint64_t x) {
+    x ^= x >> 32;
+    x ^= x >> 16;
+    x ^= x >> 8;
+    x ^= x >> 4;
+    x ^= x >> 2;
+    x ^= x >> 1;
+    return (x & 1) ? -1 : 1;
 }
 
 } // namespace Jonssonic
