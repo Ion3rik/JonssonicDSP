@@ -30,6 +30,7 @@ public:
     static constexpr T MAX_MODULATION_MS = T(5.0);      // Maximum modulation depth in milliseconds (±3ms at depth=1.0)
     static constexpr int SMOOTHING_TIME_MS = 100;       // Smoothing time for parameter changes in milliseconds
     static constexpr T MAX_DELAY_MS = T(15.0);          // Maximum delay buffer size
+    static constexpr T MAX_FEEDBACK = T(0.9);          // Maximum feedback amount to avoid instability
     
     /**
      * @brief Default constructor for Flanger effect.
@@ -67,7 +68,7 @@ public:
 
         // Set parameter safety bounds
         phaseOffset.setBounds(T(0), T(1));
-        feedback.setBounds(T(-0.95), T(0.95));
+        feedback.setBounds(T(-MAX_FEEDBACK), T(MAX_FEEDBACK));
 
         // Initialize parameters
         phaseOffset.prepare(newNumChannels, newSampleRate, SMOOTHING_TIME_MS);
