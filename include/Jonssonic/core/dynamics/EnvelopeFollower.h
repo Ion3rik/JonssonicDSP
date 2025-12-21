@@ -29,7 +29,10 @@ class EnvelopeFollower<T, EnvelopeType::Peak>
 public:
     // Constructors and Destructor
     EnvelopeFollower() = default;
-    EnvelopeFollower(float sampleRate);
+    EnvelopeFollower(size_t newNumChannels, T newSampleRate)
+    {
+        prepare(newNumChannels, newSampleRate);
+    }
     ~EnvelopeFollower() = default;
 
     // No copy or move semantics
@@ -82,8 +85,8 @@ public:
 
     /**
      * @brief Process a block of samples for all channels.
-     * @param input Input sample pointers (one per channel)
-     * @param output Output sample pointers (one per channel)
+     * @param input Input (signal) sample pointers (one per channel)
+     * @param output Output (envelope) sample pointers (one per channel)
      * @param numSamples Number of samples to process
      */
     void processBlock(const T* const* input, T* const* output, size_t numSamples)
@@ -151,7 +154,10 @@ class EnvelopeFollower<T, EnvelopeType::RMS>
 public:
     // Constructors and Destructor
     EnvelopeFollower() = default;
-    EnvelopeFollower(float sampleRate);
+    EnvelopeFollower(size_t newNumChannels, T newSampleRate)
+    {
+        prepare(newNumChannels, newSampleRate);
+    }
     ~EnvelopeFollower() = default;
 
     // No copy or move semantics
