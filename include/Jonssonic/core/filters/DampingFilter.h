@@ -1,3 +1,7 @@
+// Jonssonic - A C++ audio DSP library
+// Damping filter class header file
+// SPDX-License-Identifier: MIT
+
 #pragma once
 #include <cmath>
 #include <algorithm>

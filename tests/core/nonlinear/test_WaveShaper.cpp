@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 #include "../../../include/Jonssonic/core/nonlinear/WaveShaper.h"
 #include <cmath>
+#include "../../../include/Jonssonic/utils/MathUtils.h"
 
 using namespace Jonssonic;
 
@@ -20,10 +21,24 @@ TEST(WaveShaper, Atan)
 {
     WaveShaper<float, WaveShaperType::Atan> shaper;
     EXPECT_FLOAT_EQ(shaper.processSample(0.0f), 0.0f);
-    EXPECT_FLOAT_EQ(shaper.processSample(1.0f), std::atan(1.0f));
-    EXPECT_FLOAT_EQ(shaper.processSample(-1.0f), std::atan(-1.0f));
+    EXPECT_FLOAT_EQ(shaper.processSample(1.0f), std::atan(1.0f) * inv_atan_1<float>);
+    EXPECT_FLOAT_EQ(shaper.processSample(-1.0f), std::atan(-1.0f) * inv_atan_1<float>);
 }
-
+TEST(WaveShaper, Cubic)
+{
+    WaveShaper<float, WaveShaperType::Cubic> shaper;
+    EXPECT_FLOAT_EQ(shaper.processSample(0.0f), 0.0f);
+    EXPECT_FLOAT_EQ(shaper.processSample(1.0f), 1.0f - (1.0f / 3.0f));
+    EXPECT_FLOAT_EQ(shaper.processSample(-1.0f), -1.0f + (1.0f / 3.0f));
+}
+TEST(WaveShaper, Dynamic)
+{
+    WaveShaper<float, WaveShaperType::Dynamic> shaper;
+    float shape = 5.0f;
+    EXPECT_FLOAT_EQ(shaper.processSample(0.0f, shape), 0.0f);
+    EXPECT_FLOAT_EQ(shaper.processSample(1.0f, shape), 1.0f / std::pow(1.0f + std::pow(1.0f, shape), 1.0f / shape));
+    EXPECT_FLOAT_EQ(shaper.processSample(-1.0f, shape), -1.0f / std::pow(1.0f + std::pow(1.0f, shape), 1.0f / shape));
+}
 TEST(WaveShaper, Tanh)
 {
     WaveShaper<float, WaveShaperType::Tanh> shaper;
