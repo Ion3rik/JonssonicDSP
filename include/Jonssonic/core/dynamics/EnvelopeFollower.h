@@ -105,7 +105,7 @@ public:
      */
     void setAttackTime(T attackTimeMs, bool skipSmoothing = false)
     {
-        attackTime = attackTimeMs;
+        attackTime = std::max(attackTimeMs, T(0.1)); // prevent super fast attack times
         updateCoefficients(skipSmoothing);
     }
     /**
@@ -114,7 +114,7 @@ public:
      */
     void setReleaseTime(T releaseTimeMs, bool skipSmoothing = false)
     {
-        releaseTime = releaseTimeMs;
+        releaseTime = std::max(releaseTimeMs, T(5.0)); // prevent super fast release times
         updateCoefficients(skipSmoothing);
     }
 
@@ -140,8 +140,8 @@ private:
     void updateCoefficients(bool skipSmoothing = false)
     {
         // Set target coefficients based on current attack and release times
-        attackCoeff.setTarget(std::exp(-1.0 / (0.001 * attackTime * sampleRate)), skipSmoothing);
-        releaseCoeff.setTarget(std::exp(-1.0 / (0.001 * releaseTime * sampleRate)), skipSmoothing);
+        attackCoeff.setTarget(1.0 - std::exp(-1.0 / (0.001 * attackTime * sampleRate)), skipSmoothing);
+        releaseCoeff.setTarget(1.0 - std::exp(-1.0 / (0.001 * releaseTime * sampleRate)), skipSmoothing);
     }
 };
 
@@ -265,8 +265,8 @@ private:
     void updateCoefficients(bool skipSmoothing = false)
     {
         // Set target coefficients based on current attack and release times
-        attackCoeff.setTarget(std::exp(-1.0 / (0.001 * attackTime * sampleRate)), skipSmoothing);
-        releaseCoeff.setTarget(std::exp(-1.0 / (0.001 * releaseTime * sampleRate)), skipSmoothing);
+        attackCoeff.setTarget(1.0 - std::exp(-1.0 / (0.001 * attackTime * sampleRate)), skipSmoothing);
+        releaseCoeff.setTarget(1.0 - std::exp(-1.0 / (0.001 * releaseTime * sampleRate)), skipSmoothing);
     }
 };
 

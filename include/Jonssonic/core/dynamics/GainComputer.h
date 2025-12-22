@@ -23,7 +23,7 @@ enum class GainType {
 // =============================================================================
 // Template Declaration
 // =============================================================================
-template<typename T, GainType Type>
+template<typename T, GainType Type = GainType::Compressor>
 class GainComputer;
 
 // =============================================================================
@@ -141,6 +141,7 @@ public:
      */
     void setRatio(T newRatio, bool skipSmoothing = false)
     {
+        newRatio = std::max(newRatio, T(1.0)); // prevent ratio < 1
         ratio.setTarget(newRatio, skipSmoothing);
     }
 
@@ -151,6 +152,7 @@ public:
      */
     void setKnee(T newKneeDb, bool skipSmoothing = false)
     {
+        newKneeDb = std::max(newKneeDb, T(0)); // prevent negative knee
         knee.setTarget(newKneeDb, skipSmoothing); 
     }
 

@@ -155,7 +155,8 @@ inline T dB2Mag(T dB)
 template<typename T>
 inline T mag2dB(T mag)
 {
-    return T(20) * std::log10(mag);
+    constexpr T minMag = T(1e-12); // minimum magnitude to avoid log(0)
+    return T(20) * std::log10(std::max(mag, minMag));
 }
 
 /**

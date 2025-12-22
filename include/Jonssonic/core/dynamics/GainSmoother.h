@@ -22,7 +22,7 @@ enum class GainSmootherType {
 // =============================================================================
 // Template Declaration
 // =============================================================================
-template<typename T, GainSmootherType Type>
+template<typename T, GainSmootherType Type = GainSmootherType::AttackRelease>
 class GainSmoother;
 
 // =============================================================================
@@ -56,7 +56,9 @@ public:
         sampleRate = newSampleRate;
         attackCoeff.prepare(numChannels, sampleRate, paramSmoothingTimeMs);
         releaseCoeff.prepare(numChannels, sampleRate, paramSmoothingTimeMs);
+
         gainDb.assign(numChannels, T(0.0)); // initialize gain to unity
+
     }
 
     /**
@@ -75,12 +77,11 @@ public:
      */
 
     T processSample(size_t ch, T targetGainDb) {
-        T& currentGainDb = gainDb[ch];
-        T attackPhaseMask = static_cast<T>(targetGainDb < currentGainDb); // mask for attack phase
+        T attackPhaseMask = static_cast<T>(targetGainDb < gainDb[ch]); // mask for attack phase
         T releasePhaseMask = T(1) - attackPhaseMask; // mask for release phase
         T coeff = attackPhaseMask * attackCoeff.getNextValue(ch) + releasePhaseMask * releaseCoeff.getNextValue(ch); // select coefficient
-        currentGainDb += coeff * (targetGainDb - currentGainDb); // exponential smoothing
-        return dB2Mag(currentGainDb); // convert smoothed dB gain to linear
+        gainDb[ch] += coeff * (targetGainDb - gainDb[ch]); // exponential smoothing
+        return dB2Mag(gainDb[ch]); // convert smoothed dB gain to linear
     }
 
     /**
@@ -104,7 +105,7 @@ public:
      */
     void setAttackTime(T newAttackTimeMs, bool skipSmoothing = false)
     {
-        attackTime = newAttackTimeMs;
+        attackTime = std::max(newAttackTimeMs, T(1.0)); // prevent super fast attack times
         updateCoefficients(skipSmoothing);
     }
 
@@ -113,7 +114,7 @@ public:
      */
     void setReleaseTime(T newReleaseTimeMs, bool skipSmoothing = false)
     {
-        releaseTime = newReleaseTimeMs;
+        releaseTime = std::max(newReleaseTimeMs, T(5.0)); // prevent super fast release times
         updateCoefficients(skipSmoothing);
     }
 
@@ -140,8 +141,8 @@ private:
     void updateCoefficients(bool skipSmoothing = false)
     {
         // Set target coefficients based on current attack and release times
-        attackCoeff.setTarget(std::exp(-1.0 / (0.001 * attackTime * sampleRate)), skipSmoothing);
-        releaseCoeff.setTarget(std::exp(-1.0 / (0.001 * releaseTime * sampleRate)), skipSmoothing);
+        attackCoeff.setTarget(1.0 - std::exp(-1.0 / (0.001 * attackTime * sampleRate)), skipSmoothing);
+        releaseCoeff.setTarget(1.0 - std::exp(-1.0 / (0.001 * releaseTime * sampleRate)), skipSmoothing);
     }
 };
 
