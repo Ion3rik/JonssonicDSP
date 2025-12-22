@@ -1,5 +1,5 @@
 // Jonssonic - A C++ audio DSP library
-// Delay line class header file
+// GainComputer class header file
 // SPDX-License-Identifier: MIT
 
 #pragma once
@@ -72,7 +72,7 @@ public:
      * @brief Process a single sample for a given channel.
      * @param ch Channel index
      * @param input Input signal sample
-     * @return Computed gain
+     * @return Computed dB gain
      */
     T processSample(size_t ch, T input)
     {
@@ -106,8 +106,7 @@ public:
         T gainDb_hard = aboveHard * ((thresholdVal - inputDb) * oneMinusInvRatio);
 
         // Select soft or hard knee
-        T gainDb = inSoftKnee * gainDb_soft + (T(1) - inSoftKnee) * gainDb_hard;
-        return dB2Mag(gainDb);
+        return inSoftKnee * gainDb_soft + (T(1) - inSoftKnee) * gainDb_hard;
     }
 
     /**
