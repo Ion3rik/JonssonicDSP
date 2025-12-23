@@ -6,15 +6,37 @@
 
 #include <vector>
 #include <cmath>
+#include <cstdint>
 #include "../common/DspParam.h"
+
+/**
+ * @brief Simple Xorshift32 random number generator
+ */
+struct Xorshift32 {
+    uint32_t state;
+    Xorshift32(uint32_t seed = 2463534242UL) : state(seed) {}
+    void seed(uint32_t s) { state = s ? s : 2463534242UL; }
+    uint32_t next() {
+        uint32_t x = state;
+        x ^= x << 13;
+        x ^= x >> 17;
+        x ^= x << 5;
+        state = x;
+        return x;
+    }
+    // Returns float in [-1, 1)
+    float nextFloat() { return (next() >> 1) * (1.0f / 2147483648.0f) * 2.0f - 1.0f; }
+    // Returns float in [0, 1)
+    float nextFloat01() { return (next() >> 1) * (1.0f / 2147483648.0f); }
+};
 
 namespace Jonssonic
 {
 
 enum class NoiseType
 {
-    Gaussian,
-    Uniform
+    Uniform,
+    Gaussian
     // TO DO:
     //TotallyRandom,
     //AdditiveRandom,
@@ -24,7 +46,7 @@ enum class NoiseType
 // =============================================================================
 // TEMPLATE CLASS DEFINITION
 // =============================================================================
-template<typename T, NoiseType Type = NoiseType::Gaussian>
+template<typename T, NoiseType Type = NoiseType::Uniform>
 class Noise;
 
 // =============================================================================
@@ -55,9 +77,11 @@ public:
     {
         numChannels = newNumChannels;
         rngs.resize(numChannels);
+        hasSpare.resize(numChannels, false);
+        spare.resize(numChannels, 0.0f);
         for (size_t ch = 0; ch < numChannels; ++ch) {
-            std::random_device rd;
-            rngs[ch].seed(rd());
+            rngs[ch].seed(static_cast<uint32_t>(2463534242UL + ch * 7919));
+            hasSpare[ch] = false;
         }
     }
 
@@ -67,8 +91,8 @@ public:
     void reset()
     {
         for (size_t ch = 0; ch < numChannels; ++ch) {
-            std::random_device rd;
-            rngs[ch].seed(rd());
+            rngs[ch].seed(static_cast<uint32_t>(2463534242UL + ch * 7919));
+            hasSpare[ch] = false;
         }
     }
 
@@ -77,8 +101,21 @@ public:
      */
     T processSample(size_t ch)
     {
-        // Gaussian white noise sample
-        return T(distribution(rngs[ch]));
+        // Gaussian white noise sample using Box-Muller transform
+        if (hasSpare[ch]) {
+            hasSpare[ch] = false;
+            return T(spare[ch]);
+        }
+        float u, v, s;
+        do {
+            u = rngs[ch].nextFloat();
+            v = rngs[ch].nextFloat();
+            s = u * u + v * v;
+        } while (s >= 1.0f || s == 0.0f);
+        float mul = std::sqrt(-2.0f * std::log(s) / s);
+        spare[ch] = v * mul;
+        hasSpare[ch] = true;
+        return T(u * mul);
     }
 
 
@@ -97,8 +134,9 @@ public:
 
 private:
     size_t numChannels = 0;
-    std::vector<std::mt19937> rngs;
-    std::normal_distribution<double> distribution{0.0, 1.0};
+    std::vector<Xorshift32> rngs;
+    std::vector<bool> hasSpare;
+    std::vector<float> spare;
 };
 
 
@@ -131,8 +169,7 @@ public:
         numChannels = newNumChannels;
         rngs.resize(numChannels);
         for (size_t ch = 0; ch < numChannels; ++ch) {
-            std::random_device rd;
-            rngs[ch].seed(rd());
+            rngs[ch].seed(static_cast<uint32_t>(2463534242UL + ch * 7919));
         }
     }
 
@@ -142,8 +179,7 @@ public:
     void reset()
     {
         for (size_t ch = 0; ch < numChannels; ++ch) {
-            std::random_device rd;
-            rngs[ch].seed(rd());
+            rngs[ch].seed(static_cast<uint32_t>(2463534242UL + ch * 7919));
         }
     }
 
@@ -152,8 +188,8 @@ public:
      */
     T processSample(size_t ch)
     {
-        // Uniform white noise sample
-        return T(distribution(rngs[ch]));
+        // Uniform white noise sample in [-1, 1)
+        return T(rngs[ch].nextFloat());
     }
 
     /**
@@ -170,8 +206,7 @@ public:
 
 private:
     size_t numChannels = 0;
-    std::vector<std::mt19937> rngs;
-    std::uniform_real_distribution<double> distribution{-1.0, 1.0};
+    std::vector<Xorshift32> rngs;
 };
 
 } // namespace Jonssonic

@@ -53,7 +53,7 @@ public:
     /**
      * @brief Noise modulator depth in samples.
      */
-    static constexpr T MODULATION_DEPTH_SAMPLES = T(10.0);
+    static constexpr T MODULATION_DEPTH_SAMPLES = T(1.0);
 
     /**
      * @brief Noise modulator lowpass cutoff frequency in Hz.
