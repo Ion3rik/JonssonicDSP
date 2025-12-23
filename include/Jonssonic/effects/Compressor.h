@@ -46,39 +46,48 @@ public:
     static constexpr T DRIVE_MAX_GAIN_DB = T(24.0);
 
     /**
+     * @brief Drive compensation factor to retain overall output level.
+     */
+    static constexpr T DRIVE_COMPENSATION_FACTOR = T(0.7);
+
+    /**
      * @brief Drive scaling factor for character mode saturation.
      */
     static constexpr T DRIVE_SCALE_FACTOR = T(0.3);
 
     /**
-     * @brief Gain smoother time constant scaling
+     * @brief Mode dependent smoother attack ranges in ms.
      */
-    static constexpr T ATTACK_SCALING = T(1.5); 
+    static constexpr T NORMAL_SMOOTHER_ATTACK_MIN_MS = T(0.1);
+    static constexpr T NORMAL_SMOOTHER_ATTACK_MAX_MS = T(30.0);
+    static constexpr T CHARACTER_SMOOTHER_ATTACK_MIN_MS = T(3.0);
+    static constexpr T CHARACTER_SMOOTHER_ATTACK_MAX_MS = T(60.0);
 
     /**
-     * @brief Envelope release to gain smoother release scaling factor.
+     * @brief Mode dependent smoother release ranges in ms.
      */
-    static constexpr T RELEASE_SCALING = T(2.5); 
+    static constexpr T NORMAL_SMOOTHER_RELEASE_MIN_MS = T(30.0);
+    static constexpr T NORMAL_SMOOTHER_RELEASE_MAX_MS = T(400.0);
+    static constexpr T CHARACTER_SMOOTHER_RELEASE_MIN_MS = T(100.0);
+    static constexpr T CHARACTER_SMOOTHER_RELEASE_MAX_MS = T(1500.0);
 
     /**
-     * @brief Attack time in milliseconds for normal mode fixed gain smoother.
+     * @brief Mode dependent envelope attack times.
      */
-    static constexpr T NORMAL_MODE_ATTACK_MS = T(10.0);
+    static constexpr T NORMAL_ENVELOPE_ATTACK_MS = T(0.1);
+    static constexpr T CHARACTER_ENVELOPE_ATTACK_MS = T(10.0);
 
     /**
-     * @brief Release time in milliseconds for normal mode fixed gain smoother.
+     * @brief Mode dependent envelope release times.
      */
-    static constexpr T NORMAL_MODE_RELEASE_MS = T(100.0);
+    static constexpr T NORMAL_ENVELOPE_RELEASE_MS = T(10.0);
+    static constexpr T CHARACTER_ENVELOPE_RELEASE_MS = T(100.0);
 
     /**
-     * @brief Knee width in dB for character mode.
+     * @brief Mode dependent Knee widths in dB
      */
-    static constexpr T CHARACTER_MODE_KNEE_DB = T(8.0);
-
-    /**
-     * @brief Default knee width in dB for normal mode.
-     */
-    static constexpr T NORMAL_MODE_KNEE_DB = T(2.0);
+    static constexpr T CHARACTER_MODE_KNEE_DB = T(10.0);
+    static constexpr T NORMAL_MODE_KNEE_DB = T(1.0);
 
     // Constructor and Destructor
     Compressor() = default;
@@ -125,12 +134,18 @@ public:
 
         // Set Default Parameters
         setThreshold(T(-24.0), true);  // -24 dB
-        setAttack(T(10.0), true);      // 10 ms
-        setRelease(T(100.0), true);    // 100 ms
+        setAttack(T(0.5), true);      // 50 % relative
+        setRelease(T(0.5), true);    // 50 % relative
         setRatio(T(4.0), true);        // 4:1
         setMix(T(1.0), true);          // 100% wet
         setOutputGain(T(1.0), true);   // 0 dB
         setCharacterMode(false);       // Character mode off
+
+        // Set fixed envelope follower times 
+        peakFollower.setAttackTime(NORMAL_ENVELOPE_ATTACK_MS, true);
+        peakFollower.setReleaseTime(NORMAL_ENVELOPE_RELEASE_MS, true);
+        rmsFollower.setAttackTime(CHARACTER_ENVELOPE_ATTACK_MS, true);
+        rmsFollower.setReleaseTime(CHARACTER_ENVELOPE_RELEASE_MS, true);
 
         // Mark as prepared
         togglePrepared = true;
@@ -176,9 +191,9 @@ public:
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t n = 0; n < numSamples; ++n) {
 
-                // Compute envelope (from the dry input signal)
-                T envValue = characterModeMask * rmsFollower.processSample(ch, input[ch][n])
-                             + (static_cast<T>(1) - characterModeMask) * peakFollower.processSample(ch, input[ch][n]);
+                // Compute envelope 
+                T envValue = characterModeMask * rmsFollower.processSample(ch, fxBuffer[ch][n])
+                             + (static_cast<T>(1) - characterModeMask) * peakFollower.processSample(ch, fxBuffer[ch][n]);
                 
                 // Compute target gain from compressor curve
                 T targetGainDb = gainComputer.processSample(ch, envValue);
@@ -211,36 +226,34 @@ public:
         T driveGainDb = DRIVE_BASE_GAIN_DB -newthresholdDb * DRIVE_SCALE_FACTOR; // drive increases as threshold decreases
         driveGainDb = std::clamp(driveGainDb, T(0), DRIVE_MAX_GAIN_DB); // clamp (0 dB to max)
         shaper.setInputGain(dB2Mag(driveGainDb), skipSmoothing); // set input gain for waveshaper in linear
+        shaper.setOutputGain(dB2Mag(-DRIVE_COMPENSATION_FACTOR * driveGainDb), skipSmoothing); // set output gain to retain overall level
     }
 
     /**
-     * @brief Set attack time in milliseconds.
+     * @brief Set attack time normalized (0.0 to 1.0).
      */
-    void setAttack(T attackTimeMs, bool skipSmoothing = false) {
+    void setAttack(T attackTimeNorm, bool skipSmoothing = false) {
 
-        // Envelopes
-        peakFollower.setAttackTime(attackTimeMs, skipSmoothing);
-        rmsFollower.setAttackTime(attackTimeMs, skipSmoothing);
-
-        // Gain smoother (character mode scaled)
-        if (toggleCharacterMode) {
-            T smootherAttack = std::clamp(attackTimeMs * ATTACK_SCALING, T(10), T(300));
-            gainSmoother.setAttackTime(smootherAttack, skipSmoothing);
-        }
+        // Map to actual time in ms based on mode
+        T attackTimeMs = T(0);
+        toggleCharacterMode ?
+        attackTimeMs = mapTime(attackTimeNorm, CHARACTER_SMOOTHER_ATTACK_MIN_MS, CHARACTER_SMOOTHER_ATTACK_MAX_MS) :
+        attackTimeMs = mapTime(attackTimeNorm, NORMAL_SMOOTHER_ATTACK_MIN_MS, NORMAL_SMOOTHER_ATTACK_MAX_MS);
+        // Gain smoother attack
+        gainSmoother.setAttackTime(attackTimeMs, skipSmoothing);
     }
 
     /**
      * @brief Set release time in milliseconds.
      */
     void setRelease(T releaseTimeMs, bool skipSmoothing = false) {
-        // Envelopes
-        peakFollower.setReleaseTime(releaseTimeMs, skipSmoothing);
-        rmsFollower.setReleaseTime(releaseTimeMs, skipSmoothing);
-        // Gain smoother (character mode scaled)
-        if (toggleCharacterMode) {
-            T smootherRelease = std::clamp(releaseTimeMs * RELEASE_SCALING, T(50), T(300));
-            gainSmoother.setReleaseTime(smootherRelease, skipSmoothing);
-        }
+        // Map to actual time in ms based on mode
+        T mappedReleaseTimeMs = T(0);
+        toggleCharacterMode ?
+        mappedReleaseTimeMs = mapTime(releaseTimeMs, CHARACTER_SMOOTHER_RELEASE_MIN_MS, CHARACTER_SMOOTHER_RELEASE_MAX_MS) :
+        mappedReleaseTimeMs = mapTime(releaseTimeMs, NORMAL_SMOOTHER_RELEASE_MIN_MS, NORMAL_SMOOTHER_RELEASE_MAX_MS);
+        // Gain smoother release
+        gainSmoother.setReleaseTime(mappedReleaseTimeMs, skipSmoothing);
     }
 
     /**
@@ -272,14 +285,9 @@ public:
      */
     void setCharacterMode(bool newMode, bool skipSmoothing = false) {
         toggleCharacterMode = newMode;
-        if (toggleCharacterMode)
-            gainComputer.setKnee(CHARACTER_MODE_KNEE_DB, skipSmoothing); // softer knee for character mode
-        else
-        {
-            gainComputer.setKnee(NORMAL_MODE_KNEE_DB, skipSmoothing); // harder knee for normal mode
-            gainSmoother.setAttackTime(10.0, skipSmoothing); // fixed attack for normal mode
-            gainSmoother.setReleaseTime(100.0, skipSmoothing); // fixed
-        }
+        toggleCharacterMode 
+            ? gainComputer.setKnee(CHARACTER_MODE_KNEE_DB, skipSmoothing) // softer knee for character mode
+            : gainComputer.setKnee(NORMAL_MODE_KNEE_DB, skipSmoothing); // harder knee for normal mode
     }
 
 
@@ -325,7 +333,16 @@ private:
     Oversampler<T, OVERSAMPLING_FACTOR> oversampler; // oversampler for character mode
     AudioBuffer<T> oversampledBuffer; // buffer for oversampling
     AudioBuffer<T> fxBuffer; // buffer for the effect processing
-    
+
+    /**
+     * @brief Map normalized attack time [0.0, 1.0] exponentially to time range [min, max].
+     */
+    T mapTime(T attackTimeNorm, T min, T max) const {
+        attackTimeNorm = std::clamp(attackTimeNorm, T(0), T(1)); // safety clamp
+        T attackTime = T(0);
+        attackTime = min * std::pow((max / min), attackTimeNorm); // exponential mapping
+        return attackTime;
+    }
 
 };
 
