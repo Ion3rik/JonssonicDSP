@@ -43,22 +43,22 @@ public:
     /**
      * @brief Delay line minimum length scale factor.
      */
-    static constexpr T MIN_DELAY_SCALE = T(0.7);
+    static constexpr T MIN_DELAY_SCALE = T(0.85);
 
     /**
      * @brief Delay line maximum length scale factor.
      */
-    static constexpr T MAX_DELAY_SCALE = T(2.0);  
+    static constexpr T MAX_DELAY_SCALE = T(1.2);  
     
     /**
      * @brief Noise modulator depth in samples.
      */
-    static constexpr T MODULATION_DEPTH_SAMPLES = T(1.0);
+    static constexpr T MODULATION_DEPTH_RELATIVE = T(0.005);
 
     /**
      * @brief Noise modulator lowpass cutoff frequency in Hz.
      */
-    static constexpr T MODULATION_CUTOFF_HZ = T(10.0);
+    static constexpr T MODULATION_CUTOFF_HZ = T(1.0);
 
     /**
      * @brief Coprime base delay lengths in milliseconds for the FDN.
@@ -92,10 +92,11 @@ public:
     template <>
     struct FDNBaseDelays<16> {
         static constexpr int values[16] = {
-            887,  1039,  1217,  1429,
-            1667,  1951,  2281,  2663,
-            3109,  3631,  4231,  4937,
-            5779,  6761,  7907,  9241
+            1601, 547, 2371, 947,
+            3187, 503, 1231, 2749, 
+            587, 2053, 3677, 829,
+            1423, 631, 1069, 1823
+
         };
     };
     template <>
@@ -207,7 +208,7 @@ public:
             // Read FDN delay line outputs with modulation and apply damping into fdnState
             for (size_t d = 0; d < FDN_SIZE; ++d)
             {
-                T modSignal = diffusion * MODULATION_DEPTH_SAMPLES * delayLineMod.processSample(d); // Get modulation signal scaled by diffusion (more diffusion -> more modulation)
+                T modSignal = MODULATION_DEPTH_RELATIVE * FDNBaseDelays<FDN_SIZE>::values[d] * delayLineMod.processSample(d); // Get modulation signal scaled by delay length
                 fdnState[d] = fdnDelays.readSample(d, modSignal);                       // Read delay line with modulation
                 fdnState[d] = dampingFilter.processSample(d, fdnState[d]);              // Apply damping filter
             }
@@ -328,7 +329,7 @@ private:
     FilteredNoise<T> delayLineMod; // Lowpassed noise generator for delay line modulation
 
     // FDN Matrices
-    MixingMatrix<T, MixingMatrixType::Hadamard> A; // FDN feedback matrix
+    MixingMatrix<T, MixingMatrixType::RandomOrthogonal> A; // FDN feedback matrix
     MixingMatrix<T, MixingMatrixType::DecorrelatedSum> B; // Input mixing matrix
     MixingMatrix<T, MixingMatrixType::DecorrelatedSum> C; // Output mixing matrix
 
@@ -357,7 +358,7 @@ private:
 
         for (size_t d = 0; d < FDN_SIZE; ++d) {
             // Compute scaled delay length
-            int delaySamples = static_cast<int>(FDNBaseDelays<FDN_SIZE>::values[d] * sizeScale);
+            size_t delaySamples = static_cast<size_t>(FDNBaseDelays<FDN_SIZE>::values[d] * sizeScale);
             fdnDelays.setDelaySamples(d, delaySamples, skipSmoothing);
 
             // Update the damping filter based on delay length and desired reverb time at DC and Nyquist

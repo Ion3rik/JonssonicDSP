@@ -62,9 +62,6 @@ public:
         lfo.prepare(newNumChannels, newSampleRate);
         lfo.setWaveform(Waveform::Triangle); 
         lfo.setAntiAliasing(false);
-        
-        // DC blocker setup
-        dcBlocker.prepare(newNumChannels, newSampleRate);
 
         // Set parameter safety bounds
         phaseOffset.setBounds(T(0), T(1));
@@ -90,7 +87,6 @@ public:
     {
         delayLine.reset();
         lfo.reset();
-        dcBlocker.reset();
         phaseOffset.reset();
         depthInSamples.reset();
         feedback.reset();
@@ -123,16 +119,15 @@ public:
                 // Read delayed sample with modulation
                 T delayedSample = delayLine.readSample(ch, lfoValue);
         
-                // Compute feedback with DC blocking
+                // Compute feedback
                 T feedbackSignal = delayedSample * feedback.getNextValue(ch);
-                //feedbackSignal = dcBlocker.processSample(ch, feedbackSignal);
                 
                 // Compute what to write back (input + delayed feedback)
                 T toWrite = input[ch][n] + feedbackSignal;
                 delayLine.writeSample(ch, toWrite);
 
                 // Mix dry and delayed (50/50 for classic flanger comb filtering)
-                output[ch][n] = input[ch][n] + delayedSample;
+                output[ch][n] = (input[ch][n] + delayedSample) * T(0.5);
             }
         }
     }
@@ -203,7 +198,6 @@ private:
     // Core processors
     DelayLine<T, LagrangeInterpolator<T>, SmootherType::OnePole, 1, SMOOTHING_TIME_MS> delayLine;
     Oscillator<T, SmootherType::OnePole, 1, SMOOTHING_TIME_MS> lfo;
-    DCBlocker<T> dcBlocker;
 
     // DSP parameters
     DspParam<T> phaseOffset;
