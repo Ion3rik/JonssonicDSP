@@ -54,10 +54,18 @@ inline void computeFirstOrderAllpassCoeffs(T normFreq, T& b0, T& b1, T& a1) {
  */
 template<typename T>
 inline void computeFirstOrderLowshelfCoeffs(T normFreq, T gainLinear, T& b0, T& b1, T& a1) {
-    T x = std::exp(-two_pi<T> * normFreq);
-    b0 = (T(1) - x) * gainLinear;
-    b1 = T(0);
-    a1 = x;
+    // Prewarp frequency
+    T omega_c = two_pi<T> * normFreq;
+    T tan_wc_2 = std::tan(omega_c / T(2));
+
+    T sqrt_g = std::sqrt(gainLinear);
+
+    // Denominator normalization factor
+    T denom = tan_wc_2 + sqrt_g;
+
+    b0 = (gainLinear * tan_wc_2 + sqrt_g) / denom;
+    b1 = (gainLinear * tan_wc_2 - sqrt_g) / denom;
+    a1 = (tan_wc_2 - sqrt_g) / denom;
 }
 
 /**
@@ -66,10 +74,18 @@ inline void computeFirstOrderLowshelfCoeffs(T normFreq, T gainLinear, T& b0, T& 
  */
 template<typename T>
 inline void computeFirstOrderHighshelfCoeffs(T normFreq, T gainLinear, T& b0, T& b1, T& a1) {
-    T x = std::exp(-two_pi<T> * normFreq);
-    b0 = ((T(1) + x) / 2) * gainLinear;
-    b1 = -((T(1) + x) / 2) * gainLinear;
-    a1 = x;
+    // Prewarp frequency
+    T omega_c = two_pi<T> * normFreq;
+    T tan_wc_2 = std::tan(omega_c / T(2));
+
+    T sqrt_g = std::sqrt(gainLinear);
+
+    // Denominator normalization factor
+    T denom = tan_wc_2 + sqrt_g;
+
+    b0 = (gainLinear * tan_wc_2 + sqrt_g) / denom;
+    b1 = -(gainLinear * tan_wc_2 - sqrt_g) / denom;
+    a1 = (tan_wc_2 - sqrt_g) / denom;
 }
 
 } // namespace Jonssonic

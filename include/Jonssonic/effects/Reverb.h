@@ -33,22 +33,22 @@ public:
     /**
      * @brief Smoothing time for parameter changes in milliseconds.
      */
-    static constexpr int SMOOTHING_TIME_MS = 50;   
+    static constexpr int SMOOTHING_TIME_MS = 20;   
 
     /**
      * @brief Maximum pre-delay time in milliseconds.
      */
-    static constexpr T MAX_PRE_DELAY_MS = T(500.0); 
+    static constexpr T MAX_PRE_DELAY_MS = T(200.0); 
     
     /**
      * @brief Delay line minimum length scale factor.
      */
-    static constexpr T MIN_DELAY_SCALE = T(0.85);
+    static constexpr T MIN_DELAY_SCALE = T(0.9);
 
     /**
      * @brief Delay line maximum length scale factor.
      */
-    static constexpr T MAX_DELAY_SCALE = T(1.2);  
+    static constexpr T MAX_DELAY_SCALE = T(1.1);  
     
     /**
      * @brief Noise modulator depth in samples.
@@ -59,6 +59,11 @@ public:
      * @brief Noise modulator lowpass cutoff frequency in Hz.
      */
     static constexpr T MODULATION_CUTOFF_HZ = T(1.0);
+
+    /**
+     * @brief Damping crossover frequency in Hz.
+     */
+    static constexpr T DAMPING_CROSSOVER_HZ = T(2000.0);
 
     /**
      * @brief Coprime base delay lengths in milliseconds for the FDN.
@@ -249,7 +254,7 @@ public:
     void setReverbTimeLowS(T timeInSeconds, bool skipSmoothing = false)
     {
         // Set reverb time parameter
-        T60_DC = std::clamp(timeInSeconds, T(0.1), T(20.0));
+        T60_LO = std::clamp(timeInSeconds, T(0.1), T(20.0));
         updateFDNparams(skipSmoothing);
     }
 
@@ -259,7 +264,7 @@ public:
     void setReverbTimeHighS(T timeInSeconds, bool skipSmoothing = false)
     {
         // Set reverb time parameter
-        T60_NYQ = std::clamp(timeInSeconds, T(0.1), T(20.0));
+        T60_HI = std::clamp(timeInSeconds, T(0.1), T(20.0));
         updateFDNparams(skipSmoothing);
     }
 
@@ -324,12 +329,12 @@ private:
     // Core processor components
     DelayLine<T, LinearInterpolator<T>, SmootherType::OnePole, 1, SMOOTHING_TIME_MS> fdnDelays; // FDN delay lines
     DelayLine<T, LinearInterpolator<T>, SmootherType::OnePole, 1, SMOOTHING_TIME_MS> preDelay; // Pre-delay line
-    DampingFilter<T, DampingType::OnePole> dampingFilter; // Loop filter for damping
+    DampingFilter<T, DampingType::Shelving> dampingFilter; // Loop filter for damping
     BiquadFilter<T> lowCutFilter; // Highpass filter for low cut
     FilteredNoise<T> delayLineMod; // Lowpassed noise generator for delay line modulation
 
     // FDN Matrices
-    MixingMatrix<T, MixingMatrixType::RandomOrthogonal> A; // FDN feedback matrix
+    MixingMatrix<T, MixingMatrixType::Householder> A; // FDN feedback matrix
     MixingMatrix<T, MixingMatrixType::DecorrelatedSum> B; // Input mixing matrix
     MixingMatrix<T, MixingMatrixType::DecorrelatedSum> C; // Output mixing matrix
 
@@ -341,8 +346,8 @@ private:
 
     // User parameters
     T diffusion;       // Diffusion parameter normalized [0 .. 1]
-    T T60_DC;           // Reverb time at DC in seconds
-    T T60_NYQ;          // Reverb time at Nyquist in seconds
+    T T60_LO;           // Reverb time at DC in seconds
+    T T60_HI;          // Reverb time at Nyquist in seconds
 
     /**
      * @brief Update FDN parameters based on diffusion and reverb time.
@@ -362,7 +367,7 @@ private:
             fdnDelays.setDelaySamples(d, delaySamples, skipSmoothing);
 
             // Update the damping filter based on delay length and desired reverb time at DC and Nyquist
-            dampingFilter.setByT60(d, T60_DC, T60_NYQ, delaySamples);
+            dampingFilter.setByT60(d, DAMPING_CROSSOVER_HZ, T60_LO, T60_HI, delaySamples);
         }
     }
 

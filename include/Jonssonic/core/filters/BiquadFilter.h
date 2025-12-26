@@ -24,9 +24,9 @@ class BiquadFilter
 public:
     // Constructor and Destructor
     BiquadFilter() = default;
-    BiquadFilter(size_t newNumChannels, T newSampleRate) // Parameterized constructor (for the faint hearted)
+    BiquadFilter(size_t newNumChannels, T newSampleRate, BiquadType newType = BiquadType::Lowpass) // Parameterized constructor (for the faint hearted)
     {
-        prepare(newNumChannels, newSampleRate);
+        prepare(newNumChannels, newSampleRate, newType);
     }
     ~BiquadFilter() = default;
 
@@ -40,7 +40,7 @@ public:
      * @brief Prepare the biquad filter for processing.
      * @param newNumChannels Number of channels
      */
-    void prepare(size_t newNumChannels, T newSampleRate)
+    void prepare(size_t newNumChannels, T newSampleRate, BiquadType newType = BiquadType::Lowpass)
     {
         sampleRate = newSampleRate;
         // If not set, default to quarter Nyquist

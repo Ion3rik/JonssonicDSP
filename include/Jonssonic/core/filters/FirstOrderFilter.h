@@ -19,8 +19,8 @@ class FirstOrderFilter {
 public:
     // Constructor and Destructor
     FirstOrderFilter() = default;
-    FirstOrderFilter(size_t newNumChannels, T newSampleRate) {
-        prepare(newNumChannels, newSampleRate);
+    FirstOrderFilter(size_t newNumChannels, T newSampleRate, FirstOrderType newType = FirstOrderType::Lowpass) {
+        prepare(newNumChannels, newSampleRate, newType);
     }
     ~FirstOrderFilter() = default;
 
@@ -30,9 +30,9 @@ public:
     FirstOrderFilter(FirstOrderFilter&&) = delete;
     FirstOrderFilter& operator=(FirstOrderFilter&&) = delete;
 
-    void prepare(size_t newNumChannels, T newSampleRate) {
+    void prepare(size_t newNumChannels, T newSampleRate, FirstOrderType newType = FirstOrderType::Lowpass) {
         sampleRate = newSampleRate;
-        type = FirstOrderType::Lowpass; // default to lowpass
+        type = newType;
         FirstOrderCore.prepare(newNumChannels, 1); // single section
         updateCoeffs();
     }
