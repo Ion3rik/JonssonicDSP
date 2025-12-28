@@ -188,6 +188,7 @@ public:
         } 
         // NORMAL MODE PROCESSING
         T characterModeMask = static_cast<T>(toggleCharacterMode); // check per block if character mode is enabled (1.0 or 0.0)
+        T minGain = T(1); // track for metering
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t n = 0; n < numSamples; ++n) {
 
@@ -200,6 +201,7 @@ public:
                 
                 // Smooth gain
                 T smoothedGainLinear = gainSmoother.processSample(ch, targetGainDb);
+                minGain = std::min(smoothedGainLinear, minGain); // track min gain for metering
 
                 // Apply gain to sample
                 fxBuffer[ch][n] = fxBuffer[ch][n] * smoothedGainLinear;
@@ -212,6 +214,9 @@ public:
 
         // Apply output gain
         outputGain.applyToBuffer(output, numSamples);
+
+        // Update gain reduction metering value
+        gainReduction.store(minGain);
     }
 
     // SETTERS FOR PARAMETERS
@@ -310,6 +315,11 @@ public:
         }
     }
 
+    // GETTER FOR METERING
+    T getGainReduction() const {
+        return gainReduction.load();
+    }
+
 private:
     
     // GLOBAL PARAMETERS
@@ -333,6 +343,9 @@ private:
     Oversampler<T, OVERSAMPLING_FACTOR> oversampler; // oversampler for character mode
     AudioBuffer<T> oversampledBuffer; // buffer for oversampling
     AudioBuffer<T> fxBuffer; // buffer for the effect processing
+
+    // Metering variable
+    std::atomic<T> gainReduction { T(1) };
 
     /**
      * @brief Map normalized attack time [0.0, 1.0] exponentially to time range [min, max].

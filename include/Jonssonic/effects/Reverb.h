@@ -48,12 +48,12 @@ public:
     /**
      * @brief Delay line maximum length scale factor.
      */
-    static constexpr T MAX_DELAY_SCALE = T(1.1);  
+    static constexpr T MAX_DELAY_SCALE = T(1.2);  
     
     /**
      * @brief Noise modulator depth in samples.
      */
-    static constexpr T MODULATION_DEPTH_RELATIVE = T(0.005);
+    static constexpr T MODULATION_DEPTH_RELATIVE = T(0.003);
 
     /**
      * @brief Noise modulator lowpass cutoff frequency in Hz.
