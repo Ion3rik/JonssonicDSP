@@ -101,4 +101,25 @@ namespace Jonssonic {
         for (size_t ch = 0; ch < numChannels; ++ch)
             std::memcpy(dest[ch], src[ch], numSamples * sizeof(T));
     }
+
+    /**
+     * @brief Crossfade between two buffers.
+     * @param bufferA First buffer (array of channel pointers)
+     * @param bufferB Second buffer (array of channel pointers)
+     * @param output Output buffer (array of channel pointers)
+     * @param numChannels Number of channels
+     * @param numSamples Number of samples per channel
+     */
+    template<typename T>
+    void crossfadeBuffers(const T* const* bufferA, const T* const* bufferB, T* const* output, size_t numChannels, size_t numSamples) {
+        for (size_t ch = 0; ch < numChannels; ++ch) {
+            for (size_t n = 0; n < numSamples; ++n) {
+                // Equal power crossfade
+                T fadeFactor = static_cast<T>(n) / static_cast<T>(numSamples - 1);
+                T gainA = std::cos(fadeFactor * (static_cast<T>(M_PI) / static_cast<T>(2))); // cos(0 to π/2)
+                T gainB = std::sin(fadeFactor * (static_cast<T>(M_PI) / static_cast<T>(2))); // sin(0 to π/2)
+                output[ch][n] = bufferA[ch][n] * gainA + bufferB[ch][n] * gainB;
+            }
+        }
+    }
 } // namespace Jonssonic

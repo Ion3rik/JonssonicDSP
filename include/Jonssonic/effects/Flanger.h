@@ -30,7 +30,7 @@ public:
     static constexpr T MAX_MODULATION_MS = T(5.0);      // Maximum modulation depth in milliseconds (±3ms at depth=1.0)
     static constexpr int SMOOTHING_TIME_MS = 100;       // Smoothing time for parameter changes in milliseconds
     static constexpr T MAX_DELAY_MS = T(15.0);          // Maximum delay buffer size
-    static constexpr T MAX_FEEDBACK = T(0.9);          // Maximum feedback amount to avoid instability
+    static constexpr T MAX_FEEDBACK = T(0.8);          // Maximum feedback amount to avoid instability
     
     /**
      * @brief Default constructor for Flanger effect.
@@ -127,7 +127,7 @@ public:
                 delayLine.writeSample(ch, toWrite);
 
                 // Mix dry and delayed (50/50 for classic flanger comb filtering)
-                output[ch][n] = (input[ch][n] + delayedSample) * T(0.5);
+                output[ch][n] = (input[ch][n] + delayedSample) * T(0.707); 
             }
         }
     }

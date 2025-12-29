@@ -41,7 +41,7 @@ public:
     /** 
      * @brief Makeup gain for nonlinear EQ. Compensates the operating gain reduction.
      */
-    static constexpr T NONLINEAR_MAKEUP_GAIN = T(2); 
+    static constexpr T NONLINEAR_MAKEUP_GAIN = T(1.4142); // approx sqrt(2)
 
     /**
      * @brief Oversampling factor for nonlinear EQ.

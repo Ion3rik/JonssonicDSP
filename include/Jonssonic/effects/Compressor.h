@@ -46,14 +46,9 @@ public:
     static constexpr T DRIVE_MAX_GAIN_DB = T(24.0);
 
     /**
-     * @brief Drive compensation factor to retain overall output level.
-     */
-    static constexpr T DRIVE_COMPENSATION_FACTOR = T(0.7);
-
-    /**
      * @brief Drive scaling factor for character mode saturation.
      */
-    static constexpr T DRIVE_SCALE_FACTOR = T(0.3);
+    static constexpr T DRIVE_SCALE_FACTOR = T(0.4);
 
     /**
      * @brief Mode dependent smoother attack ranges in ms.
@@ -231,7 +226,8 @@ public:
         T driveGainDb = DRIVE_BASE_GAIN_DB -newthresholdDb * DRIVE_SCALE_FACTOR; // drive increases as threshold decreases
         driveGainDb = std::clamp(driveGainDb, T(0), DRIVE_MAX_GAIN_DB); // clamp (0 dB to max)
         shaper.setInputGain(dB2Mag(driveGainDb), skipSmoothing); // set input gain for waveshaper in linear
-        shaper.setOutputGain(dB2Mag(-DRIVE_COMPENSATION_FACTOR * driveGainDb), skipSmoothing); // set output gain to retain overall level
+        T driveCompensation = T(1) / std::sqrt(dB2Mag(driveGainDb)); // approximate compensation to retain overall level
+        shaper.setOutputGain(driveCompensation, skipSmoothing); // set output gain to retain overall level
     }
 
     /**

@@ -2,12 +2,12 @@
 // Smoothed value class for parameter and control signal smoothing
 // SPDX-License-Identifier: MIT
 
-
-constexpr int SmoothedValueMaxOrder = 8; // Maximum allowed order for cascaded smoothing filters
-
 #pragma once
 #include <cmath>
 #include <algorithm>
+#include <vector>
+#include <cassert>
+
 
 namespace Jonssonic {
 /**
@@ -22,6 +22,7 @@ enum class SmootherType {
 // Forward declaration for template specializations
 template<typename T, SmootherType Type = SmootherType::OnePole, size_t Order = 1>
 class SmoothedValue;
+constexpr int SmoothedValueMaxOrder = 8; // Maximum allowed order for cascaded smoothing filters
 
 /**
  *  @brief Type aliases for common smoothers
@@ -130,6 +131,17 @@ public:
         stage.resize(numChannels);
         for (auto& s : stage)
             s.fill(T(0));
+        updateSmoothingParams();
+    }
+
+    void setTimeMs(T newTimeMs) {
+        timeMs = newTimeMs;
+        updateSmoothingParams();
+    }
+
+    void setTimeSamples(size_t timeSamples) {
+        assert(sampleRate > T(0));
+        timeMs = (T(timeSamples) / sampleRate) * T(1000);
         updateSmoothingParams();
     }
 
@@ -250,6 +262,17 @@ public:
         target.resize(numChannels, T(0));
         rampStep.resize(numChannels, T(0));
         rampSamples = 0;
+        updateSmoothingParams();
+    }
+
+    void setTimeMs(T newTimeMs) {
+        timeMs = newTimeMs;
+        updateSmoothingParams();
+    }
+
+    void setTimeSamples(size_t timeSamples) {
+        assert(sampleRate > T(0));
+        timeMs = (T(timeSamples) / sampleRate) * T(1000);
         updateSmoothingParams();
     }
 
