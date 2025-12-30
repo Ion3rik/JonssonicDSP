@@ -1,13 +1,13 @@
-// Jonssonic - A C++ audio DSP library
+// Jonssonic - A Modular Realtime C++ Audio DSP Library
 // Biquad filter coefficient computation functions
 // Based on Robert Bristow-Johnson's Audio EQ Cookbook
 // SPDX-License-Identifier: MIT
 
 #pragma once
 #include <cmath>
-#include "../../utils/MathUtils.h"
+#include "../../utils/math_utils.h"
 
-namespace Jonssonic
+namespace jonssonic::filters::detail
 {
 
 /**
@@ -223,4 +223,4 @@ inline void computeHighshelfCoeffs(T normFreq, T Q, T gainLinear,
     a2 = ((A + T(1)) - (A - T(1)) * cosw0 - T(2) * sqrtA * alpha) / a0;
 }
 
-} // namespace Jonssonic
+} // namespace jonssonic::filters::detail

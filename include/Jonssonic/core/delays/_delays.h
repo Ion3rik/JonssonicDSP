@@ -4,6 +4,6 @@
 
 #pragma once
 
-#include "AllpassFilter.h"
-#include "CombFilter.h"
-#include "DelayLine.h"
+#include "allpass_filter.h"
+#include "comb_filter.h"
+#include "delay_line.h"

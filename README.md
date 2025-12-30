@@ -1,7 +1,18 @@
 # JonssonicDSP
 
 JonssonicDSP is a modular, approachable realtime C++ audio DSP library for developers exploring audio programming and building audio effects and tools.
----
+
+## Library Guidelines
+
+JonssonicDSP is developed with the following principles:
+
+- **Header-only and templated classes:** All core components are implemented as header-only, using C++ templates for flexibility and inlining.
+- **Scalar-only processing:** For now, all processing is scalar (single-sample) to maximize code readability and learning value. Vectorized or SIMD processing may be considered in the future.
+- **Readable, modular code:** The codebase prioritizes clarity and modularity over micro-optimizations, making it approachable for those learning audio DSP.
+- **Minimal dependencies:** The library is self-contained and avoids external dependencies where possible.
+- **Consistent naming and structure:** Classes and files follow a consistent naming convention and folder structure for easy navigation.
+
+These guidelines may evolve as the library grows.
 
 ## Features 
 

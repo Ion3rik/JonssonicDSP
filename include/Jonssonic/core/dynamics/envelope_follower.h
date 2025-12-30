@@ -5,7 +5,7 @@
 #pragma once
 
 #include <cmath>
-#include "../common/DspParam.h"
+#include "../common/dsp_param.h"
 
 namespace Jonssonic::core {
 

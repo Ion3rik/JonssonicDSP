@@ -1,0 +1,19 @@
+// JonssonicDSP - A Modular Realtime C++ Audio DSP Library
+// Global configuration header file
+// SPDX-License-Identifier: MIT
+#pragma once
+#include <cstddef>
+
+#define JONSSONIC_VERSION_MAJOR @PROJECT_VERSION_MAJOR@
+#define JONSSONIC_VERSION_MINOR @PROJECT_VERSION_MINOR@
+#define JONSSONIC_VERSION_PATCH @PROJECT_VERSION_PATCH@
+#define JONSSONIC_VERSION (JONSSONIC_VERSION_MAJOR * 10000 + JONSSONIC_VERSION_MINOR * 100 + JONSSONIC_VERSION_PATCH)
+
+namespace jonssonic {
+    /// Maximum number of supported channels
+    constexpr size_t JONSSONIC_MAX_CHANNELS = @JONSSONIC_MAX_CHANNELS@;
+    /// Supported sample rate range
+    constexpr double JONSSONIC_MIN_SAMPLE_RATE = @JONSSONIC_MIN_SAMPLE_RATE@;
+    constexpr double JONSSONIC_MAX_SAMPLE_RATE = @JONSSONIC_MAX_SAMPLE_RATE@;
+// Add other global config options here as needed
+}

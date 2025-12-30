@@ -1,18 +1,21 @@
-// Jonssonic - A C++ audio DSP library
+// JonssonicDSP - A Modular Realtime C++ Audio DSP Library
 // Damping filter class header file
 // SPDX-License-Identifier: MIT
 
 #pragma once
+#include <jonssonic/jonssonic_config.h>
 #include <cmath>
 #include <algorithm>
-#include "FilterTypes.h"
-#include "BiquadFilter.h"
+#include <jonssonic/core/filters/filter_types.h>
+#include <jonssonic/core/filters/biquad_filter.h>
+#include <cassert>
 
-namespace Jonssonic {
+namespace jonssonic::filters {
 
 // =============================================================================
 // Template Declaration
 // =============================================================================
+/// DampingFilter class template
 template<typename T, DampingType Type = DampingType::OnePole>
 class DampingFilter;
 
@@ -27,21 +30,27 @@ class DampingFilter;
 template<typename T>
 class DampingFilter<T, DampingType::OnePole> {
 public:
-    // Constructors and Destructor
+    /// Default constructor.
     DampingFilter() = default;
+    /**
+     * @brief Parameterized constructor that calls @ref prepare.
+     * @param newNumChannels Number of channels.
+     * @param newSampleRate Sample rate in Hz.
+     */
     DampingFilter(size_t newNumChannels, T newSampleRate) {
         prepare(newNumChannels, newSampleRate);
     }
-
+    /// Default destructor.
+    ~DampingFilter() = default;
+    
     /**
      * @brief Prepare the filter for processing.
-     * @param newSampleRate Sample rate in Hz
-     * @param newNumChannels Number of channels
-     * @note Must be called before processing.
+     * @param newSampleRate Sample rate in Hz.
+     * @param newNumChannels Number of channels.
      */
     void prepare(size_t newNumChannels, T newSampleRate) {
         numChannels = newNumChannels;
-        sampleRate = newSampleRate;
+        sampleRate = std::clamp(newSampleRate, T(1), 192000);
         z1.assign(numChannels, T(0));
         a.assign(numChannels, T(0));
         b.assign(numChannels, T(0));
@@ -51,9 +60,11 @@ public:
      * @brief Set filter coefficients based on T60 at DC and Nyquist.
      * @param T60_DC Desired decay time (seconds) at DC (0 Hz)
      * @param T60_NYQ Desired decay time (seconds) at Nyquist (fs/2 Hz)
-     * @note Must call prepare() before this.
+     * @note Must call @ref prepare before this.
      */
     void setByT60(size_t ch, T T60_DC, T T60_NYQ, size_t delaySamples) {
+        assert(ch < numChannels && "Channel index out of bounds.");
+        assert(sampleRate > T(0) && "Sample rate must be set and greater than zero.");
         T g0 = std::pow(T(10), -3.0 * delaySamples / (T60_DC * sampleRate));
         T g1 = std::pow(T(10), -3.0 * delaySamples / (T60_NYQ * sampleRate));
         a[ch] = (g0 + g1) / 2;
@@ -65,6 +76,7 @@ public:
      * @param ch Channel index
      * @param x Input sample
      * @return Filtered output sample
+     * @note Must call @ref prepare before processing.
      */
     T processSample(size_t ch, T x) {
         assert(ch < numChannels && "Channel index out of bounds");
@@ -76,6 +88,7 @@ public:
     void reset() { std::fill(z1.begin(), z1.end(), T(0)); }
 
 private:
+    bool togglePrepared = false;
     T sampleRate = T(44100);
     size_t numChannels = 0;
     std::vector<T> a; // feedforward coefficient

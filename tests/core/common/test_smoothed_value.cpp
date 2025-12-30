@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 #include <gtest/gtest.h>
-#include "Jonssonic/core/common/SmoothedValue.h"
+#include "Jonssonic/core/common/smoothed_value.h"
 
 namespace Jonssonic {
 

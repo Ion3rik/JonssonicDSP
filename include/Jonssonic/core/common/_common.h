@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "AudioBuffer.h"
-#include "CircularAudioBuffer.h"
-#include "DspParam.h"
-#include "Interpolators.h"
-#include "Modulation.h"
-#include "SmoothedValue.h"
+#include "audio_buffer.h"
+#include "circular_audio_buffer.h"
+#include "dsp_param.h"
+#include "interpolators.h"
+#include "modulation.h"
+#include "smoothed_value.h"

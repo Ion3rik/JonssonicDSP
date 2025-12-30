@@ -4,5 +4,5 @@
 
 #pragma once
 
-#include "WaveShaper.h"
-#include "WaveShaperProcessor.h"
+#include "wave_shaper.h"
+#include "wave_shaper_processor.h"

@@ -1,12 +1,12 @@
-// Jonssonic - A C++ audio DSP library
+// Jonssonic - A Modular Realtime C++ Audio DSP Library
 // BiquadCore header file
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include "../common/AudioBuffer.h"
-#include "../nonlinear/WaveShaper.h"
+#include "../common/audio_buffer.h"
+#include "../nonlinear/wave_shaper.h"
 
-namespace Jonssonic
+namespace jonssonic::filters::detail
 {
 /**
  * @brief BiquadCore filter class implementing a multi-channel, multi-section biquad filter.
@@ -18,19 +18,27 @@ template<typename T, WaveShaperType ShaperType = WaveShaperType::None>
 class BiquadCore
 {
 public:
-    // Constants
+    /// Constexprs for coefficient and state variable counts
     static constexpr size_t COEFFS_PER_SECTION = 5; // b0, b1, b2, a1, a2
     static constexpr size_t STATE_VARS_PER_SECTION = 4; // x1, x2, y1, y2
 
-    // Constructor and Destructor
-    BiquadCore() = default; // Default constructor
-    BiquadCore(size_t newNumChannels, size_t newNumSections) // Parameterized constructor (for the faint hearted)
+    /// Default constructor
+    BiquadCore() = default;
+
+    /**
+     * @brief Parameterized constructor that calls @ref prepare.
+     * @param newNumChannels Number of channels
+     * @param newNumSections Number of second-order sections
+     */
+    BiquadCore(size_t newNumChannels, size_t newNumSections)
     {
         prepare(newNumChannels, newNumSections);
     }
+
+    /// Default destructor
     ~BiquadCore() = default;
 
-    // No copy or move semantics
+    /// No copy nor move semantics
     BiquadCore(const BiquadCore&) = delete;
     BiquadCore& operator=(const BiquadCore&) = delete;
     BiquadCore(BiquadCore&&) = delete;
@@ -51,16 +59,15 @@ public:
         togglePrepared = true;
     }
 
-    void reset()
-    {
-        state.clear();
-    }
-
+    /// Reset the filter state
+    void reset() { state.clear(); }
+    
     /**
      * @brief Process a single sample for a given channel.
      * @param ch Channel index
      * @param input Input sample
      * @return Output sample
+     * @note Must call @ref prepare before processing.
      */
     T processSample(size_t ch, T input)
     {   
@@ -107,6 +114,7 @@ public:
      * @param input Input sample pointers (one per channel)
      * @param output Output sample pointers (one per channel)
      * @param numSamples Number of samples to process
+     * @note Must call @ref prepare before processing.
      */
     void processBlock(const T* const* input, T* const* output, size_t numSamples)
     {
@@ -120,6 +128,16 @@ public:
         }
     }
 
+    /**
+     * @brief Set the coefficients for a specific section.
+     * @param section Section index
+     * @param b0 Feedforward coefficient 0
+     * @param b1 Feedforward coefficient 1
+     * @param b2 Feedforward coefficient 2
+     * @param a1 Feedback coefficient 1
+     * @param a2 Feedback coefficient 2
+     * @note Must call @ref prepare before setting coefficients.
+     */
     void setSectionCoeffs(size_t section, T b0, T b1, T b2, T a1, T a2)
     {
         if (!togglePrepared) return; // Safety check
@@ -170,4 +188,4 @@ private:
     // Waveshaper instance
     WaveShaper<T, ShaperType> waveShaper;
 };
-} // namespace Jonssonic
+} // namespace jonssonic::filters::detail

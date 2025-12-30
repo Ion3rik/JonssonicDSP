@@ -3,8 +3,20 @@ cmake_minimum_required(VERSION 3.15)
 # Project configuration
 project(JonssonicDSP 
     VERSION 0.1.0
-    DESCRIPTION "A modular, approachable C++ audio DSP library"
-    LANGUAGES CXX
+	DESCRIPTION "JonssonicDSP - A Modular Realtime C++ Audio DSP Library"
+	LANGUAGES CXX
+)
+
+# Global config options for header generation
+set(JONSSONIC_MAX_CHANNELS 64)
+set(JONSSONIC_MIN_SAMPLE_RATE 8000)
+set(JONSSONIC_MAX_SAMPLE_RATE 192000)
+
+# Generate jonssonic_config.h from template
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/jonssonic/jonssonic_config.h.in
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/jonssonic/jonssonic_config.h
+    @ONLY
 )
 
 # Set C++ standard
@@ -65,9 +77,10 @@ install(TARGETS JonssonicDSP
 # Install header files
 install(DIRECTORY include/Jonssonic
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-    FILES_MATCHING 
+    FILES_MATCHING
         PATTERN "*.h"
         PATTERN "*.hpp"
+        PATTERN "detail" EXCLUDE
 )
 
 # Install the export set

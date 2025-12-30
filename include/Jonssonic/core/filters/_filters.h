@@ -4,15 +4,8 @@
 
 #pragma once
 
-#include "BiquadChain.h"
-#include "BiquadCoeffs.h"
-#include "BiquadCore.h"
-#include "BiquadFilter.h"
-
-#include "DampingFilter.h"
-
-#include "FirstOrderCoeffs.h"
-#include "FirstOrderCore.h"
-#include "FirstOrderFilter.h"
-
-#include "UtilityFilters.h"
+#include "biquad_chain.h"
+#include "biquad_filter.h"
+#include "damping_filter.h"
+#include "first_order_filter.h"
+#include "utility_filters.h"

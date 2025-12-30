@@ -4,6 +4,6 @@
 
 #pragma once
 
-#include "FilteredNoise.h"
-#include "Noise.h"
-#include "Oscillator.h"
+#include "filtered_noise.h"
+#include "noise.h"
+#include "oscillator.h"

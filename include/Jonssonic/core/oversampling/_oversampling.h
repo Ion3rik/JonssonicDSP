@@ -4,6 +4,6 @@
 
 #pragma once
 
-#include "OversampledProcessor.h"
-#include "Oversampler.h"
-#include "OversamplerFilters.h"
+#include "oversampled_processor.h"
+#include "oversampler.h"
+#include "oversampler_filters.h"

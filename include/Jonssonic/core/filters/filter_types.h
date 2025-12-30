@@ -1,16 +1,13 @@
-// Jonssonic - A C++ audio DSP library
-// Filter types header file
+// Jonssonic - A Modular Realtime C++ Audio DSP Library
 // Filter type enumerations are defined here
 // SPDX-License-Identifier: MIT
 
 #pragma once
 
-namespace Jonssonic
+namespace jonssonic::filters
 {  
 
-/**
- * @brief First-order filter types
- */
+/// First-order filter types
 enum class FirstOrderType {
     Lowpass,
     Highpass,
@@ -19,9 +16,7 @@ enum class FirstOrderType {
     Highshelf
 };   
 
-/**
- * @brief Biquad Filter Types
- */
+/// Biquad filter types
 enum class BiquadType {
     Lowpass,
     Highpass,
@@ -33,12 +28,10 @@ enum class BiquadType {
     Highshelf
 };
 
-/**
- * @brief Damping filter types
- */
+/// Damping filter types
 enum class DampingType {
     OnePole,
     Shelving 
 };
 
-} // namespace Jonssonic
+} // namespace jonssonic::filters

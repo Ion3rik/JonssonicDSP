@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
-#include <Jonssonic/core/dynamics/GainSmoother.h>
-#include <Jonssonic/utils/MathUtils.h>
+#include <Jonssonic/core/dynamics/gain_smoother.h>
+#include <Jonssonic/utils/math_utils.h>
 #include <vector>
 #include <cmath>
 

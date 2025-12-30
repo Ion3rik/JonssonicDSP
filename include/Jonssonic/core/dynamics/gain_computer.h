@@ -6,8 +6,8 @@
 
 #include <cmath>
 #include <limits>
-#include "../common/DspParam.h"
-#include "../../utils/MathUtils.h"
+#include "../common/dsp_param.h"
+#include "../../utils/math_utils.h"
 
 namespace Jonssonic::core {
 

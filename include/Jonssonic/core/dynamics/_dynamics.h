@@ -4,6 +4,6 @@
 
 #pragma once
 
-#include "EnvelopeFollower.h"
-#include "GainComputer.h"
-#include "SignalSmoother.h"
+#include "envelope_follower.h"
+#include "gain_computer.h"
+#include "signal_smoother.h"

@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <Jonssonic/core/dynamics/GainComputer.h>
+#include <Jonssonic/core/dynamics/gain_computer.h>
 #include <cmath>
 
 using namespace Jonssonic::core;
