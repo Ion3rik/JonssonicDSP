@@ -1,14 +1,13 @@
 # JonssonicDSP
 
-JonssonicDSP is a modular, approachable C++ audio DSP library for developers exploring audio programming and building audio effects and tools.
+JonssonicDSP is a modular, approachable realtime C++ audio DSP library for developers exploring audio programming and building audio effects and tools.
 ---
 
-## Features (Planned)
+## Features 
 
-- Core DSP utilities including delay lines, digital filters, waveshapers, and oscillators 
-- Multi-channel audio processing support  
-- Example audio effects: Delay, Flanger, Chorus, Phaser, Reverb, Distortion, Synthesizer Voice...
-- Both per-sample and per-block processing interfaces  
+- Core DSP utilities including audio buffers, delay lines, digital filters, waveshapers, dynamic processors, oversampler, noise generators and LFOs 
+- Example audio effects: Delay, Flanger, Reverb, EQ, Compressor, and Distortion
+- Multi-channel audio processing support 
 - Modular architecture designed for easy extension and integration  
 - CMake-based build system for cross-platform development  
 
