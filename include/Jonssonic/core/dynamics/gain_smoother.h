@@ -1,4 +1,4 @@
-// Jonssonic - A C++ audio DSP library
+// Jonssonic - A Modular Realtime C++ Audio DSP Library
 // GainSmoother class header file
 // SPDX-License-Identifier: MIT
 
@@ -7,7 +7,7 @@
 #include "../common/dsp_param.h"
 #include "../../utils/math_utils.h"
 
-namespace Jonssonic::core {
+namespace jonssonic::core::dynamics {
 
 /**
  * @brief Gain smoother type enumeration.
@@ -31,6 +31,8 @@ class GainSmoother;
 template<typename T>
 class GainSmoother<T, GainSmootherType::AttackRelease>
 {
+    /// Type aliases for convenience, readability and future-proofing
+    using DspParamType = jonssonic::core::common::DspParam<T>;
 public:
     // Constructors and Destructor
     GainSmoother() = default;
@@ -51,12 +53,11 @@ public:
      * @param numChannels Number of channels
      * @param sampleRate Sample rate in Hz
      */
-    void prepare(size_t numNewChannels, T newSampleRate, T paramSmoothingTimeMs = T(20.0)) {
+    void prepare(size_t numNewChannels, T newSampleRate) {
         numChannels = numNewChannels;
         sampleRate = newSampleRate;
-        attackCoeff.prepare(numChannels, sampleRate, paramSmoothingTimeMs);
-        releaseCoeff.prepare(numChannels, sampleRate, paramSmoothingTimeMs);
-
+        attackCoeff.prepare(numChannels, sampleRate);
+        releaseCoeff.prepare(numChannels, sampleRate);
         gainDb.assign(numChannels, T(0.0)); // initialize gain to unity
 
     }
@@ -81,7 +82,7 @@ public:
         T releasePhaseMask = T(1) - attackPhaseMask; // mask for release phase
         T coeff = attackPhaseMask * attackCoeff.getNextValue(ch) + releasePhaseMask * releaseCoeff.getNextValue(ch); // select coefficient
         gainDb[ch] += coeff * (targetGainDb - gainDb[ch]); // exponential smoothing
-        return dB2Mag(gainDb[ch]); // convert smoothed dB gain to linear
+        return utils::dB2Mag(gainDb[ch]); // convert smoothed dB gain to linear
     }
 
     /**
@@ -98,6 +99,17 @@ public:
                 output[ch][n] = processSample(ch, input[ch][n]);
             }
         }
+    }
+
+    /**
+     * @brief Set parameter control smoothing time in milliseconds.
+     * @param timeMs Smoothing time in milliseconds
+     * @note Not to be confused with attack/release times.
+     */
+    void setParameterSmoothingTimeMs(T timeMs)
+    {
+        attackCoeff.setSmoothingTimeMs(timeMs);
+        releaseCoeff.setSmoothingTimeMs(timeMs);
     }
 
     /**
@@ -134,8 +146,8 @@ private:
     T releaseTime;
 
     // Coefficient smoothers
-    DspParam<T> attackCoeff;
-    DspParam<T> releaseCoeff;
+    DspParamType attackCoeff;
+    DspParamType releaseCoeff;
 
 
     void updateCoefficients(bool skipSmoothing = false)
@@ -146,4 +158,4 @@ private:
     }
 };
 
-} // namespace Jonssonic::core
+} // namespace jonssonic::core::dynamics

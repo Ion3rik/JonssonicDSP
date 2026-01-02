@@ -1,19 +1,21 @@
-// Jonssonic - A Modular Realtime C++ Audio DSP Library
+// JonssonicDSP - A Modular Realtime C++ Audio DSP Library
 // FirstOrderCore header file
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include "../common/audio_buffer.h"
+#include <jonssonic/core/common/audio_buffer.h>
 #include <vector>
 #include <cassert>
 
-namespace jonssonic::filters::detail {
+namespace jonssonic::core::filters::detail {
 /**
  * @brief FirstOrderCore filter class implementing a multi-channel, multi-section first-order filter.
  * @param T Sample data type (e.g., float, double)
  */
 template<typename T>
 class FirstOrderCore {
+    /// Type aliases for convenience, readability and future-proofing
+    using AudioBufferType = jonssonic::core::common::AudioBuffer<T>;
 public:
     /// Constexprs for coefficient and state variable counts
     static constexpr size_t COEFFS_PER_SECTION = 3; // b0, b1, a1
@@ -130,7 +132,7 @@ private:
     size_t numChannels = 0;
     size_t numSections = 0;
     std::vector<T> coeffs; // [b0, b1, a1] per section
-    AudioBuffer<T> state;  // [x1, y1] per section, per channel
+    AudioBufferType state;  // [x1, y1] per section, per channel
 };
 
-} // namespace Jonssonic
+} // namespace jonssonic::core::filters

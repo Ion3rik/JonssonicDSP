@@ -6,7 +6,7 @@
 #include <cmath>
 #include "../../utils/math_utils.h"
 
-namespace jonssonic::filters::detail
+namespace jonssonic::core::filters::detail
 { 
 
 /**

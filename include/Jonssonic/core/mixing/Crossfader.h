@@ -1,15 +1,14 @@
-// Jonssonic - A C++ audio DSP library
+// Jonssonic - A Modular Realtime C++ Audio DSP Library
 // Crossfader class header file
 // SPDX-License-Identifier: MIT
 
 #pragma once
 
-#include "../common/DspParam.h"
-#include "../../utils/MathUtils.h"
-#include "../common/CircularAudioBuffer.h"
+#include <jonssonic/utils/math_utils.h>
+#include <jonssonic/core/common/circular_audio_buffer.h>
 #include <cmath>
 
-namespace Jonssonic
+namespace jonssonic::core::mixing
 {
 /**
  * @brief Crossfader for audio signals.
@@ -100,4 +99,4 @@ private:
     CircularAudioBuffer<T> latencyBuffer; // Circular buffer for dry signal delay compensation
 };
 
-} // namespace Jonssonic
+} // namespace jonssonic::core::mixing

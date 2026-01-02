@@ -4,8 +4,9 @@
 
 #pragma once
 
-#include "Delay.h"
-#include "Distortion.h"
-#include "Equalizer.h"
-#include "Flanger.h"
-#include "Reverb.h"
+#include <jonssonic/effects/delay.h>
+#include <jonssonic/effects/distortion.h>
+#include <jonssonic/effects/compressor.h>
+#include <jonssonic/effects/equalizer.h>
+#include <jonssonic/effects/flanger.h>
+#include <jonssonic/effects/reverb.h>

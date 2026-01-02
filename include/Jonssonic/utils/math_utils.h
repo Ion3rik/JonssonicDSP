@@ -10,7 +10,7 @@
 #include <vector>
 
 
-namespace Jonssonic
+namespace jonssonic::utils
 {
 // Mathematical constants
 template<typename T>
@@ -76,11 +76,10 @@ template<typename T>
 std::vector<std::complex<T>> complexSpectrum(const std::vector<T>& input) {
     size_t N = input.size();
     std::vector<std::complex<T>> output(N);
-    const T pi = Jonssonic::pi<T>;
     for (size_t k = 0; k < N; ++k) {
         std::complex<T> sum(0, 0);
         for (size_t n = 0; n < N; ++n) {
-            T angle = -2 * pi * k * n / N;
+            T angle = -2 * pi<T> * k * n / N;
             sum += input[n] * std::exp(std::complex<T>(0, angle));
         }
         output[k] = sum;
@@ -245,4 +244,26 @@ inline int parity_sign(uint64_t x) {
     return (x & 1) ? -1 : 1;
 }
 
-} // namespace Jonssonic
+/**
+ * @brief Simple Xorshift32 random number generator
+ */
+struct Xorshift32 {
+    uint32_t state;
+    Xorshift32(uint32_t seed = 2463534242UL) : state(seed) {}
+    void seed(uint32_t s) { state = s ? s : 2463534242UL; }
+    uint32_t next() {
+        uint32_t x = state;
+        x ^= x << 13;
+        x ^= x >> 17;
+        x ^= x << 5;
+        state = x;
+        return x;
+    }
+    // Returns float in [-1, 1)
+    float nextFloat() { return (next() >> 1) * (1.0f / 2147483648.0f) * 2.0f - 1.0f; }
+    // Returns float in [0, 1)
+    float nextFloat01() { return (next() >> 1) * (1.0f / 2147483648.0f); }
+};
+
+
+} // namespace jonssonic::utils

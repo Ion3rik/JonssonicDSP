@@ -1,13 +1,14 @@
-// Jonssonic - A C++ audio DSP library
-// Delay line class header file
+// Jonssonic - A Modular Realtime C++ Audio DSP Library
+// Envelope Follower class template declaration and specializations
 // SPDX-License-Identifier: MIT
 
 #pragma once
 
 #include <cmath>
-#include "../common/dsp_param.h"
+#include <jonssonic/core/common/dsp_param.h>
+#include "jonssonic/utils/detail/config_utils.h"
 
-namespace Jonssonic::core {
+namespace jonssonic::core::dynamics {
 
 enum class EnvelopeType {
     Peak,
@@ -20,12 +21,15 @@ enum class EnvelopeType {
 template<typename T, EnvelopeType Type>
 class EnvelopeFollower;
 
+
 // =============================================================================
 // Peak Envelope Follower Specialization
 // =============================================================================
 template<typename T>
 class EnvelopeFollower<T, EnvelopeType::Peak>
 {
+    /// Type aliases for convenience, readability and future-proofing
+    using DspParamType = jonssonic::core::common::DspParam<T>;
 public:
     // Constructors and Destructor
     EnvelopeFollower() = default;
@@ -46,17 +50,13 @@ public:
      * @param numChannels Number of channels
      * @param sampleRate Sample rate in Hz
      */
-    void prepare(size_t numNewChannels, T newSampleRate, T smoothingTimeMs = T(20.0)) {
-        numChannels = numNewChannels;
-        sampleRate = newSampleRate;
-        attackCoeff.prepare(numChannels, sampleRate, smoothingTimeMs);
-        releaseCoeff.prepare(numChannels, sampleRate, smoothingTimeMs);
+    void prepare(size_t numNewChannels, T newSampleRate) {
+        numChannels = utils::detail::clampChannels(numNewChannels);
+        sampleRate = utils::detail::clampSampleRate(newSampleRate);
+        attackCoeff.prepare(numChannels, sampleRate);
+        releaseCoeff.prepare(numChannels, sampleRate);
         envelope.assign(numChannels, T(0));
-
-        // default values
-        attackTime = T(10.0); // default attack time in ms
-        releaseTime = T(100.0); // default release time in ms
-        updateCoefficients(true);
+        togglePrepared = true;
     }
 
     /**
@@ -98,7 +98,17 @@ public:
             }
         }
     }
-
+    /**
+     * @brief Set parameter control smoothing time in milliseconds.
+     * @param timeMs Smoothing time in milliseconds
+     * @note Not to be confused with attack/release times.
+     */
+    void setParameterSmoothingTimeMs(T timeMs)
+    {
+        attackCoeff.setSmoothingTimeMs(timeMs);
+        releaseCoeff.setSmoothingTimeMs(timeMs);
+        updateCoefficients(true);
+    }
     /**
      * @brief Set the attack time in milliseconds.
      * @param ms Attack time in milliseconds
@@ -114,7 +124,7 @@ public:
      */
     void setReleaseTime(T releaseTimeMs, bool skipSmoothing = false)
     {
-        releaseTime = std::max(releaseTimeMs, T(5.0)); // prevent super fast release times
+        releaseTime = std::max(releaseTimeMs, T(0.1)); // prevent super fast release times
         updateCoefficients(skipSmoothing);
     }
 
@@ -124,6 +134,7 @@ public:
 private:
 
     // Global parameters
+    bool togglePrepared = false;
     size_t numChannels = 0;
     T sampleRate = T(44100);
 
@@ -133,12 +144,15 @@ private:
     // User Parameters
     T attackTime;
     T releaseTime;
-    DspParam<T> attackCoeff;
-    DspParam<T> releaseCoeff;
+    DspParamType attackCoeff;
+    DspParamType releaseCoeff;
 
 
-    void updateCoefficients(bool skipSmoothing = false)
-    {
+    void updateCoefficients(bool skipSmoothing)
+    {   
+        // Early exit if not prepared
+        if (!togglePrepared) 
+            return;
         // Set target coefficients based on current attack and release times
         attackCoeff.setTarget(1.0 - std::exp(-1.0 / (0.001 * attackTime * sampleRate)), skipSmoothing);
         releaseCoeff.setTarget(1.0 - std::exp(-1.0 / (0.001 * releaseTime * sampleRate)), skipSmoothing);
@@ -151,6 +165,8 @@ private:
 template<typename T>
 class EnvelopeFollower<T, EnvelopeType::RMS>
 {
+    /// Type aliases for convenience, readability and future-proofing
+    using DspParamType = jonssonic::core::common::DspParam<T>;
 public:
     // Constructors and Destructor
     EnvelopeFollower() = default;
@@ -171,11 +187,11 @@ public:
      * @param numChannels Number of channels
      * @param sampleRate Sample rate in Hz
      */
-    void prepare(size_t numNewChannels, T newSampleRate, T smoothingTimeMs = T(20.0)) {
-        numChannels = numNewChannels;
-        sampleRate = newSampleRate;
-        attackCoeff.prepare(numChannels, sampleRate, smoothingTimeMs);
-        releaseCoeff.prepare(numChannels, sampleRate, smoothingTimeMs);
+    void prepare(size_t numNewChannels, T newSampleRate) {
+        numChannels = utils::detail::clampChannels(numNewChannels);
+        sampleRate = utils::detail::clampSampleRate(newSampleRate);
+        attackCoeff.prepare(numChannels, sampleRate);
+        releaseCoeff.prepare(numChannels, sampleRate);
         envelope.assign(numChannels, T(0));
 
         // default values
@@ -223,7 +239,17 @@ public:
             }
         }
     }
-
+    /**
+     * @brief Set parameter control smoothing time in milliseconds.
+     * @param timeMs Smoothing time in milliseconds
+     * @note Not to be confused with attack/release times.
+     */
+    void setParameterSmoothingTimeMs(T timeMs)
+    {
+        attackCoeff.setSmoothingTimeMs(timeMs);
+        releaseCoeff.setSmoothingTimeMs(timeMs);
+    }
+    
     /**
      * @brief Set the attack time in milliseconds.
      * @param ms Attack time in milliseconds
@@ -258,11 +284,11 @@ private:
     // User Parameters
     T attackTime;
     T releaseTime;
-    DspParam<T> attackCoeff;
-    DspParam<T> releaseCoeff;
+    DspParamType attackCoeff;
+    DspParamType releaseCoeff;
 
 
-    void updateCoefficients(bool skipSmoothing = false)
+    void updateCoefficients(bool skipSmoothing)
     {
         // Set target coefficients based on current attack and release times
         attackCoeff.setTarget(1.0 - std::exp(-1.0 / (0.001 * attackTime * sampleRate)), skipSmoothing);
@@ -270,4 +296,4 @@ private:
     }
 };
 
-} // namespace Jonssonic::core
+} // namespace jonssonic::core::dynamics

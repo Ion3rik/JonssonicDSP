@@ -2,8 +2,8 @@
 // Unit tests for the Oversampler class
 // SPDX-License-Identifier: MIT
 
-#include "../../../include/Jonssonic/core/oversampling/Oversampler.h"
-#include "../../../include/Jonssonic/utils/MathUtils.h"
+#include <jonssonic/core/oversampling/oversampler.h>
+#include <jonssonic/utils/math_utils.h>
 #include <gtest/gtest.h>
 
 #include <algorithm>
@@ -11,7 +11,8 @@
 #include <iostream>
 #include <vector>
 
-using namespace Jonssonic;
+using namespace jonssonic::core::oversampling;
+using namespace jonssonic::utils;
 
 //==============================================================================
 // Oversampler TESTS - FACTOR 2

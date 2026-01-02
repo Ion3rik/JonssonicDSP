@@ -1,22 +1,21 @@
-// Jonssonic - A Modular Realtime C++ Audio DSP Library
+// JonssonicDSP - A Modular Realtime C++ Audio DSP Library
 // BiquadCore header file
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include "../common/audio_buffer.h"
-#include "../nonlinear/wave_shaper.h"
+#include <jonssonic/core/common/audio_buffer.h>
 
-namespace jonssonic::filters::detail
+namespace jonssonic::core::filters::detail
 {
 /**
  * @brief BiquadCore filter class implementing a multi-channel, multi-section biquad filter.
  * @param T Sample data type (e.g., float, double)
- * @param ShaperType Type of waveshaper to apply after each section (from WaveShaperType enum)
- * @note Default ShaperType is WaveShaperType::None (linear biquad)
  */
-template<typename T, WaveShaperType ShaperType = WaveShaperType::None>
+template<typename T>
 class BiquadCore
 {
+    /// Type aliases for convenience, readability and future-proofing
+    using AudioBufferType = jonssonic::core::common::AudioBuffer<T, jonssonic::core::common::BufferLayout::Planar>;
 public:
     /// Constexprs for coefficient and state variable counts
     static constexpr size_t COEFFS_PER_SECTION = 5; // b0, b1, b2, a1, a2
@@ -70,8 +69,7 @@ public:
      * @note Must call @ref prepare before processing.
      */
     T processSample(size_t ch, T input)
-    {   
-        assert(ch < numChannels && "Channel index out of bounds");
+    { 
         for (size_t s = 0; s < numSections; ++s)
         {
             size_t coeffBase = s * COEFFS_PER_SECTION;
@@ -89,9 +87,6 @@ public:
             T x2 = state[ch][stateBase + 1];
             T y1 = state[ch][stateBase + 2];
             T y2 = state[ch][stateBase + 3];
-
-            // Apply waveshaper 
-            input = waveShaper.processSample(input, T(0));
 
             // Compute output sample (Direct Form I)
             T output = b0 * input + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
@@ -118,7 +113,6 @@ public:
      */
     void processBlock(const T* const* input, T* const* output, size_t numSamples)
     {
-        assert(numChannels > 0 && "Filter not prepared");
         for (size_t ch = 0; ch < numChannels; ++ch)
         {
             for (size_t n = 0; n < numSamples; ++n)
@@ -140,7 +134,8 @@ public:
      */
     void setSectionCoeffs(size_t section, T b0, T b1, T b2, T a1, T a2)
     {
-        if (!togglePrepared) return; // Safety check
+        // Early exit if not prepared
+        if (!togglePrepared) return; 
         assert(section < numSections && "Section index out of bounds");
         size_t baseIdx = section * COEFFS_PER_SECTION;
         coeffs[baseIdx + 0] = b0;
@@ -150,8 +145,11 @@ public:
         coeffs[baseIdx + 4] = a2;
     }
 
+    /// Get number of prepared channels
     size_t getNumChannels() const { return numChannels; }
+    /// Get number of prepared sections
     size_t getNumSections() const { return numSections; }
+    /// Check if the filter is prepared
     bool isPrepared() const { return togglePrepared; }
 
 private:
@@ -183,9 +181,7 @@ private:
     //   x2 = state[ch][s*4 + 1];
     //   y1 = state[ch][s*4 + 2];
     //   y2 = state[ch][s*4 + 3];
-    AudioBuffer<T> state;
+    AudioBufferType state;
 
-    // Waveshaper instance
-    WaveShaper<T, ShaperType> waveShaper;
 };
 } // namespace jonssonic::filters::detail

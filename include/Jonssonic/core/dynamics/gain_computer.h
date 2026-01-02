@@ -1,4 +1,4 @@
-// Jonssonic - A C++ audio DSP library
+// Jonssonic - A Modular Realtime C++ Audio DSP Library
 // GainComputer class header file
 // SPDX-License-Identifier: MIT
 
@@ -9,7 +9,7 @@
 #include "../common/dsp_param.h"
 #include "../../utils/math_utils.h"
 
-namespace Jonssonic::core {
+namespace jonssonic::core::dynamics {
 
 enum class GainType {
     Compressor
@@ -32,6 +32,8 @@ class GainComputer;
 template<typename T>
 class GainComputer<T, GainType::Compressor>
 {
+/// Type aliases for convenience, readability, and future-proofing
+using DspParamType = common::DspParam<T>;
 public:
     // Constructors and Destructor
     GainComputer() = default;
@@ -52,13 +54,13 @@ public:
      * @param numChannels Number of channels
      * @param sampleRate Sample rate in Hz
      */
-    void prepare(size_t numNewChannels, T newSampleRate, T smoothingTimeMs = T(20.0)) {
+    void prepare(size_t numNewChannels, T newSampleRate) {
         numChannels = numNewChannels;
         sampleRate = newSampleRate;
 
-        threshold.prepare(numChannels, sampleRate, smoothingTimeMs);
-        ratio.prepare(numChannels, sampleRate, smoothingTimeMs);
-        knee.prepare(numChannels, sampleRate, smoothingTimeMs);
+        threshold.prepare(numChannels, sampleRate);
+        ratio.prepare(numChannels, sampleRate);
+        knee.prepare(numChannels, sampleRate);
     }
 
     /**
@@ -77,7 +79,7 @@ public:
     T processSample(size_t ch, T input)
     {
         // convert input to dB
-        T inputDb = mag2dB(input);
+        T inputDb = utils::mag2dB(input);
         T thresholdVal = threshold.getNextValue(ch);
         T ratioVal = ratio.getNextValue(ch);
         T kneeVal = knee.getNextValue(ch);
@@ -125,6 +127,17 @@ public:
     }
 
     /**
+     * @brief Set the parameter smoothing time in milliseconds.
+     * @param timeMs Smoothing time in milliseconds
+     */
+    void setParameterSmoothingTimeMs(T timeMs)
+    {
+        threshold.setSmoothingTimeMs(timeMs);
+        ratio.setSmoothingTimeMs(timeMs);
+        knee.setSmoothingTimeMs(timeMs);
+    }
+
+    /**
      * @brief Set threshold in dB.
      * @param newThreshold Threshold in dB
      * @param skipSmoothing If true, update coefficients immediately
@@ -165,10 +178,10 @@ private:
     T sampleRate = T(44100);
 
     // User Parameters
-    DspParam<T> threshold; // threshold in dB
-    DspParam<T> ratio;     // Compression ratio
-    DspParam<T> knee;      // knee width in dB
+    DspParamType threshold; // threshold in dB
+    DspParamType ratio;     // Compression ratio
+    DspParamType knee;      // knee width in dB
 
 
 };
-}// namespace Jonssonic::core
+}// namespace jonssonic::dynamics

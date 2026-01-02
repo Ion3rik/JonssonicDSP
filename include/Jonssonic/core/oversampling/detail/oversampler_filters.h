@@ -3,12 +3,11 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include "../common/CircularAudioBuffer.h"
-#include "../../utils/MathUtils.h"
+#include <jonssonic/core/common/circular_audio_buffer.h>
+#include <jonssonic/utils/math_utils.h>
 #include <vector>
 #include <numeric>
-namespace Jonssonic {
-
+namespace jonssonic::core::oversampling::detail {
 
 //==============================================================================
 // FIR HALFBAND FILTER STAGE
@@ -20,6 +19,8 @@ namespace Jonssonic {
  */
 template<typename T, size_t FIRTaps = 31>
 class FIRHalfbandStage {
+    /// Type aliases for convenience, readability and future-proofing
+    using CircularAudioBufferType = jonssonic::core::common::CircularAudioBuffer<T>;
     // Compile-time checks
     static_assert(FIRTaps == 31, "Only 31-tap FIR halfband filter is supported currently");
 
@@ -128,8 +129,8 @@ private:
     size_t numChannels = 0; // number of channels
 
     // BUFFERS
-    CircularAudioBuffer<T> upsamplerBuffer; // Circular audio buffer for upsampler filter state
-    CircularAudioBuffer<T> downsamplerBuffer; // Polyphase buffer: even channels for even branch, odd channels for odd branch
+    CircularAudioBufferType upsamplerBuffer; // Circular audio buffer for upsampler filter state
+    CircularAudioBufferType downsamplerBuffer; // Polyphase buffer: even channels for even branch, odd channels for odd branch
 
     // COEFFICIENTS
     static constexpr size_t K0 = (FIRTaps / 2 + 1) / 2; // Number of unique symmetric even polyphase coefficients actually stored
@@ -182,4 +183,4 @@ private:
 // =============================================================================
 
 
-} // namespace Jonssonic
+} // namespace jonssonic::core::oversampling::detail

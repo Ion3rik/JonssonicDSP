@@ -3,17 +3,17 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include "../core/nonlinear/WaveShaperProcessor.h"
-#include "../core/oversampling/Oversampler.h"
-#include "../core//common/AudioBuffer.h"
-#include "../core/filters/FirstOrderFilter.h"
-#include "../core/filters/UtilityFilters.h"
-#include "../utils/MathUtils.h"
-#include "../core/mixing/DryWetMixer.h"
-#include "../core/common/SmoothedValue.h"
-#include "../utils/BufferUtils.h"
+#include <jonssonic/core/nonlinear/wave_shaper_processor.h>
+#include <jonssonic/core/oversampling/oversampler.h>
+#include <jonssonic/core/common/audio_buffer.h>
+#include <jonssonic/core/filters/first_order_filter.h>
+#include <jonssonic/core/filters/utility_filters.h>
+#include <jonssonic/utils/math_utils.h>
+#include <jonssonic/core/mixing/dry_wet_mixer.h>
+#include <jonssonic/core/common/smoothed_value.h>
+#include <jonssonic/utils/buffer_utils.h>
 
-namespace Jonssonic::effects {
+namespace jonssonic::effects {
 /**
  * @brief Distortion effect with continuous curve shaping and tone control.
  * @param T Sample data type (e.g., float, double)
@@ -240,17 +240,17 @@ private:
     bool toggleOversampling = false;
 
     // PROCESSORS
-    WaveShaperProcessor<T, WaveShaperType::Dynamic> shaper; // waveshaper processor with dynamic type
-    FirstOrderFilter<T> toneFilter; // tone control filter
-    DCBlocker<T> dcBlocker; // DC blocker after distortion
-    DryWetMixer<T> dryWetMixer; // dry/wet mixer
-    SmoothedValue<float> outputGain; // Smoothed output gain parameter
+    nonlinear::WaveShaperProcessor<T, WaveShaperType::Dynamic> shaper; // waveshaper processor with dynamic type
+    filters::FirstOrderFilter<T> toneFilter; // tone control filter
+    filters::DCBlocker<T> dcBlocker; // DC blocker after distortion
+    mixing::DryWetMixer<T> dryWetMixer; // dry/wet mixer
+    common::SmoothedValue<float> outputGain; // Smoothed output gain parameter
 
-    Oversampler<T, OVERSAMPLING_FACTOR> oversampler; // oversampler for nonlinear EQ
-    AudioBuffer<T> oversampledBuffer; // buffer for oversampling
-    AudioBuffer<T> fxBuffer; // buffer for the effect processing
+    oversampling::Oversampler<T, OVERSAMPLING_FACTOR> oversampler; // oversampler for nonlinear EQ
+    common::AudioBuffer<T> oversampledBuffer; // buffer for oversampling
+    common::AudioBuffer<T> fxBuffer; // buffer for the effect processing
     
 
 };
 
-} // namespace Jonssonic::effects
+} // namespace jonssonic::effects

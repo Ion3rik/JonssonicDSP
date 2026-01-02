@@ -3,14 +3,16 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include "jonssonic/utils/detail/config_utils.h"
-#include "first_order_core.h"
-#include "first_order_coeffs.h"
 
-#include <filter_types.h>
+#include "jonssonic/utils/detail/config_utils.h"
+#include "detail/first_order_core.h"
+#include "detail/first_order_coeffs.h"
+#include "detail/filter_limits.h"
+
+#include <jonssonic/filters/filter_types.h>
 #include <algorithm>
 
-namespace jonssonic::filters {
+namespace jonssonic::core::filters {
 
 /**
  * @brief Single section first-order filter wrapper class.
@@ -82,24 +84,28 @@ public:
     }
 
     /**
-     * @brief Set the cutoff frequency in Hz (clamped between 1 Hz and Nyquist).
-     * @param newFreqHz Cutoff frequency in Hz.
+     * @brief Set the cutoff frequency in Hz.
+     * @param newFreqHz Cutoff frequency in Hz (clampped within filter_limits.h)
      * @note Coeffs are only updated if @ref prepare has been called before.
      */
     void setFreq(T newFreqHz) {
         assert(sampleRate > T(0) && "Sample rate must be set before setting frequency");
-        freqNormalized = std::clamp(newFreqHz / sampleRate, T(1) / sampleRate, T(0.5));
+        freqNormalized = std::clamp( newFreqHz / sampleRate,
+                                     detail::FilterLimits<T>::MIN_FREQ_NORM,
+                                     detail::FilterLimits<T>::MAX_FREQ_NORM);
         updateCoeffs();
     }
 
     /**
      * @brief Set the cutoff frequency as a normalized value.
-     * @param normalizedFreq Normalized frequency (clamped between 1 Hz and Nyquist).
+     * @param normalizedFreq Normalized frequency (clamped within filter_limits.h)
      * @note This allows setting frequency before sample rate is known.
      */
     void setFreqNormalized(T normalizedFreq) {
         assert(sampleRate > T(0) && "Sample rate must be set before setting frequency");
-        freqNormalized = std::clamp(normalizedFreq, T(1) / sampleRate, T(0.5));
+        freqNormalized = std::clamp(normalizedFreq,
+                                    detail::FilterLimits<T>::MIN_FREQ_NORM,
+                                    detail::FilterLimits<T>::MAX_FREQ_NORM);
         updateCoeffs();
     }
 
@@ -119,7 +125,9 @@ public:
      * @note Coeffs are only updated if @ref prepare has been called before.
      */
     void setGainLinear(T newGainLin) {
-        gain = std::clamp(newGainLin, T(0.001), T(10));
+        gain = std::clamp(newGainLin, 
+                          detail::FilterLimits<T>::MIN_GAIN_LIN,
+                          detail::FilterLimits<T>::MAX_GAIN_LIN);
         updateCoeffs();
     }
 
@@ -129,7 +137,9 @@ public:
      * @note Coeffs are only updated if @ref prepare has been called before.
      */
     void setGainDb(T newGainDb) {
-        gain = Jonssonic::dB2Mag(newGainDb);
+        gain = std::clamp(Jonssonic::dB2Mag(newGainDb),
+                          detail::FilterLimits<T>::MIN_GAIN_LIN,
+                          detail::FilterLimits<T>::MAX_GAIN_LIN);
         updateCoeffs();
     }
 

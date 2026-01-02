@@ -3,10 +3,10 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include "Oversampler.h"
-#include "../common/AudioBuffer.h"
+#include <jonssonic/core/common/audio_buffer.h>
+#include <jonssonic/core/oversampling/oversampler.h>
 
-namespace Jonssonic {
+namespace jonssonic::core::oversampling {
 
 /**
  * @brief Runtime-switchable oversampling processor wrapper
@@ -158,7 +158,7 @@ private:
     Oversampler<T, 16> oversampler16x;
     
     // Internal buffer for oversampled audio
-    AudioBuffer<T> oversampledBuffer;
+    common::AudioBuffer<T> oversampledBuffer;
 };
 
-} // namespace Jonssonic
+} // namespace jonssonic::core::oversampling

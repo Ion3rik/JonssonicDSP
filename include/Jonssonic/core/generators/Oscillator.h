@@ -6,11 +6,11 @@
 
 #include <vector>
 #include <cmath>
-#include "../common/DspParam.h"
+#include <jonssonic/core/common/dsp_param.h>
 
-namespace Jonssonic
+namespace jonssonic::core::generators
 {
-
+/// Waveform types 
 enum class Waveform
 {
     Sine,
@@ -23,19 +23,33 @@ enum class Waveform
  * This class generates basic waveforms (sine, square, sawtooth, triangle) at a specified frequency.
  */
 template<typename T,
-    SmootherType SmootherType = SmootherType::OnePole,
-    int SmootherOrder = 1,
-    int SmoothingTimeMs = 10
+        common::SmootherType SmootherType = common::SmootherType::OnePole,
+        int SmootherOrder = 1
 >
 class Oscillator
 {
-    public:
+/// Type aliases for convenience, readability and future-proofing
+using DspParam = common::DspParam<T, SmootherType, SmootherOrder>;
+public:
+    /// Default constructor
     Oscillator()
         : numChannels(0), sampleRate(T(0))
     {
     }
+    /**
+     * @brief Parameterized constructor that calls @ref prepare.
+     * @param newNumChannels Number of channels
+     * @param newSampleRate Sample rate in Hz
+     */
+    Oscillator(size_t newNumChannels, T newSampleRate, T newSmoothingTimeMs = T(10))
+    {
+        prepare(newNumChannels, newSampleRate, newSmoothingTimeMs);
+    }
+
+    /// Default destructor
     ~Oscillator() = default;
-    // No copy semantics nor move semantics
+
+    /// No copy semantics nor move semantics
     Oscillator(const Oscillator&) = delete;
     const Oscillator& operator=(const Oscillator&) = delete;
     Oscillator(Oscillator&&) = delete;
@@ -49,7 +63,7 @@ class Oscillator
 
         // Resize and initialize to zero
         phase.assign(numChannels, T(0));
-        phaseIncrement.prepare(numChannels, sampleRate, SmoothingTimeMs);
+        phaseIncrement.prepare(numChannels, sampleRate);
     }
 
     // Reset phase for all channels
@@ -131,6 +145,15 @@ class Oscillator
         }
     }
 
+    /**
+     * @brief Set parameter smoothing time in milliseconds for frequency changes.
+     * @param timeMs Smoothing time in milliseconds
+     */
+    void setParameterSmoothingTimeMs(T timeMs)
+    {
+        phaseIncrement.setSmoothingTimeMs(timeMs);
+    }
+
     // Set all channels to same frequency
     void setFrequency(T freq, bool skipSmoothing = false) {
         phaseIncrement.setTarget(freq / sampleRate, skipSmoothing);
@@ -184,6 +207,6 @@ private:
     bool useAntiAliasing = false;
 
     std::vector<T> phase;           // Phase per channel
-    DspParam<T,SmootherType, SmootherOrder> phaseIncrement;     // Phase increment per channel
+    DspParam phaseIncrement;        // Phase increment per channel
 };
-} // namespace Jonssonic
+} // namespace jonssonic::core::generators

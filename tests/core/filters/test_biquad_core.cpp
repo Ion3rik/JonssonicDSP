@@ -4,9 +4,9 @@
 
 #include <gtest/gtest.h>
 #include <cmath>
-#include "Jonssonic/core/filters/BiquadCore.h"
+#include <jonssonic/core/filters/detail/biquad_core.h>
 
-namespace Jonssonic {
+using namespace jonssonic::core::filters::detail;
 
 class SOSFilterTest : public ::testing::Test {
 protected:
@@ -158,4 +158,3 @@ TEST_F(SOSFilterTest, Constants) {
     EXPECT_EQ(BiquadCore<float>::STATE_VARS_PER_SECTION, 4);
 }
 
-} // namespace Jonssonic

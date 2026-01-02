@@ -3,11 +3,11 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include "DelayLine.h"
-#include "../common/DspParam.h"
-#include "../common/Modulation.h"
+#include <jonssonic/core/delays/delay_line.h>
+#include <jonssonic/core/common/interpolators.h>
+#include <jonssonic/core/common/modulation.h>
 
-namespace Jonssonic
+namespace jonssonic::core::delays
 {
 // MODULATION STRUCTURES
 namespace AllpassMod{
@@ -16,7 +16,7 @@ namespace AllpassMod{
  * @param T Sample data type (e.g., float, double)
  */
 template<typename T>
-struct Sample: public ModulationInput<T> {
+struct Sample: public common::ModulationInput<T> {
     T delayMod = T(0);
     T gainMod = T(1);
 };
@@ -26,7 +26,7 @@ struct Sample: public ModulationInput<T> {
  * @param T Sample data type (e.g., float, double)
  */
 template<typename T>
-struct Block: public ModulationInput<T> {
+struct Block: public common::ModulationInput<T> {
     const T* const* delayMod = nullptr;         // modulation buffer for delay time (in samples)
     const T* const* gainMod = nullptr;          // modulation buffer for gain
 };
@@ -42,31 +42,53 @@ struct Block: public ModulationInput<T> {
  */
 template<
 	typename T,
-	typename Interpolator = LinearInterpolator<T>,
-	SmootherType SmootherType = SmootherType::OnePole,
-	int SmootherOrder = 1,
-	int SmoothingTimeMs = 10
+	typename Interpolator = common::LinearInterpolator<T>,
+	common::SmootherType SmootherType = common::SmootherType::OnePole,
+	int SmootherOrder = 1
 >
 class AllpassFilter{
+/// Type aliases for convenience, readability, and future-proofing
+using DelayLineType = DelayLine<T, Interpolator, SmootherType, SmootherOrder>;
+using DspParamType = common::DspParam<T, SmootherType, SmootherOrder>;
 public:
+    /// Default constructor
 	AllpassFilter() = default;
+    /**
+     * Parmetrized constructor that calls @ref prepare.
+     * @param newNumChannels Number of channels
+     * @param newSampleRate Sample rate in Hz
+     * @param newMaxDelayMs Maximum delay time in milliseconds
+     */
+    AllpassFilter(size_t newNumChannels, T newSampleRate, T newMaxDelayMs)
+    {
+        prepare(newNumChannels, newSampleRate, newMaxDelayMs);
+    }
+
+    /// Default destructor
 	~AllpassFilter() = default;
 
-    // No copy semantics nor move semantics
+    /// No copy semantics nor move semantics
     AllpassFilter(const AllpassFilter&) = delete;
     const AllpassFilter& operator=(const AllpassFilter&) = delete;
     AllpassFilter(AllpassFilter&&) = delete;
     const AllpassFilter& operator=(AllpassFilter&&) = delete;
 
+    /**
+     * @brief Prepare the allpass filter for processing.
+     * @param newNumChannels Number of channels
+     * @param newSampleRate Sample rate in Hz
+     * @param newMaxDelayMs Maximum delay time in milliseconds
+     */
 	void prepare(size_t newNumChannels, T newSampleRate, T newMaxDelayMs)
 	{
 		delayLine.prepare(newNumChannels, newSampleRate, newMaxDelayMs);
 		numChannels = newNumChannels;
-		gain.prepare(numChannels, newSampleRate, SmoothingTimeMs);
+		gain.prepare(numChannels, newSampleRate);
 		gain.setBounds(T(-1), T(1));
 		gain.setTarget(T(0), true);
 	}
 
+    /// Reset the allpass filter state
 	void reset()
 	{
 		delayLine.reset();
@@ -107,7 +129,7 @@ public:
     T processSample(size_t ch, T input, AllpassMod::Sample<T>& modStruct)
     {
         // Apply modulation to feedback and feedforward gains
-        T modulatedGain = gain.applyMultiplicativeMod(modStruct.gainMod, ch);
+        T modulatedGain = gain.applyMultiplicativeMod(ch,modStruct.gainMod);
         
         // Read delayed feedback state with modulation
         T delayed = delayLine.readSample(ch, modStruct.delayMod);
@@ -127,7 +149,6 @@ public:
 	 * @param input Input sample pointers (one per channel)
 	 * @param output Output sample pointers (one per channel)
 	 * @param numSamples Number of samples to process
-	 *
 	 * @note Input and output must have the same number of channels as prepared.
 	 */
 	void processBlock(const T* const* input, T* const* output, size_t numSamples)
@@ -158,7 +179,6 @@ public:
      * @param output Output sample pointers (one per channel)
      * @param modStruct Modulation structure containing modulation buffers
      * @param numSamples Number of samples to process
-     *
      * @note Input and output must have the same number of channels as prepared.
      */
     void processBlock(const T* const* input, T* const* output, AllpassMod::Block<T>& modStruct, size_t numSamples)
@@ -168,7 +188,7 @@ public:
             for (size_t i = 0; i < numSamples; ++i)
             {
 			    // Apply modulation to feedback and feedforward gains
-                T modulatedGain = gain.applyMultiplicativeMod(modStruct.gainMod[ch][i], ch);
+                T modulatedGain = gain.applyMultiplicativeMod(ch,modStruct.gainMod[ch][i]);
 
                 // Read delayed feedback state with modulation
                 T delayed = delayLine.readSample(ch, modStruct.delayMod[ch][i]);
@@ -183,39 +203,75 @@ public:
 		}
 	}
 
+    /**
+     * @brief Set the parameter smoothing time in milliseconds.
+     * @param timeMs Smoothing time in milliseconds.
+     */
+    void setParameterSmoothingTimeMs(T timeMs)
+    {
+        gain.setSmoothingTimeMs(timeMs);
+        delayLine.setSmoothingTimeMs(timeMs);
+    }
+
+    /**
+     * @brief Set a constant delay time in milliseconds for all channels.
+     * @param newDelayMs Delay time in milliseconds
+     */
     void setDelayMs(T newDelayMs, bool skipSmoothing = false)
 	{
 		delayLine.setDelayMs(newDelayMs, skipSmoothing);
 	}
 
+    /**
+     * @brief Set a constant delay time in milliseconds for a specific channel.
+     * @param ch Channel index
+     * @param newDelayMs Delay time in milliseconds
+     */
 	void setDelayMs(size_t ch, T newDelayMs, bool skipSmoothing = false)
 	{
 		delayLine.setDelayMs(ch, newDelayMs, skipSmoothing);
 	}
 
+    /**
+     * @brief Set a constant delay time in samples for all channels.
+     * @param newDelaySamples Delay time in samples
+     */
     void setDelaySamples(T newDelaySamples, bool skipSmoothing = false)
     {
         delayLine.setDelaySamples(newDelaySamples, skipSmoothing);
     }
 
+    /**
+     * @brief Set a constant delay time in samples for a specific channel.
+     * @param ch Channel index
+     * @param newDelaySamples Delay time in samples
+     */
     void setDelaySamples(size_t ch, T newDelaySamples, bool skipSmoothing = false)
     {
         delayLine.setDelaySamples(ch, newDelaySamples, skipSmoothing);
     }
 
+    /**
+     * @brief Set a constant gain value for all channels.
+     * @param newGain Gain value
+     */
 	void setGain(T newGain, bool skipSmoothing = false)
 	{
 		gain.setTarget(newGain, skipSmoothing);
 	}
+	/**
+     * @brief Set a constant gain value for a specific channel.
+     * @param ch Channel index
+     * @param newGain Gain value
+     */
 	void setGain(size_t ch, T newGain, bool skipSmoothing = false)
 	{
 		gain.setTarget(ch, newGain, skipSmoothing);
 	}
     
-
 private:
-	DelayLine<T, Interpolator, SmootherType, SmootherOrder, SmoothingTimeMs> delayLine;
-	DspParam<T, SmootherType, SmootherOrder> gain;
+	DelayLineType delayLine;
+	DspParamType gain;
 	size_t numChannels = 0;
 };
-} 
+} // namespace jonssonic::core::delays

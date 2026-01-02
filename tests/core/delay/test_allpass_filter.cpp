@@ -3,13 +3,14 @@
 // SPDX-License-Identifier: MIT
 
 #include <gtest/gtest.h>
-#include "Jonssonic/core/delays/AllpassFilter.h"
-#include "Jonssonic/utils/MathUtils.h"
+#include <jonssonic/core/delays/allpass_filter.h>
+#include <jonssonic/utils/math_utils.h>
 #include <cmath>
 #include <vector>
 #include <algorithm>
 
-using namespace Jonssonic;
+using namespace jonssonic::core::delays;
+using namespace jonssonic::utils;
 
 class AllpassFilterTest : public ::testing::Test {
 protected:

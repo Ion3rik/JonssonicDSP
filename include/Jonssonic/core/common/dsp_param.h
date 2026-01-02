@@ -1,72 +1,115 @@
-// Jonssonic - A C++ audio DSP library
+// Jonssonic - A Modular Realtime C++ Audio DSP Library
 // DspParam class with, smoothing and modulation support
-// Author: Jon Fagerström
-// Update: 23.11.2025
+// SPDX-License-Identifier: MIT
 
 #pragma once
-#include "Jonssonic/core/common/SmoothedValue.h"
+#include <jonssonic/core/common/smoothed_value.h>
 #include <limits>
 
-namespace Jonssonic {
+namespace jonssonic::core::common {
 /**
- * @brief DSP parameter class with smoothing and modulation capabilities.
+ * @brief DSP parameter class with smoothing and safe modulation capabilities.
  */
 template<typename T, SmootherType Type = SmootherType::OnePole, int Order = 1>
 class DspParam {
 public:
-
+    /// Default constructor
     DspParam() = default;
+
+    /**
+     * @brief Parameterized constructor that calls @ref prepare.
+     * @param newNumChannels Number of channels
+     * @param newSampleRate Sample rate in Hz
+     */
+    DspParam(size_t newNumChannels, T newSampleRate) {
+        prepare(newNumChannels, newSampleRate);
+    }
+    /// Default destructor
     ~DspParam() = default;
 
-    // no copy semantics nor move semantics
+    /// No copy semantics nor move semantics
     DspParam(const DspParam&) = delete;
     const DspParam& operator=(const DspParam&) = delete;
     DspParam(DspParam&&) = delete;
     const DspParam& operator=(DspParam&&) = delete;
 
-    void prepare(size_t newNumChannels, T newSampleRate, T newTimeMs = T(10)) {
-        smoother.prepare(newNumChannels, newSampleRate, newTimeMs);
+    /**
+     * @brief Prepare the parameter for processing.
+     * @param newNumChannels Number of channels.
+     * @param newSampleRate Sample rate in Hz.
+     */
+    void prepare(size_t newNumChannels, T newSampleRate) {
+        smoother.prepare(newNumChannels, newSampleRate);
     }
 
+    /// Reset the parameter smoothing state.
     void reset() {
         smoother.reset();
     }
 
+    /// Set smoothing time in milliseconds.
+    void setSmoothingTimeMs(T timeMs) {
+        smoother.setTimeMs(timeMs);
+    }
+
+    /// Set parameter value bounds.
     void setBounds(T newMin, T newMax) {
         min = newMin;
         max = newMax;
     }
 
-    // Additive modulation: base + mod (clamped)
-    T applyAdditiveMod(T mod, size_t ch) {
+    /**
+     * @brief Apply additive modulation: base + mod.
+     * @param ch Channel index
+     * @param mod Modulation value
+     * @return Modulated value (clamped to bounds set in @ref setBounds).
+     */
+    T applyAdditiveMod(size_t ch, T mod) {
         return clamp(getNextValue(ch) + mod);
     }
 
-    // Multiplicative modulation: base * mod (clamped)
-    T applyMultiplicativeMod(T mod, size_t ch) {
+    /**
+     * @brief Apply multiplicative modulation: base * mod (clamped).
+     * @param ch Channel index
+     * @param mod Modulation value
+     * @return Modulated value (clamped to bounds set in @ref setBounds).
+     */
+    T applyMultiplicativeMod(size_t ch, T mod) {
         return clamp(getNextValue(ch) * mod);
     }
 
-    // Set target value for all channels (clamped)
+    /** 
+     * @brief Set target value for all channels.
+     * @param value Target value (clamped to bounds set in @ref setBounds).
+     * @param skipSmoothing If true, skip smoothing and set immediately
+     */
     void setTarget(T value, bool skipSmoothing = false) {
         T clampedValue = clamp(value);
         smoother.setTarget(clampedValue, skipSmoothing);
     }
     
-    // Set target value for specific channel (clamped)
+    /**
+     * @brief Set target value for a specific channel.
+     * @param ch Channel index.
+     * @param value Target value (clamped to bounds set in @ref setBounds).
+     * @param skipSmoothing If true, skip smoothing and set immediately.
+     */
     void setTarget(size_t ch, T value, bool skipSmoothing = false) {
         T clampedValue = clamp(value);
         smoother.setTarget(ch, clampedValue, skipSmoothing);
     }
 
+    /// Get next smoothed value for a channel.
     T getNextValue(size_t ch) {
         return smoother.getNextValue(ch);
     }
 
+    /// Get current value for a channel.
     T getCurrentValue(size_t ch) const {
         return smoother.getCurrentValue(ch);
     }
 
+    /// Get target value for a channel.
     T getTargetValue(size_t ch) const {
         return smoother.getTargetValue(ch);
     }
@@ -82,4 +125,4 @@ private:
     }
 };
 
-} // namespace Jonssonic
+} // namespace jonssonic::core::common

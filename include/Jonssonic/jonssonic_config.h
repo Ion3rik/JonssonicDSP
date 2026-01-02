@@ -13,7 +13,7 @@ namespace jonssonic {
     /// Maximum number of supported channels
     constexpr size_t JONSSONIC_MAX_CHANNELS = 64;
     /// Supported sample rate range
-    constexpr double JONSSONIC_MIN_SAMPLE_RATE = 8000;
+    constexpr double JONSSONIC_MIN_SAMPLE_RATE = 1000;
     constexpr double JONSSONIC_MAX_SAMPLE_RATE = 192000;
 // Add other global config options here as needed
 }

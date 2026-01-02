@@ -5,11 +5,11 @@
 
 #include <gtest/gtest.h>
 #include <cmath>
-#include "Jonssonic/core/common/Interpolators.h"
-#include "Jonssonic/core/delays/DelayLine.h"
-#include "Jonssonic/utils/MathUtils.h"
+#include <jonssonic/core/delays/delay_line.h>
+#include <jonssonic/utils/math_utils.h>
 
-namespace Jonssonic {
+using namespace jonssonic::core::delays;
+using namespace jonssonic::core::common;
 
 class DelayLineTest : public ::testing::Test {
 protected:
@@ -18,7 +18,7 @@ protected:
 
     void SetUp() override {
         // Use new prepare API: (channels, sampleRate, maxDelayMs)
-        delayLine.prepare(2, sampleRate, maxDelayMs);
+        delayLine.prepare(2, sampleRate, maxDelayMs); 
         blockDelayLine.prepare(2, sampleRate, maxDelayMs);
         zeroDelayLine.prepare(2, sampleRate, maxDelayMs);
         maxDelayLine.prepare(1, sampleRate, maxDelayMs);
@@ -27,6 +27,17 @@ protected:
         oversizeDelayLine.prepare(1, sampleRate, maxDelayMs);
         quadDelayLine.prepare(4, sampleRate, maxDelayMs);
         surroundDelayLine.prepare(6, sampleRate, maxDelayMs);
+
+        // Set smoothing time to zero for precise testing
+        delayLine.setSmoothingTimeMs(0.0f);
+        blockDelayLine.setSmoothingTimeMs(0.0f);
+        zeroDelayLine.setSmoothingTimeMs(0.0f);
+        maxDelayLine.setSmoothingTimeMs(0.0f);
+        smallDelayLine.setSmoothingTimeMs(0.0f);
+        clampDelayLine.setSmoothingTimeMs(0.0f);
+        oversizeDelayLine.setSmoothingTimeMs(0.0f);
+        quadDelayLine.setSmoothingTimeMs(0.0f);
+        surroundDelayLine.setSmoothingTimeMs(0.0f);
 
     // Set delays in samples (directly)
     delayLine.setDelaySamples(2.0f);
@@ -79,15 +90,15 @@ protected:
     }
     
     // Test fixture members - DelayLine instances (with smoothing disabled for precise testing)
-    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> delayLine;          // Standard stereo
-    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> blockDelayLine;     // For block processing tests
-    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> zeroDelayLine;      // Zero delay test
-    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> maxDelayLine;       // Maximum delay test
-    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> smallDelayLine;     // Wraparound test
-    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> clampDelayLine;     // Modulation clamping test
-    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> oversizeDelayLine;  // Delay exceeds buffer test
-    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> quadDelayLine;      // Quad (4-channel)
-    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> surroundDelayLine;  // 5.1 surround (6-channel)
+    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1> delayLine;          // Standard stereo
+    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1> blockDelayLine;     // For block processing tests
+    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1> zeroDelayLine;      // Zero delay test
+    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1> maxDelayLine;       // Maximum delay test
+    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1> smallDelayLine;     // Wraparound test
+    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1> clampDelayLine;     // Modulation clamping test
+    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1> oversizeDelayLine;  // Delay exceeds buffer test
+    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1> quadDelayLine;      // Quad (4-channel)
+    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1> surroundDelayLine;  // 5.1 surround (6-channel)
     
     // Common input buffers
     float leftChannel[4] = {0.0f, 10.0f, 20.0f, 30.0f};
@@ -111,7 +122,7 @@ protected:
     // Test: Different integer delay times per channel
     TEST_F(DelayLineTest, PerChannelIntegerDelay)
     {
-        DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> dl;
+        DelayLine<float, NearestInterpolator<float>, SmootherType::None, 1> dl;
     dl.prepare(2, sampleRate, maxDelayMs);
     // Set different delays for each channel (in samples)
     dl.setDelaySamples(0u, 2.0f); // left
@@ -132,7 +143,7 @@ protected:
     // Test: Different modulated delay times per channel
     TEST_F(DelayLineTest, PerChannelModulatedDelay)
     {
-        DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> dl;
+        DelayLine<float, NearestInterpolator<float>, SmootherType::None, 1> dl;
     dl.prepare(2, sampleRate, maxDelayMs);
     dl.setDelaySamples(0u, 2.0f); // left
     dl.setDelaySamples(1u, 4.0f); // right
@@ -250,8 +261,8 @@ TEST_F(DelayLineTest, ProcessBlockFixedDelay) {
 // Test block processing matches sample-by-sample processing
 TEST_F(DelayLineTest, ProcessBlockMatchesSampleBySample) {
     // Create two identical delay lines for this comparison test
-    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> sampleDelayLine;
-    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> blockCompareDelayLine;
+    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1> sampleDelayLine;
+    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1> blockCompareDelayLine;
     sampleDelayLine.prepare(2, sampleRate, maxDelayMs);
     blockCompareDelayLine.prepare(2, sampleRate, maxDelayMs);
     // Set delay in samples (directly)
@@ -492,7 +503,7 @@ TEST_F(DelayLineTest, ModulatedDelayClampedToZero) {
 
 // Edge case: Modulated delay with extreme positive modulation (clamped to max delay)
 TEST_F(DelayLineTest, ModulatedDelayClampedToMaxDelay) {
-    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> clampLargeDelayLine;
+    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1> clampLargeDelayLine;
     clampLargeDelayLine.prepare(1, sampleRate, maxDelayMs);
     clampLargeDelayLine.setDelaySamples(2.0f);
 
@@ -522,8 +533,8 @@ TEST_F(DelayLineTest, ModulatedDelayClampedToMaxDelay) {
 
 // Test setDelayMs and setDelaySamples consistency
 TEST_F(DelayLineTest, SetDelayMsAndSamplesConsistency) {
-    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> testDelayLine1;
-    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1, 0> testDelayLine2;
+    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1> testDelayLine1;
+    DelayLine<float, NearestInterpolator<float>, SmootherType::OnePole, 1> testDelayLine2;
     
     testDelayLine1.prepare(1, sampleRate, maxDelayMs);
     testDelayLine2.prepare(1, sampleRate, maxDelayMs);
@@ -549,9 +560,10 @@ TEST_F(DelayLineTest, SetDelayMsAndSamplesConsistency) {
 // ============================================================================
 
 TEST_F(DelayLineTest, DelayTimeSmoothing10msIsEffective) {
-    // Test that delay time smoothing (10ms) prevents discontinuities
-    DelayLine<float, LinearInterpolator<float>, SmootherType::OnePole, 1, 10> dl;
+    // Test that delay time smoothing
+    DelayLine<float, LinearInterpolator<float>, SmootherType::OnePole, 1> dl;
     dl.prepare(1, sampleRate, maxDelayMs);
+    dl.setSmoothingTimeMs(10.0f); // 10ms smoothing time
     
     // Start with 5 samples delay
     dl.setDelaySamples(5.0f);
@@ -592,7 +604,7 @@ TEST_F(DelayLineTest, RapidModulationWithLinearInterpolation) {
     // Test that linear interpolation handles rapid modulation without graininess
     // Uses a 44.1kHz sample rate (realistic audio) instead of 1kHz test rate
     float audioSampleRate = 44100.0f;
-    DelayLine<float, LinearInterpolator<float>, SmootherType::OnePole, 1, 0> dl;
+    DelayLine<float, LinearInterpolator<float>, SmootherType::OnePole, 1> dl;
     dl.prepare(1, audioSampleRate, 20.0f); // 20ms max delay
     dl.setDelaySamples(220.0f); // 5ms base delay at 44.1kHz
     
@@ -635,7 +647,7 @@ TEST_F(DelayLineTest, RapidModulationWithLinearInterpolation) {
 
 TEST_F(DelayLineTest, LargeModulationSwingsNoClicks) {
     // Test that large modulation swings don't cause clicks with interpolation
-    DelayLine<float, LinearInterpolator<float>, SmootherType::OnePole, 1, 0> dl;
+    DelayLine<float, LinearInterpolator<float>, SmootherType::OnePole, 1> dl;
     dl.prepare(1, sampleRate, maxDelayMs);
     dl.setDelaySamples(20.0f); // Base delay
     
@@ -670,7 +682,7 @@ TEST_F(DelayLineTest, LargeModulationSwingsNoClicks) {
 
 TEST_F(DelayLineTest, FractionalDelayInterpolationSmooth) {
     // Test that fractional delays are smooth (good interpolation)
-    DelayLine<float, LinearInterpolator<float>, SmootherType::OnePole, 1, 0> dl;
+    DelayLine<float, LinearInterpolator<float>, SmootherType::OnePole, 1> dl;
     dl.prepare(1, sampleRate, maxDelayMs);
     dl.setDelaySamples(5.5f); // Fractional delay
     
@@ -692,5 +704,3 @@ TEST_F(DelayLineTest, FractionalDelayInterpolationSmooth) {
             << " (fractional delay interpolation issue)";
     }
 }
-
-}// namespace Jonssonic

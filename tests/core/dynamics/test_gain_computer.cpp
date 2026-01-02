@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
-#include <Jonssonic/core/dynamics/gain_computer.h>
+#include <jonssonic/core/dynamics/gain_computer.h>
 #include <cmath>
 
-using namespace Jonssonic::core;
+using namespace jonssonic::core::dynamics;
 
 TEST(GainComputerCompressorTest, NoCompressionBelowThreshold) {
     GainComputer<float, GainType::Compressor> gc;

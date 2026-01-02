@@ -5,10 +5,10 @@
 #pragma once
 
 #include <vector>
-#include "Noise.h"
-#include "../filters/FirstOrderFilter.h"
+#include <jonssonic/core/generators/noise.h>
+#include <jonssonic/core/filters/first_order_filter.h>
 
-namespace Jonssonic
+namespace jonssonic::core::generators
 {
 enum class FilterType
 {

@@ -1,38 +1,19 @@
-// Jonssonic - A C++ audio DSP library
+// Jonssonic - A Modular Realtime C++ Audio DSP Library
 // Noise generator class header file
 // SPDX-License-Identifier: MIT
 
 #pragma once
 
+#include <Jonssonic/utils/math_utils.h>
 #include <vector>
 #include <cmath>
 #include <cstdint>
-#include "../common/DspParam.h"
 
-/**
- * @brief Simple Xorshift32 random number generator
- */
-struct Xorshift32 {
-    uint32_t state;
-    Xorshift32(uint32_t seed = 2463534242UL) : state(seed) {}
-    void seed(uint32_t s) { state = s ? s : 2463534242UL; }
-    uint32_t next() {
-        uint32_t x = state;
-        x ^= x << 13;
-        x ^= x >> 17;
-        x ^= x << 5;
-        state = x;
-        return x;
-    }
-    // Returns float in [-1, 1)
-    float nextFloat() { return (next() >> 1) * (1.0f / 2147483648.0f) * 2.0f - 1.0f; }
-    // Returns float in [0, 1)
-    float nextFloat01() { return (next() >> 1) * (1.0f / 2147483648.0f); }
-};
 
-namespace Jonssonic
+namespace jonssonic::core::generators
 {
 
+// TODO: Move all types to generator_types.h and same for each module
 enum class NoiseType
 {
     Uniform,

@@ -4,7 +4,7 @@
 #pragma once
 #include <cstring> 
 
-namespace Jonssonic {
+namespace jonssonic::utils {
 
     //==============================================================================
     // FUNCTIONS

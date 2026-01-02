@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
-#include <Jonssonic/core/dynamics/EnvelopeFollower.h>
+#include <jonssonic/core/dynamics/envelope_follower.h>
 #include <vector>
 
-using namespace Jonssonic::core;
+using namespace jonssonic::core::dynamics;
 
 TEST(EnvelopeFollowerTest, PeakTracksStepInput) {
 	EnvelopeFollower<float, EnvelopeType::Peak> env;

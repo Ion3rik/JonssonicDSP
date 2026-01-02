@@ -4,7 +4,7 @@
 
 #pragma once
 
-namespace jonssonic::filters
+namespace jonssonic::core::filters
 {  
 
 /// First-order filter types
@@ -31,7 +31,8 @@ enum class BiquadType {
 /// Damping filter types
 enum class DampingType {
     OnePole,
-    Shelving 
+    BiquadShelf,
+    FirstOrderShelf 
 };
 
 } // namespace jonssonic::filters

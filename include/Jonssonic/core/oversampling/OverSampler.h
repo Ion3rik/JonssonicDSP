@@ -3,13 +3,12 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include "../common/AudioBuffer.h"
-#include "../common/CircularAudioBuffer.h"
-#include "../common/Interpolators.h"
-#include "OversamplerFilters.h"
+#include <jonssonic/core/common/audio_buffer.h>
+#include <jonssonic/core/common/circular_audio_buffer.h>
+#include <jonssonic/core/common/interpolators.h>
+#include "detail/oversampler_filters.h"
 
-
-namespace Jonssonic {
+namespace jonssonic::core::oversampling {
 /**
  * @brief Oversampler class for upsampling and downsampling audio signals.
  *        Additionally integrated latency compensation (e.g. for alligning dry/wet signals).
@@ -183,15 +182,15 @@ private:
     size_t numChannels = 0;
 
     // FIR Halfband filter stages
-    FIRHalfbandStage<T, 31> stage1;     // 2x stage
-    FIRHalfbandStage<T, 31> stage2;     // 4x stage
-    FIRHalfbandStage<T, 31> stage3;     // 8x stage
-    FIRHalfbandStage<T, 31> stage4;     // 16x stage
+    detail::FIRHalfbandStage<T, 31> stage1;     // 2x stage
+    detail::FIRHalfbandStage<T, 31> stage2;     // 4x stage
+    detail::FIRHalfbandStage<T, 31> stage3;     // 8x stage
+    detail::FIRHalfbandStage<T, 31> stage4;     // 16x stage
 
     // Intermediate buffers for multi-stage processing
-    AudioBuffer<T> intermediateBuffer1to2; // for 1x to 2x oversampling
-    AudioBuffer<T> intermediateBuffer2to4; // for 2x to 4x oversampling
-    AudioBuffer<T> intermediateBuffer4to8; // for 4x to 8x oversampling
+    common::AudioBuffer<T> intermediateBuffer1to2; // for 1x to 2x oversampling
+    common::AudioBuffer<T> intermediateBuffer2to4; // for 2x to 4x oversampling
+    common::AudioBuffer<T> intermediateBuffer4to8; // for 4x to 8x oversampling
 };
 
-} // namespace Jonssonic
+} // namespace jonssonic::core::oversampling

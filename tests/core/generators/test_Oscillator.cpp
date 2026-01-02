@@ -5,9 +5,9 @@
 
 #include <gtest/gtest.h>
 #include <cmath>
-#include "Jonssonic/core/generators/Oscillator.h"
+#include <jonssonic/core/generators/oscillator.h>
 
-namespace Jonssonic {
+using namespace jonssonic::core::generators;
 
 class OscillatorTest : public ::testing::Test {
 protected:
@@ -467,4 +467,3 @@ TEST_F(OscillatorTest, ProcessSampleMatchesProcessBlock) {
     }
 }
 
-} // namespace Jonssonic

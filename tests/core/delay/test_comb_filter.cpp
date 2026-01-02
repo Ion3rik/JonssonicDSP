@@ -3,13 +3,14 @@
 // SPDX-License-Identifier: MIT
 
 #include <gtest/gtest.h>
-#include "Jonssonic/core/delays/CombFilter.h"
-#include "Jonssonic/utils/MathUtils.h"
+#include <jonssonic/core/delays/comb_filter.h>
+#include <jonssonic/utils/math_utils.h>
 #include <cmath>
 #include <vector>
 #include <algorithm>
 
-using namespace Jonssonic;
+using namespace jonssonic::core::delays;
+using namespace jonssonic::utils;
 
 class CombFilterTest : public ::testing::Test {
 protected:

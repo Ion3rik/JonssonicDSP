@@ -3,14 +3,24 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include <jonssonic/jonssonic_config.h>
-#include <cmath>
-#include <algorithm>
+
+// Internal includes
+#include "jonssonic/utils/detail/config_utils.h"
+#include "detail/filter_limits.h"
+
+// Public API includes
 #include <jonssonic/core/filters/filter_types.h>
 #include <jonssonic/core/filters/biquad_filter.h>
+#include <jonssonic/core/filters/first_order_filter.h>
+
+// Standard library includes
+#include <cmath>
+#include <algorithm>
 #include <cassert>
 
-namespace jonssonic::filters {
+
+
+namespace jonssonic::core::filters {
 
 // =============================================================================
 // Template Declaration
@@ -49,22 +59,37 @@ public:
      * @param newNumChannels Number of channels.
      */
     void prepare(size_t newNumChannels, T newSampleRate) {
-        numChannels = newNumChannels;
-        sampleRate = std::clamp(newSampleRate, T(1), 192000);
+        numChannels = utils::detail::clampChannels(newNumChannels);
+        sampleRate = utils::detail::clampSampleRate(newSampleRate);
         z1.assign(numChannels, T(0));
         a.assign(numChannels, T(0));
         b.assign(numChannels, T(0));
+        togglePrepared = true;
     }
 
     /**
      * @brief Set filter coefficients based on T60 at DC and Nyquist.
      * @param T60_DC Desired decay time (seconds) at DC (0 Hz)
      * @param T60_NYQ Desired decay time (seconds) at Nyquist (fs/2 Hz)
-     * @note Must call @ref prepare before this.
+     * @note Coeffs are only updated if @ref prepare has been called before.
      */
     void setByT60(size_t ch, T T60_DC, T T60_NYQ, size_t delaySamples) {
         assert(ch < numChannels && "Channel index out of bounds.");
         assert(sampleRate > T(0) && "Sample rate must be set and greater than zero.");
+
+        // Early exit if not prepared
+        if (!togglePrepared) 
+            return; 
+
+        // Clamp T60 values
+        T60_DC = std::clamp(T60_DC,
+                            detail::DampingLimits<T>::MIN_T60,
+                            detail::DampingLimits<T>::MAX_T60);
+        T60_NYQ = std::clamp(T60_NYQ,
+                             detail::DampingLimits<T>::MIN_T60,
+                             detail::DampingLimits<T>::MAX_T60);
+
+        // Compute coefficients based on T60 values
         T g0 = std::pow(T(10), -3.0 * delaySamples / (T60_DC * sampleRate));
         T g1 = std::pow(T(10), -3.0 * delaySamples / (T60_NYQ * sampleRate));
         a[ch] = (g0 + g1) / 2;
@@ -85,35 +110,48 @@ public:
         return y;
     }
 
+    /// Reset the filter state
     void reset() { std::fill(z1.begin(), z1.end(), T(0)); }
+
+    /// Get number of prepared channels
+    size_t getNumChannels() const { return numChannels; }
+
+    /// Check if the filter is prepared
+    bool isPrepared() const { return togglePrepared; }
 
 private:
     bool togglePrepared = false;
     T sampleRate = T(44100);
     size_t numChannels = 0;
-    std::vector<T> a; // feedforward coefficient
-    std::vector<T> b;  // feedback coefficient
-    std::vector<T> z1;   // state per channel
+    std::vector<T> a;   // feedforward coefficient
+    std::vector<T> b;   // feedback coefficient
+    std::vector<T> z1;  // state per channel
 };
 
 // =============================================================================
-// Shelving Damping Filter Specialization
+// Biquad Damping Filter Specialization
 // =============================================================================
 /**
- * @brief DampingFilter specialization for Shelving type.
+ * @brief DampingFilter specialization for BiquadShelf type.
  *       Implements a biquad shelving filter parametrized
  *       by crossover frequency and T60 below and above it.
  */
 template<typename T>
-class DampingFilter<T, DampingType::Shelving> {
+class DampingFilter<T, DampingType::BiquadShelf> {
 public:
-    // Constructors and Destructor
+    /// Default constructor.
     DampingFilter() = default;
+
+    /**
+     * @brief Parameterized constructor that calls @ref prepare.
+     * @param newNumChannels Number of channels.
+     * @param newSampleRate Sample rate in Hz.
+     */
     DampingFilter(size_t newNumChannels, T newSampleRate) {
         prepare(newNumChannels, newSampleRate);
     }
 
-    // No copy or move semantics
+    /// No copy nor move semantics
     DampingFilter(const DampingFilter&) = delete;
     DampingFilter& operator=(const DampingFilter&) = delete;
     DampingFilter(DampingFilter&&) = delete;
@@ -126,10 +164,11 @@ public:
      * @note Must be called before processing.
      */
     void prepare(size_t newNumChannels, T newSampleRate) {
-        numChannels = newNumChannels;
-        sampleRate = newSampleRate;
+        numChannels = utils::detail::clampChannels(newNumChannels);
+        sampleRate = utils::detail::clampSampleRate(newSampleRate);
         shelf.prepare(newNumChannels, newSampleRate, BiquadType::Highshelf);
         gBase.resize(numChannels, T(0));
+        togglePrepared = true;
     }
 
     /**
@@ -141,10 +180,29 @@ public:
      * @note Must call prepare() before this.
      */
     void setByT60(size_t ch, T crossOverFreqHz, T T60_Low, T T60_High, size_t delaySamples) {
-        // set crossover frequency
+        assert(ch < numChannels && "Channel index out of bounds.");
+        assert(sampleRate > T(0) && "Sample rate must be set and greater than zero.");
+        // Early exit if not prepared
+        if (!togglePrepared) 
+            return;
+
+        // Clamp crossover frequency
+        crossOverFreqHz = std::clamp(crossOverFreqHz, 
+                                     detail::FilterLimits<T>::MIN_FREQ_NORM * sampleRate,
+                                     detail::FilterLimits<T>::MAX_FREQ_NORM * sampleRate);
+        // Clamp T60 values
+        T60_Low = std::clamp(T60_Low,
+                            detail::DampingLimits<T>::MIN_T60,
+                            detail::DampingLimits<T>::MAX_T60);
+
+        T60_High = std::clamp(T60_High,
+                             detail::DampingLimits<T>::MIN_T60,
+                             detail::DampingLimits<T>::MAX_T60);
+
+        // Set crossover frequency
         shelf.setFreq(crossOverFreqHz);
 
-        // compute gains based on T60
+        // Compute gains based on T60
         T gLow = std::pow(T(10), -3.0 * delaySamples / (T60_Low * sampleRate));
         T gHigh = std::pow(T(10), -3.0 * delaySamples / (T60_High * sampleRate));
 
@@ -172,16 +230,34 @@ public:
         return shelf.processSample(ch, gBase[ch] * x);
     }
 
-    void reset() {
-        shelf.reset();
-    }
+    /// Reset the filter state
+    void reset() { shelf.reset(); }
 
+    /// Get number of prepared channels
+    size_t getNumChannels() const { return numChannels; }
 
+    /// Check if the filter is prepared
+    bool isPrepared() const { return togglePrepared; }
 private:
+    bool togglePrepared = false;
     T sampleRate = T(44100);
     size_t numChannels = 0;
-    std::vector<T> gBase; // base feedback gain per channel
-    BiquadFilter<T> shelf; // shelving biquad filter
+    std::vector<T> gBase; 
+    BiquadFilter<T> shelf; 
 };
+
+// =============================================================================
+// First-Order Damping Filter Specialization
+// =============================================================================
+/**
+ * @brief DampingFilter specialization for FirstOrderShelf type.
+ *       Implements a first-order shelving filter parametrized
+ *       by crossover frequency and T60 below and above it.
+ */
+template<typename T>
+class DampingFilter<T, DampingType::FirstOrderShelf> {
+public:
+    /// Default constructor.
+    DampingFilter() = default;
 
 } // namespace Jonssonic

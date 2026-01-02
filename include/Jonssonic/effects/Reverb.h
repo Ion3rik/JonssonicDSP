@@ -3,15 +3,15 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include "../core/delays/DelayLine.h" 
-#include "../core/common/DspParam.h"
-#include "../core/filters/DampingFilter.h"
-#include "../core/filters/BiquadFilter.h"
-#include "../core/mixing/MixingMatrix.h"
-#include "../core/generators/FilteredNoise.h"
+#include <jonssonic/core/delays/delay_line.h>
+#include <jonssonic/core/common/dsp_param.h>
+#include <jonssonic/core/filters/damping_filter.h>
+#include <jonssonic/core/filters/biquad_filter.h>
+#include <jonssonic/core/mixing/mixing_matrix.h>
+#include <jonssonic/core/generators/filtered_noise.h>
 
 
-namespace Jonssonic
+namespace jonssonic::effects
 {
 /**
  * @brief Reverberation effect implmented with Feedback Delay Network (FDN)

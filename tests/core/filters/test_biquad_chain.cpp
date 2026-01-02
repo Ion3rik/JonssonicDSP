@@ -3,9 +3,9 @@
 // SPDX-License-Identifier: MIT
 
 #include <gtest/gtest.h>
-#include "Jonssonic/core/filters/BiquadChain.h"
+#include <jonssonic/core/filters/biquad_chain.h>
 
-using namespace Jonssonic;
+using namespace jonssonic::core::filters;
 
 TEST(BiquadChain, ConstructionAndPrepare)
 {

@@ -1,10 +1,11 @@
-// Jonssonic - A C++ audio DSP library
+// JonssonicDSP - A Modular Realtime C++ Audio DSP Library
 // Unit tests for AudioBuffer class
 // SPDX-License-Identifier: MIT
-#include "../../../include/Jonssonic/core/common/AudioBuffer.h"
+
+#include <jonssonic/core/common/audio_buffer.h>
 #include <gtest/gtest.h>
 
-using namespace Jonssonic;
+using namespace jonssonic::core::common;
 
 TEST(AudioBufferTest, ResizeAndAccess) {
     AudioBuffer<float> buffer;

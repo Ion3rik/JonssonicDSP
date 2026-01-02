@@ -1,4 +1,4 @@
-// Jonssonic - A C++ audio DSP library
+// Jonssonic - A Modular Realtime C++ Audio DSP Library
 // General-purpose audio buffer class
 // SPDX-License-Identifier: MIT
 
@@ -6,7 +6,7 @@
 #include <vector>
 #include <cassert>
 
-namespace Jonssonic
+namespace jonssonic::core::common
 {
 //==============================================================================
 // LAYOUT TYPES
@@ -42,6 +42,7 @@ class AudioBuffer;
 //==============================================================================
 // Planar specialization
 //==============================================================================
+/// Planar layout specialization.
 template<typename T>
 class AudioBuffer<T, BufferLayout::Planar>
 {
@@ -58,9 +59,9 @@ public:
     }
 
     /**
-     * @brief Constructor.
-     * @param numChannels Number of audio channels
-     * @param numSamples Number of samples per channel
+     * @brief Parameterized constructor.
+     * @param numChannels Number of audio channels.
+     * @param numSamples Number of samples per channel.
      */
     AudioBuffer(size_t numChannels, size_t numSamples)
         : m_numChannels(numChannels)
@@ -589,4 +590,4 @@ inline AudioBuffer<T, L> operator+(T scalar, const AudioBuffer<T, L>& buffer)
     return buffer + scalar;
 }
 
-} // namespace Jonssonic
+} // namespace jonssonic::common

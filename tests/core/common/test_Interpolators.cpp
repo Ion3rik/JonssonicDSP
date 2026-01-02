@@ -4,9 +4,9 @@
 // Update: 18.11.2025
 
 #include <gtest/gtest.h>
-#include "Jonssonic/core/common/Interpolators.h"
+#include <jonssonic/core/common/interpolators.h>
 
-namespace Jonssonic {
+namespace jonssonic::core::common {
 
 class InterpolatorTest : public ::testing::Test {
 protected:

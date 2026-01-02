@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: MIT
 
 #include <gtest/gtest.h>
-#include "../../../include/Jonssonic/core/nonlinear/WaveShaper.h"
+#include <jonssonic/core/nonlinear/wave_shaper.h>
 #include <cmath>
-#include "../../../include/Jonssonic/utils/MathUtils.h"
+#include <jonssonic/utils/math_utils.h>
 
-using namespace Jonssonic;
-
+using namespace jonssonic::core::nonlinear;
+using namespace jonssonic::utils;
 TEST(WaveShaper, HardClip)
 {
     WaveShaper<float, WaveShaperType::HardClip> shaper;

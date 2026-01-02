@@ -2,7 +2,7 @@
 // Unit tests for the OverSamplerFilters classes
 // SPDX-License-Identifier: MIT
 
-#include "../../../include/Jonssonic/core/oversampling/OversamplerFilters.h"
+#include <jonssonic/core/oversampling/detail/oversampler_filters.h>
 #include <gtest/gtest.h>
 
 #include <algorithm>
@@ -10,9 +10,10 @@
 #include <iostream>
 #include <vector>
 
-#include "../../../include/Jonssonic/utils/MathUtils.h"
+#include <jonssonic/utils/math_utils.h>
 
-using namespace Jonssonic;
+using namespace jonssonic::core::oversampling::detail;
+using namespace jonssonic::utils;
 
 //==============================================================================
 // FIR HALFBAND FILTER TESTS

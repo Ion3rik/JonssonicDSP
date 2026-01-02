@@ -1,29 +1,39 @@
-// Jonssonic - A C++ audio DSP library
+// JonssonicDSP - A Modular Realtime C++ Audio DSP Library
 // Biqaud filter chain class header file
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include "BiquadCore.h"
-#include "FilterTypes.h"
-#include "BiquadCoeffs.h"
-#include "../../utils/MathUtils.h"
-#include "../nonlinear/WaveShaper.h"
+
+#include "detail/biquad_core.h"
+#include "detail/biquad_coeffs.h"
+#include "detail/filter_limits.h"
+#include "jonssonic/utils/detail/config_utils.h"
+
+#include <jonssonic/core/filters/filter_types.h>
+#include <jonssonic/utils/math_utils.h>
 #include <algorithm>
 
-namespace Jonssonic
+namespace jonssonic::core::filters
 {
 
-
 /**
- * @brief This class implements a chain of biquad filters, with each section configurable independently.
+ * @brief Multi-section biquad filter chain class.
  * @param T Sample data type (e.g., float, double)
  */
-template<typename T, WaveShaperType ShaperType = WaveShaperType::None>
+template<typename T>
 class BiquadChain
 {
 public:
-    // Constructor and Destructor
+
+    /// Default constructor
     BiquadChain() = default;
+
+    /**
+     * @brief Parameterized constructor that calls @ref prepare.
+     * @param newNumChannels Number of channels
+     * @param newNumSections Number of second-order sections
+     * @param newSampleRate Sample rate
+     */
     BiquadChain(size_t newNumChannels, size_t newNumSections, T newSampleRate) // Parameterized constructor (for the faint hearted)
     {
         prepare(newNumChannels, newNumSections, newSampleRate);
@@ -46,54 +56,64 @@ public:
     void prepare(size_t newNumChannels, size_t newNumSections, T newSampleRate)
     {
         // Initialize parameters
-        sampleRate = newSampleRate;
-        freqNormalized.assign(newNumSections, T(0.25));     // default to quarter Nyquist
-        Q.assign(newNumSections, T(0.707));                 // default to Butterworth
-        gain.assign(newNumSections, T(1));                  // default to unity gain
-        type.assign(newNumSections, BiquadType::Lowpass);   // default to lowpass
-        BiquadCore.prepare(newNumChannels, newNumSections); // initialize core processor
+        numChannels = utils::detail::clampChannels(newNumChannels);
+        sampleRate = utils::detail::clampSampleRate(newSampleRate);
+        numSections = std::clamp(newNumSections, size_t(1), detail::FilterLimits<T>::MAX_SECTIONS);
 
+        // Initialize per-section parameter vectors
+        freqNormalized.assign(numSections, T(0.25));     // default to quarter Nyquist
+        Q.assign(numSections, T(0.707));                 // default to Butterworth
+        gain.assign(numSections, T(1));                  // default to unity gain
+        type.assign(numSections, BiquadType::Lowpass);   // default to lowpass
+
+        // Prepare the underlying biquad core processor
+        biquadCore.prepare(numChannels, numSections);   
+        togglePrepared = true;
+        
         // Update coefficients for all sections
         updateCoeffs();
+
     }
 
-    void reset()
-    {
-        BiquadCore.reset();
-    }
+    /// Reset the filter state
+    void reset() { biquadCore.reset(); }
 
     /**
      * @brief Process a single sample for a given channel.
-     * @param ch Channel index
-     * @param input Input sample
-     * @return Output sample
+     * @param ch Channel index.
+     * @param input Input sample.
+     * @return Output sample.
+     * @note Must call @ref prepare before processing.
      */
     T processSample(size_t ch, T input)
     {
-        return BiquadCore.processSample(ch, input);
+        return biquadCore.processSample(ch, input);
     }
 
     /**
      * @brief Process a block of samples for all channels.
-     * @param input Input sample pointers (one per channel)
-     * @param output Output sample pointers (one per channel)
+     * @param input Input sample pointers (one per channel).
+     * @param output Output sample pointers (one per channel).
      * @param numSamples Number of samples to process
+     * @note Must call @ref prepare before processing.
      */
     void processBlock(const T* const* input, T* const* output, size_t numSamples)
     {
-        BiquadCore.processBlock(input, output, numSamples);
+        biquadCore.processBlock(input, output, numSamples);
     }
 
     /** 
      * @brief Set gain in dB for a specific section.
-     * @param section Section index
-     * @param newGainDb Gain in decibels
+     * @param section Section index.
+     * @param newGainDb Gain in decibels. (Clamped to limits defined in filter_limits.h).
+     * @note Coeffs are only updated if @ref prepare has been called before.
     */
     void setGainDb(size_t section, T newGainDb)
     {
-        // clamp gain to avoid instability
-        newGainDb = std::clamp(newGainDb, T(-60), T(20));
-        gain[section] = Jonssonic::dB2Mag(newGainDb); // convert to linear
+        newGainDb = std::clamp(newGainDb,
+                                 detail::FilterLimits<T>::MIN_GAIN_DB,
+                                 detail::FilterLimits<T>::MAX_GAIN_DB);
+        gain[section] = utils::dB2Mag(newGainDb); // convert to linear
         updateCoeffs(section);
     }
 
@@ -101,6 +121,7 @@ public:
      * @brief Set gain in linear scale for a specific section.
      * @param section Section index
      * @param newGainLin Linear gain
+     * @note Coeffs are only updated if @ref prepare has been called before.
     */
     void setGainLinear(size_t section, T newGainLin)
     {   
@@ -112,8 +133,9 @@ public:
 
     /** 
      * @brief Set frequency in Hz for a specific section.
-     * @param section Section index
-     * @param newFreqHz Frequency in Hertz
+     * @param section Section index.
+     * @param newFreqHz Frequency in Hertz.
+     * @note Coeffs are only updated if @ref prepare has been called before.
     */
     void setFreq(size_t section,T newFreqHz)
     {
@@ -129,6 +151,7 @@ public:
      * @brief Set Q factor for a specific section.
      * @param section Section index
      * @param newQ Q factor
+     * @note Coeffs are only updated if @ref prepare has been called before.
     */
     void setQ(size_t section, T newQ)
     {
@@ -139,9 +162,9 @@ public:
 
     /** 
      * @brief Set filter type for a specific section.
-     * @param section Section index
-     * @param newType Filter type
-     * @note BiquadType is defined in FilterTypes.h
+     * @param section Section index.
+     * @param newType Filter type @ref BiquadType.
+     * @note Coeffs are only updated if @ref prepare has been called before.
     */
     void setType(size_t section, BiquadType newType)
     {
@@ -150,62 +173,68 @@ public:
     }
 
 private:
-    T sampleRate = T(44100);                // default sample rate
-    std::vector<T> freqNormalized;          // normalized frequency
-    std::vector<T> Q;                       // quality factor
-    std::vector<T> gain;                    // linear gain for shelving/peak filters
-    std::vector<BiquadType> type;           // filter type
-    BiquadCore<T, ShaperType> BiquadCore;   // underlying biquad core processor 
+    bool togglePrepared = false;
+    size_t numChannels = 0;                 
+    size_t numSections = 0;                 
+    T sampleRate = T(44100);                
+    std::vector<T> freqNormalized;          
+    std::vector<T> Q;                       
+    std::vector<T> gain;                   
+    std::vector<BiquadType> type;           
+    detail::BiquadCore<T> biquadCore;  
 
     /**
      * @brief Update filter coefficients of single section.
      * @param section Section index
      */
     void updateCoeffs(size_t section)
-    {
+    {   
+        // Early exit if not prepared
+        if (!(togglePrepared))
+            return;
         // Initialize coefficients variables
         T b0 = T(0), b1 = T(0), b2 = T(0), a1 = T(0), a2 = T(0);
         switch (type[section])
         {
             case BiquadType::Lowpass:
-                Jonssonic::computeLowpassCoeffs<T>(freqNormalized[section], Q[section],
+                detail::computeLowpassCoeffs<T>(freqNormalized[section], Q[section],
                     b0, b1, b2, a1, a2);
-                BiquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
+                biquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
                 break;
             case BiquadType::Highpass:
-                Jonssonic::computeHighpassCoeffs<T>(freqNormalized[section], Q[section],
+                detail::computeHighpassCoeffs<T>(freqNormalized[section], Q[section],
                     b0, b1, b2, a1, a2);
-                BiquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
+                biquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
                 break;
             case BiquadType::Bandpass:
-                Jonssonic::computeBandpassCoeffs<T>(freqNormalized[section], Q[section],
+                detail::computeBandpassCoeffs<T>(freqNormalized[section], Q[section],
                     b0, b1, b2, a1, a2);
-                BiquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
+                biquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
                 break;
             case BiquadType::Allpass:
-                Jonssonic::computeAllpassCoeffs<T>(freqNormalized[section], Q[section],
+                detail::computeAllpassCoeffs<T>(freqNormalized[section], Q[section],
                     b0, b1, b2, a1, a2);
-                BiquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
+                biquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
                 break;
             case BiquadType::Notch:
-                Jonssonic::computeNotchCoeffs<T>(freqNormalized[section], Q[section],
+                detail::computeNotchCoeffs<T>(freqNormalized[section], Q[section],
                     b0, b1, b2, a1, a2);
-                BiquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
+                biquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
                 break;
             case BiquadType::Peak:
-                Jonssonic::computePeakCoeffs<T>(freqNormalized[section], Q[section], gain[section],
+                detail::computePeakCoeffs<T>(freqNormalized[section], Q[section], gain[section],
                     b0, b1, b2, a1, a2);
-                BiquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
+                biquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
                 break;
             case BiquadType::Lowshelf:
-                Jonssonic::computeLowshelfCoeffs<T>(freqNormalized[section], Q[section], gain[section],
+                detail::computeLowshelfCoeffs<T>(freqNormalized[section], Q[section], gain[section],
                     b0, b1, b2, a1, a2);
-                BiquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
+                biquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
                 break;
             case BiquadType::Highshelf:
-                Jonssonic::computeHighshelfCoeffs<T>(freqNormalized[section], Q[section], gain[section],
+                detail::computeHighshelfCoeffs<T>(freqNormalized[section], Q[section], gain[section],
                     b0, b1, b2, a1, a2);
-                BiquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
+                biquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
                 break;
             default:
                 // Handle unsupported types or add implementations
@@ -218,7 +247,7 @@ private:
      */
     void updateCoeffs()
     {
-        for (size_t s = 0; s < BiquadCore.getNumSections(); ++s)
+        for (size_t s = 0; s < biquadCore.getNumSections(); ++s)
         {
             updateCoeffs(s);
         }

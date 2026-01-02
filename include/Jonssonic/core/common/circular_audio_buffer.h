@@ -1,16 +1,17 @@
-// Jonssonic - A C++ audio DSP library
+// Jonssonic - A Modular Realtime C++ Audio DSP Library
 // CircularAudioBuffer class header file
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include "AudioBuffer.h"
-#include "../../utils/MathUtils.h"
+#include <jonssonic/core/common/audio_buffer.h>
+#include <jonssonic/utils/math_utils.h>
 #include <vector>
 #include <cstddef>
 #include <cassert>
 
 
-namespace Jonssonic {
+namespace jonssonic::core::common
+{
 
 //==============================================================================
 // CIRCULAR AUDIO BUFFER CLASS
@@ -27,7 +28,7 @@ public:
 
 
     void resize(size_t newNumChannels, size_t newNumSamples) {
-        bufferSize = nextPowerOfTwo(newNumSamples); // ensure power-of-two size for efficient wrap-around
+        bufferSize = utils::nextPowerOfTwo(newNumSamples); // ensure power-of-two size for efficient wrap-around
         buffer.resize(newNumChannels, bufferSize);
         writeIndex.assign(newNumChannels, 0);
     }

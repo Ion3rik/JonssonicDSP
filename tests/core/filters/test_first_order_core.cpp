@@ -4,9 +4,9 @@
 
 #include <gtest/gtest.h>
 #include <cmath>
-#include "Jonssonic/core/filters/FirstOrderCore.h"
+#include <jonssonic/core/filters/detail/first_order_core.h>
 
-namespace Jonssonic {
+using namespace jonssonic::core::filters::detail;
 
 class FirstOrderCoreTest : public ::testing::Test {
 protected:
@@ -109,4 +109,3 @@ TEST_F(FirstOrderCoreTest, Constants) {
     EXPECT_EQ(FirstOrderCore<float>::STATE_VARS_PER_SECTION, 2);
 }
 
-} // namespace Jonssonic

@@ -6,7 +6,7 @@
 #include <vector>
 #include <cmath>
 
-namespace jonssonic::filters {
+namespace jonssonic::core::filters {
 
 /**
  * @brief DC Blocker - A first-order highpass filter with very low cutoff

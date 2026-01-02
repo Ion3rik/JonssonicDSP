@@ -7,20 +7,20 @@
 #include "jonssonic/utils/detail/config_utils.h"
 #include "detail/biquad_core.h"
 #include "detail/biquad_coeffs.h"
+#include "detail/filter_limits.h"  
+
 #include <jonssonic/core/filters/filter_types.h>
-#include <jonssonic/core/nonlinear/wave_shaper.h>
 #include <jonssonic/utils/math_utils.h>
 #include <algorithm>
 
-namespace jonssonic::filters
+namespace jonssonic::core::filters
 {
 
 /**
- * @brief Biquad Filter
+ * @brief Biquad filter wrapper for single section with integrated coeff computation for common types.
  * @param T Sample data type (e.g., float, double)
- * @param ShaperType Type of waveshaper for nonlinear processing (default: None)
  */
-template<typename T, WaveShaperType ShaperType = WaveShaperType::None>
+template<typename T>
 class BiquadFilter
 {
 public:
@@ -55,9 +55,9 @@ public:
      */
     void prepare(size_t newNumChannels, T newSampleRate, BiquadType newType = BiquadType::Lowpass)
     {
-
+        numChannels = utils::detail::clampChannels(newNumChannels);
         sampleRate = utils::detail::clampSampleRate(newSampleRate);   
-        BiquadCore.prepare(newNumChannels, 1);  
+        biquadCore.prepare(numChannels, 1);  
         type = newType;  
 
         freqNormalized = T(0.25);               
@@ -70,7 +70,7 @@ public:
     }
 
     /// Reset the filter state.
-    void reset() { BiquadCore.reset(); }
+    void reset() { biquadCore.reset(); }
 
     /**
      * @brief Process a single sample for a given channel.
@@ -81,7 +81,7 @@ public:
      */
     T processSample(size_t ch, T input)
     {
-        return BiquadCore.processSample(ch, input);
+        return biquadCore.processSample(ch, input);
     }
 
     /**
@@ -93,7 +93,7 @@ public:
      */
     void processBlock(const T* const* input, T* const* output, size_t numSamples)
     {
-        BiquadCore.processBlock(input, output, numSamples);
+        biquadCore.processBlock(input, output, numSamples);
     }
 
     /**
@@ -103,8 +103,11 @@ public:
      */
     void setGainDb(T newGainDb)
     {
-        newGainDb = std::clamp(newGainDb, T(-60), T(20));
-        gain = Jonssonic::dB2Mag(newGainDb); 
+        newGainDb = std::clamp(newGainDb, 
+                               detail::FilterLimits<T>::MIN_GAIN_DB,
+                               detail::FilterLimits<T>::MAX_GAIN_DB);
+
+        gain = utils::dB2Mag(newGainDb); 
         updateCoeffs();
     }
 
@@ -115,8 +118,9 @@ public:
      */
     void setGainLinear(T newGainLin)
     {   
-        newGainLin = std::clamp(newGainLin, T(0.001), T(10));
-        gain = newGainLin;
+        gain = std::clamp(newGainLin,
+                          detail::FilterLimits<T>::MIN_GAIN_LIN,
+                          detail::FilterLimits<T>::MAX_GAIN_LIN);
         updateCoeffs();
     }
 
@@ -127,7 +131,9 @@ public:
      */
     void setFreq(T newFreqHz)
     {
-        freqNormalized = std::clamp(newFreqHz / sampleRate, T(1) / sampleRate, T(0.5));
+        freqNormalized = std::clamp(newFreqHz / sampleRate, 
+                                    detail::FilterLimits<T>::MIN_FREQ_NORM,
+                                    detail::FilterLimits<T>::MAX_FREQ_NORM);
         updateCoeffs();
     }
 
@@ -138,7 +144,9 @@ public:
      */
     void setQ(T newQ)
     {
-        Q = std::clamp(newQ, T(0.1), T(10));
+        Q = std::clamp(newQ,
+                       detail::BiquadLimits<T>::MIN_Q,
+                       detail::BiquadLimits<T>::MAX_Q);
         updateCoeffs();
     }
 
@@ -155,13 +163,13 @@ public:
 
 private:
     bool togglePrepared = false;
-    T sampleRate = T(44100); // default sample rate
-    size_t numChannels = 0; // number of channels
-    T freqNormalized = T(0.25); // default to quarter Nyquist
-    T Q;    // quality factor
-    T gain; // linear gain for shelving/peak filters
-    BiquadType type; // filter type
-    BiquadCore<T, ShaperType> BiquadCore;
+    T sampleRate = T(44100); 
+    size_t numChannels = 0; 
+    T freqNormalized = T(0.25); 
+    T Q;   
+    T gain; 
+    BiquadType type; 
+    detail::BiquadCore<T> biquadCore;
 
     void updateCoeffs()
     {   
@@ -176,44 +184,44 @@ private:
         switch (type)
         {
             case BiquadType::Lowpass:
-                jonssonic::detail::computeLowpassCoeffs<T>(freqNormalized, Q,
+                detail::computeLowpassCoeffs<T>(freqNormalized, Q,
                     b0, b1, b2, a1, a2);
-                BiquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
+                biquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
                 break;
             case BiquadType::Highpass:
-                jonssonic::detail::computeHighpassCoeffs<T>(freqNormalized, Q,
+                detail::computeHighpassCoeffs<T>(freqNormalized, Q,
                     b0, b1, b2, a1, a2);
-                BiquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
+                biquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
                 break;
             case BiquadType::Bandpass:
-                jonssonic::detail::computeBandpassCoeffs<T>(freqNormalized, Q,
+                detail::computeBandpassCoeffs<T>(freqNormalized, Q,
                     b0, b1, b2, a1, a2);
-                BiquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
+                biquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
                 break;
             case BiquadType::Allpass:
-                jonssonic::detail::computeAllpassCoeffs<T>(freqNormalized, Q,
+                detail::computeAllpassCoeffs<T>(freqNormalized, Q,
                     b0, b1, b2, a1, a2);
-                BiquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
+                biquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
                 break;
             case BiquadType::Notch:
-                jonssonic::detail::computeNotchCoeffs<T>(freqNormalized, Q,
+                detail::computeNotchCoeffs<T>(freqNormalized, Q,
                     b0, b1, b2, a1, a2);
-                BiquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
+                biquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
                 break;
             case BiquadType::Peak:
-                jonssonic::detail::computePeakCoeffs<T>(freqNormalized, Q, gain,
+                detail::computePeakCoeffs<T>(freqNormalized, Q, gain,
                     b0, b1, b2, a1, a2);
-                BiquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
+                biquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
                 break;
             case BiquadType::Lowshelf:
-                jonssonic::detail::computeLowshelfCoeffs<T>(freqNormalized, Q, gain,
+                detail::computeLowshelfCoeffs<T>(freqNormalized, Q, gain,
                     b0, b1, b2, a1, a2);
-                BiquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
+                biquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
                 break;
             case BiquadType::Highshelf:
-                jonssonic::detail::computeHighshelfCoeffs<T>(freqNormalized, Q, gain,
+                detail::computeHighshelfCoeffs<T>(freqNormalized, Q, gain,
                     b0, b1, b2, a1, a2);
-                BiquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
+                biquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
                 break;
             default:
                 // Handle unsupported types or add implementations

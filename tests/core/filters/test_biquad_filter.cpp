@@ -4,10 +4,11 @@
 
 #include <gtest/gtest.h>
 #include <cmath>
-#include "Jonssonic/core/filters/BiquadFilter.h"
-#include "Jonssonic/utils/MathUtils.h"
+#include <jonssonic/core/filters/biquad_filter.h>
+#include <jonssonic/utils/math_utils.h>
 
-namespace Jonssonic {
+using namespace jonssonic::core::filters;
+using namespace jonssonic::utils;
 
 class BiquadFilterTest : public ::testing::Test {
 protected:
@@ -288,4 +289,3 @@ TEST_F(BiquadFilterTest, GainConversion) {
     // Both should produce similar results (tested implicitly through frequency response)
 }
 
-} // namespace Jonssonic

@@ -1,15 +1,15 @@
 // Jonssonic - A C++ audio DSP library
 // Delay line class header file
 // SPDX-License-Identifier: MIT
+// TO DO: Seprate a lower level DelayCore class without modulation nor smoothing?
 
 #pragma once
-#include "../common/CircularAudioBuffer.h"
-#include "../../utils/MathUtils.h"
-#include "../common/Interpolators.h"
-#include "../common/DspParam.h"
+#include <jonssonic/core/common/circular_audio_buffer.h>
+#include <jonssonic/utils/math_utils.h>
+#include <jonssonic/core/common/interpolators.h>
+#include <jonssonic/core/common/dsp_param.h>
 
-
-namespace Jonssonic
+namespace jonssonic::core::delays
 {
 /**
  * @brief A multichannel delay line class for audio processing with fractional delay support
@@ -17,20 +17,36 @@ namespace Jonssonic
  * @param Interpolator Interpolator type for fractional delay support (default: LinearInterpolator)
  * @param SmootherType Type of smoother for delay time modulation (default: OnePole)
  * @param SmootherOrder Order of the smoother for delay time modulation (default: 1)
- * @param SmoothingTimeMs Smoothing time in milliseconds for delay time changes (default: 20ms)
  * @param Layout Buffer layout type (Planar or Interleaved, default: Planar)
  */
 template<
     typename T,
-    typename Interpolator = LinearInterpolator<T>,
-    SmootherType SmootherType = SmootherType::OnePole,
-    int SmootherOrder = 1,
-    int SmoothingTimeMs = 20
+    typename Interpolator = common::LinearInterpolator<T>,
+    common::SmootherType SmootherType = common::SmootherType::OnePole,
+    int SmootherOrder = 1
 >
 class DelayLine
 {
+/// Type aliases for convenience, readability, and future-proofing
+using CircularAudioBufferType =  common::CircularAudioBuffer<T>;
+using DspParamType = common::DspParam<T, SmootherType, SmootherOrder>;
 public:
+    /// Default constructor
     DelayLine() = default;
+
+    /**
+     * @brief Parmetrized constructor that calls @ref prepare.
+     * @param newNumChannels Number of channels
+     * @param newSampleRate Sample rate in Hz
+     * @param newMaxDelayMs Maximum delay time in milliseconds
+     * @param newSmoothingTimeMs Smoothing time for delay time control in milliseconds
+     */
+    DelayLine(size_t newNumChannels, T newSampleRate, T newMaxDelayMs)
+    {
+        prepare(newNumChannels, newSampleRate, newMaxDelayMs);
+    }
+
+    /// Default destructor
     ~DelayLine() = default;
 
     // No copy semantics nor move semantics
@@ -39,20 +55,22 @@ public:
     DelayLine(DelayLine&&) = delete;
     const DelayLine& operator=(DelayLine&&) = delete;
 
-    void prepare(size_t newNumChannels, T newSampleRate, T newMaxDelayMs)
+        void prepare(size_t newNumChannels, T newSampleRate, T newMaxDelayMs)
     {
         numChannels = newNumChannels;
         sampleRate = newSampleRate;
-        size_t maxDelaySamples = msToSamples(newMaxDelayMs, sampleRate); // convert ms to samples
+        size_t maxDelaySamples = utils::msToSamples(newMaxDelayMs, sampleRate); // convert ms to samples
         circularBuffer.resize(numChannels, maxDelaySamples); // resize circular buffer
         bufferSize = circularBuffer.getBufferSize(); // get actual buffer size (power of two)
-        delaySamples.prepare(numChannels, newSampleRate, SmoothingTimeMs); // prepare smoother for delay time
+        delaySamples.prepare(numChannels, newSampleRate); // prepare smoother for delay time
         delaySamples.setBounds(T(0), static_cast<T>(maxDelaySamples)); // set bounds to actual max delay requested
     }
 
+    /// Reset the delay line state
     void reset()
     {
         circularBuffer.clear();
+        delaySamples.reset();
     }
 
     /**
@@ -84,7 +102,7 @@ public:
     T processSample(size_t ch, T input, T modulation)
     {
         // Calculate modulated delay time with internal clamping (base delay + modulation)
-        T modulatedDelay = delaySamples.applyAdditiveMod(modulation, ch);
+        T modulatedDelay = delaySamples.applyAdditiveMod(ch, modulation);
         
         // Split into integer and fractional parts for interpolation
         auto [readIndex, delayFrac] = computeReadIndexAndFrac(modulatedDelay, circularBuffer.getChannelWriteIndex(ch));
@@ -133,12 +151,21 @@ public:
     }
 
     /**
+     * @brief Set the parameter smoothing time in milliseconds for delay time changes.
+     * @param timeMs Smoothing time in milliseconds
+     */
+    void setSmoothingTimeMs(T timeMs)
+    {
+        delaySamples.setSmoothingTimeMs(timeMs);
+    }
+
+    /**
      * @brief Set a constant delay time in milliseconds for all channels.
      * @param newDelayMs Delay time in milliseconds
      */
     void setDelayMs(T newDelayMs, bool skipSmoothing = false)
     {
-        T newDelaySamples = msToSamples(newDelayMs, sampleRate); // convert ms to samples  
+        T newDelaySamples = utils::msToSamples(newDelayMs, sampleRate); // convert ms to samples  
         delaySamples.setTarget(newDelaySamples, skipSmoothing);
     }
 
@@ -222,8 +249,8 @@ private:
     size_t bufferSize;                                      // Maximum delay in samples (always power of two)
 
     // DSP Components
-    CircularAudioBuffer<T> circularBuffer;                  // Multi-channel circular buffer
-    DspParam<T, SmootherType, SmootherOrder> delaySamples;  // Multi-channel Delay time in samples
+    CircularAudioBufferType circularBuffer;                  // Multi-channel circular buffer
+    DspParamType delaySamples;  // Multi-channel Delay time in samples
 
 
     // Helper function to compute read index and fractional part for interpolation

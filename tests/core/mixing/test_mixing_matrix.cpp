@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
-#include <Jonssonic/core/mixing/MixingMatrix.h>
+#include <jonssonic/core/mixing/mixing_matrix.h>
 #include <cmath>
 #include <vector>
 
-using namespace Jonssonic;
+using namespace jonssonic::core::mixing;
 
 TEST(MixingMatrixTest, IdentityMixing)
 {

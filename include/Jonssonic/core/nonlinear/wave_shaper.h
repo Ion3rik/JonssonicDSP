@@ -3,14 +3,11 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include "../common/AudioBuffer.h"
-#include "../../utils/MathUtils.h"
-#include "../common/Interpolators.h"
-#include "../common/DspParam.h"
+#include <jonssonic/utils/math_utils.h>
 #include <functional>
 #include <cmath>
 
-namespace Jonssonic {
+namespace jonssonic::core::nonlinear {
 
 enum class WaveShaperType {
 	None,
@@ -88,7 +85,7 @@ template<typename T>
 class WaveShaper<T, WaveShaperType::Atan> {
 public:
 	T processSample(T x, T shape = T(0)) const {
-		return std::atan(x) * inv_atan_1<T>;
+		return std::atan(x) * utils::inv_atan_1<T>;
 	}
 
 	void processBlock(const T* const* input, T* const* output, size_t numChannels, size_t numSamples) const {

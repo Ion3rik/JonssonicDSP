@@ -3,13 +3,13 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include "../core/filters/BiquadChain.h"
-#include "../core/nonlinear/WaveShaper.h"
-#include "../utils/BufferUtils.h"
-#include "../core/oversampling/Oversampler.h"
-#include "../core//common/AudioBuffer.h"
+#include <jonssonic/core/filters/biquad_chain.h>
+#include <jonssonic/core/nonlinear/wave_shaper.h>
+#include <jonssonic/utils/buffer_utils.h>
+#include <jonssonic/core/oversampling/oversampler.h>
+#include <jonssonic/core/common/audio_buffer.h>
 
-namespace Jonssonic {
+namespace jonssonic::effects {
 /**
  * @brief Variable Q Equalizer with highpass, high and low mid peaks, and highshelf filters.
  * @param T Sample data type (e.g., float, double)

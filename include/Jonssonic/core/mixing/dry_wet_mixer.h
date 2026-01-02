@@ -1,15 +1,15 @@
-// Jonssonic - A C++ audio DSP library
+// Jonssonic - A Modular Realtime C++ Audio DSP Library
 // Dry/Wet Mixer class 
 // SPDX-License-Identifier: MIT
 
 #pragma once
 
-#include "../common/DspParam.h"
-#include "../../utils/MathUtils.h"
-#include "../common/CircularAudioBuffer.h"
+#include <jonssonic/core/common/dsp_param.h>
+#include <jonssonic/utils/math_utils.h>
+#include <jonssonic/core/common/circular_audio_buffer.h>
 #include <cmath>
 
-namespace Jonssonic
+namespace jonssonic::core::mixing
 {
 /**
  * @brief Dry/Wet mixer for audio signals.
@@ -123,8 +123,8 @@ public:
 
 private:
     size_t numChannels = 0;
-    DspParam<T, SmootherType::OnePole, 1> mix; // Mix parameter with smoothing
-    CircularAudioBuffer<T> dryDelayBuffer; // Circular buffer for dry signal delay compensation
+    common::DspParam<T, SmootherType::OnePole, 1> mix; // Mix parameter with smoothing
+    common::CircularAudioBuffer<T> dryDelayBuffer; // Circular buffer for dry signal delay compensation
 };
 
-} // namespace Jonssonic
+} // namespace jonssonic::core::mixing

@@ -3,12 +3,12 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include "../../utils/MathUtils.h"
+#include <jonssonic/utils/math_utils.h>
 #include <cstddef>
 #include <random>
 #include <vector>
 
-namespace Jonssonic {
+namespace jonssonic::core::mixing {
 
 /**
  * @brief Enum for different types of compile-time mixing matrices.
@@ -601,11 +601,11 @@ private:
 		T norm = static_cast<T>(1) / std::sqrt(static_cast<T>(numInputs));
 		for (size_t out = 0; out < numOutputs; ++out) {
 			for (size_t in = 0; in < numInputs; ++in) {
-				   int sign = Jonssonic::parity_sign(static_cast<uint64_t>(in & out));
+				   int sign = utils::parity_sign(static_cast<uint64_t>(in & out));
 				denseMatrix.set(out, in, norm * static_cast<T>(sign));
 			}
 		}
 	}
 };
 
-} // namespace Jonssonic
+} // namespace jonssonic::core::mixing

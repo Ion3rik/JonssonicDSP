@@ -1,12 +1,11 @@
 #include <gtest/gtest.h>
-#include <Jonssonic/core/dynamics/gain_smoother.h>
-#include <Jonssonic/utils/math_utils.h>
+#include <jonssonic/core/dynamics/gain_smoother.h>
+#include <jonssonic/utils/math_utils.h>
 #include <vector>
 #include <cmath>
 
-using namespace Jonssonic::core;
-using Jonssonic::mag2dB;
-using Jonssonic::dB2Mag;
+using namespace jonssonic::core::dynamics;
+using namespace jonssonic::utils;
 
 constexpr float kSampleRate = 48000.0f;
 constexpr size_t kNumChannels = 2;

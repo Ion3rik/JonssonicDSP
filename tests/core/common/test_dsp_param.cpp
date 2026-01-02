@@ -1,13 +1,13 @@
-// Jonssonic - A C++ audio DSP library
+// Jonssonic - A Modular Realtime C++ Audio DSP Library
 // Unit tests for DspParam
 // SPDX-License-Identifier: MIT
 
 
 #include <gtest/gtest.h>
-#include "Jonssonic/core/common/DspParam.h"
+#include <jonssonic/core/common/dsp_param.h>
 
 
-namespace Jonssonic {
+namespace jonssonic::core::common {
 
 class DspParamTest : public ::testing::Test {
 protected:
@@ -18,20 +18,22 @@ protected:
 };
 
 TEST_F(DspParamTest, OnePoleBaseSmoothing) {
-    DspParam<float> param;
-    param.prepare(1, sampleRate, timeMs);
+    DspParam<float, SmootherType::OnePole> param;
+    param.prepare(1, sampleRate);
+    param.setSmoothingTimeMs(timeMs);
     param.reset();
     param.setTarget(0, 1.0f);
     float last = 0.0f;
     for (int i = 0; i < 100; ++i) {
         last = param.getNextValue(0);
     }
-    EXPECT_TRUE(last > 0.99f);
+    EXPECT_NEAR(last, 1.0f, 1e-2f);
 }
 
 TEST_F(DspParamTest, LinearBaseSmoothing) {
     DspParam<float, SmootherType::Linear> param;
-    param.prepare(1, sampleRate, timeMs);
+    param.prepare(1, sampleRate);
+    param.setSmoothingTimeMs(timeMs);
     param.reset();
     param.setTarget(0, 1.0f);
     float val = 0.0f;
@@ -43,7 +45,8 @@ TEST_F(DspParamTest, LinearBaseSmoothing) {
 
 TEST_F(DspParamTest, AdditiveModRaw) {
     DspParam<float, SmootherType::None> param;
-    param.prepare(1, sampleRate, timeMs);
+    param.prepare(1, sampleRate);
+    param.setSmoothingTimeMs(0.0f);
     param.reset();
     param.setTarget(0.5f, true); // set current value forcibly
     float result = param.getNextValue(0) + 0.25f;
@@ -52,7 +55,8 @@ TEST_F(DspParamTest, AdditiveModRaw) {
 
 TEST_F(DspParamTest, AdditiveModSmoothed) {
     DspParam<float, SmootherType::OnePole> param;
-    param.prepare(1, sampleRate, timeMs);
+    param.prepare(1, sampleRate);
+    param.setSmoothingTimeMs(0.0f);
     param.reset();
     param.setTarget(0, 0.5f);
     float result = 0.0f;
@@ -64,7 +68,8 @@ TEST_F(DspParamTest, AdditiveModSmoothed) {
 
 TEST_F(DspParamTest, MultiplicativeModRaw) {
     DspParam<float, SmootherType::None> param;
-    param.prepare(1, sampleRate, timeMs);
+    param.prepare(1, sampleRate);
+    param.setSmoothingTimeMs(0.0f);
     param.reset();
     param.setTarget(0.5f, true); // set current value forcibly
     float result = param.getNextValue(0) * 2.0f;
@@ -73,7 +78,8 @@ TEST_F(DspParamTest, MultiplicativeModRaw) {
 
 TEST_F(DspParamTest, MultiplicativeModSmoothed) {
     DspParam<float, SmootherType::OnePole> param;
-    param.prepare(1, sampleRate, timeMs);
+    param.prepare(1, sampleRate);
+    param.setSmoothingTimeMs(0.0f);
     param.reset();
     param.setTarget(0, 0.5f);
     float result = 0.0f;
@@ -87,7 +93,8 @@ TEST_F(DspParamTest, MultiplicativeModSmoothed) {
 TEST_F(DspParamTest, OnePoleBaseSmoothingMultiChannel) {
     constexpr size_t numChannels = 4;
     DspParam<float> param;
-    param.prepare(numChannels, sampleRate, timeMs);
+    param.prepare(numChannels, sampleRate);
+    param.setSmoothingTimeMs(timeMs);
     param.reset();
     for (size_t ch = 0; ch < numChannels; ++ch) {
         param.setTarget(ch, static_cast<float>(ch + 1));
@@ -106,7 +113,8 @@ TEST_F(DspParamTest, OnePoleBaseSmoothingMultiChannel) {
 TEST_F(DspParamTest, AdditiveModMultiChannel) {
     constexpr size_t numChannels = 3;
     DspParam<float, SmootherType::OnePole> param;
-    param.prepare(numChannels, sampleRate, timeMs);
+    param.prepare(numChannels, sampleRate);
+    param.setSmoothingTimeMs(0);
     param.reset();
     for (size_t ch = 0; ch < numChannels; ++ch) {
         param.setTarget(ch, 1.0f);
@@ -125,7 +133,8 @@ TEST_F(DspParamTest, AdditiveModMultiChannel) {
 TEST_F(DspParamTest, MultiplicativeModMultiChannel) {
     constexpr size_t numChannels = 2;
     DspParam<float, SmootherType::OnePole> param;
-    param.prepare(numChannels, sampleRate, timeMs);
+    param.prepare(numChannels, sampleRate);
+    param.setSmoothingTimeMs(0);
     param.reset();
     for (size_t ch = 0; ch < numChannels; ++ch) {
         param.setTarget(ch, 2.0f);

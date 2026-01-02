@@ -1,16 +1,16 @@
-// Jonssonic - A C++ audio DSP library
+// Jonssonic - A Modular Realtime C++ Audio DSP Library
 // WaveShaperProcessor class header file
 // SPDX-License-Identifier: MIT
 
 #pragma once
 
-#include "WaveShaper.h"
-#include "../common/DspParam.h"
+#include <jonssonic/core/nonlinear/wave_shaper.h>
+#include <jonssonic/core/common/dsp_param.h>
 #include <cstddef>
 #include <algorithm>
 #include <vector>
 
-namespace Jonssonic {
+namespace jonssonic::core::nonlinear {
 
 /**
  * @brief Parametric wave shaping stage with gain, bias, and asymmetry.
@@ -21,10 +21,13 @@ namespace Jonssonic {
 template 
     <typename T, 
     WaveShaperType ShaperType,
-    SmootherType SmootherType = SmootherType::OnePole,
+    common::SmootherType SmootherType = common::SmootherType::OnePole,
     int SmootherOrder = 1>
 
 class WaveShaperProcessor {
+    /// Type aliases for convenience, readability and future-proofing
+    using DspParamType = common::DspParam<T, SmootherType, SmootherOrder>;
+
 public:
    WaveShaperProcessor() = default;
    ~WaveShaperProcessor() = default;
@@ -35,14 +38,13 @@ public:
     WaveShaperProcessor(WaveShaperProcessor&&) = delete;
     const WaveShaperProcessor& operator=(WaveShaperProcessor&&) = delete;
 
-    void prepare(size_t newNumChannels, T sampleRate, T smoothTimeMs = T(10)) {
+    void prepare(size_t newNumChannels, T sampleRate) {
         numChannels = newNumChannels;
-        inputGain.prepare(newNumChannels, sampleRate, smoothTimeMs);
-        outputGain.prepare(newNumChannels, sampleRate, smoothTimeMs);
-        bias.prepare(newNumChannels, sampleRate, smoothTimeMs);
-        asymmetry.prepare(newNumChannels, sampleRate, smoothTimeMs);
-        shape.prepare(newNumChannels, sampleRate, smoothTimeMs); // only functional with Dynamic shaper
-
+        inputGain.prepare(newNumChannels, sampleRate);
+        outputGain.prepare(newNumChannels, sampleRate);
+        bias.prepare(newNumChannels, sampleRate);
+        asymmetry.prepare(newNumChannels, sampleRate);
+        shape.prepare(newNumChannels, sampleRate); // only functional with Dynamic shaper
         // Set bounds for parameters
         inputGain.setBounds(T(0.001), T(1000)); // -60 dB to +60 dB
         outputGain.setBounds(T(0.001), T(10)); // -60 dB to +20 dB
@@ -105,6 +107,17 @@ public:
                 output[ch][n] *= outputGain.getNextValue(ch);
             }
         }
+    }
+
+    /**
+     * @brief Set parameter smoothing time in milliseconds for all parameters.
+     */
+    void setParameterSmoothingTimeMs(T timeMs) {
+        inputGain.setSmoothingTimeMs(timeMs);
+        outputGain.setSmoothingTimeMs(timeMs);
+        bias.setSmoothingTimeMs(timeMs);
+        asymmetry.setSmoothingTimeMs(timeMs);
+        shape.setSmoothingTimeMs(timeMs);
     }
 
     /**
@@ -177,28 +190,12 @@ public:
 
 private:
     size_t numChannels = 0;
-    DspParam<T, SmootherType, SmootherOrder> inputGain;
-    DspParam<T, SmootherType, SmootherOrder> outputGain;
-    DspParam<T, SmootherType, SmootherOrder> bias;
-    DspParam<T, SmootherType, SmootherOrder> asymmetry;
-    DspParam<T, SmootherType, SmootherOrder> shape; // Only functional with Dynamic shaper
+    DspParamType inputGain;
+    DspParamType outputGain;
+    DspParamType bias;
+    DspParamType asymmetry;
+    DspParamType shape; // Only functional with Dynamic shaper
     WaveShaper<T, ShaperType> shaper;
 };
 
-// Convenient type aliases for common distortion stages
-template<typename T>
-using HardDistortion = WaveShaperProcessor<T, WaveShaperType::HardClip>;
-
-template<typename T>
-using AtanDistortion = WaveShaperProcessor<T, WaveShaperType::Atan>;
-
-template<typename T>
-using TanhDistortion = WaveShaperProcessor<T, WaveShaperType::Tanh>;
-
-template<typename T>
-using FullWaveRectifierDistortion = WaveShaperProcessor<T, WaveShaperType::FullWaveRectifier>;
-
-template<typename T>
-using HalfWaveRectifierDistortion = WaveShaperProcessor<T, WaveShaperType::HalfWaveRectifier>;
-
-} // namespace Jonssonic
+} // namespace jonssonic::core::nonlinear

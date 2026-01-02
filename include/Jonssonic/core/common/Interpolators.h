@@ -1,17 +1,16 @@
-
-// Jonssonic - A C++ audio DSP library
+// Jonssonic - A Modular Realtime C++ Audio DSP Library
 // Interpolator structs for audio processing
 // SPDX-License-Identifier: MIT
 
 /**
  * @file Interpolators.h
  * @brief This file contains various interpolation methods used in audio processing.
- * @namespace Jonssonic
+ * @namespace jonssonic::common
  */
 
 #pragma once
 
-namespace Jonssonic
+namespace jonssonic::core::common
 {
 /** 
 * @brief None interpolation, direct sample access.

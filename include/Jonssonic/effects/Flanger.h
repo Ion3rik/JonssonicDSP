@@ -4,15 +4,15 @@
 
 #pragma once
 
-#include "../core/delays/DelayLine.h"
-#include "../core/generators/Oscillator.h"
-#include "../core/common/DspParam.h"
-#include "../core/filters/UtilityFilters.h"
-#include "../utils/MathUtils.h"
+#include <jonssonic/core/delays/delay_line.h>
+#include <jonssonic/core/generators/oscillator.h>
+#include <jonssonic/core/common/dsp_param.h>
+#include <jonssonic/core/filters/utility_filters.h>
+#include <jonssonic/utils/math_utils.h>
 #include <vector>
 #include <algorithm>
 
-namespace Jonssonic
+namespace jonssonic::effects
 {
 
 /**

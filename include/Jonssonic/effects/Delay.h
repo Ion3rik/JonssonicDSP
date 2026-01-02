@@ -3,22 +3,24 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include "../core/delays/DelayLine.h"
-#include "../core/filters/FirstOrderFilter.h"
-#include "../core/filters/UtilityFilters.h"
-#include "../core/common/DspParam.h"
-#include "../core/generators/Oscillator.h"
-#include "../utils/MathUtils.h"
-#include "../core/nonlinear/WaveShaper.h"
+#include <jonssonic/core/delays/delay_line.h>
+#include <jonssonic/core/filters/first_order_filter.h>
+#include <jonssonic/core/filters/utility_filters.h>
+#include <jonssonic/core/common/dsp_param.h>
+#include <jonssonic/core/generators/oscillator.h>
+#include <jonssonic/utils/math_utils.h>
+#include <jonssonic/core/nonlinear/wave_shaper.h>
 #include <cmath>
 
-namespace Jonssonic {
+namespace jonssonic::effects {
 /**
  * @brief Delay Effect with Feedback, Damping, and ping-pong cross-talk
  * @param T Sample data type (e.g., float, double)
  */
 template<typename T>
 class Delay {
+/// Type aliases for convenience, readability and future-proofing
+
 public:
     // Tunable constants
     static constexpr T MAX_MODULATION_MS = T(2.0);          // Maximum modulation depth in milliseconds 

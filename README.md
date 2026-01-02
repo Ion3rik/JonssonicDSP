@@ -10,13 +10,15 @@ JonssonicDSP is developed with the following principles:
 - **Scalar-only processing:** For now, all processing is scalar (single-sample) to maximize code readability and learning value. Vectorized or SIMD processing may be considered in the future.
 - **Readable, modular code:** The codebase prioritizes clarity and modularity over micro-optimizations, making it approachable for those learning audio DSP.
 - **Minimal dependencies:** The library is self-contained and avoids external dependencies where possible.
-- **Consistent naming and structure:** Classes and files follow a consistent naming convention and folder structure for easy navigation.
+
+For detailed design conventions and API guidelines, see [docs/GUIDELINES.md](docs/GUIDELINES.md).
 
 These guidelines may evolve as the library grows.
 
 ## Features 
 
-- Core DSP utilities including audio buffers, delay lines, digital filters, waveshapers, dynamic processors, oversampler, noise generators and LFOs 
+- Core DSP including audio buffers, delay lines, digital filters, waveshapers, dynamic processors, oversampler, noise generators and LFOs
+- Reusable Models build from the core dsp classes, including reverb algortihms, virtual-analog models
 - Example audio effects: Delay, Flanger, Reverb, EQ, Compressor, and Distortion
 - Multi-channel audio processing support 
 - Modular architecture designed for easy extension and integration  

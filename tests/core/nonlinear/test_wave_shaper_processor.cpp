@@ -3,10 +3,10 @@
 // SPDX-License-Identifier: MIT
 
 #include <gtest/gtest.h>
-#include "../../../include/Jonssonic/core/nonlinear/WaveShaperProcessor.h"
+#include <jonssonic/core/nonlinear/wave_shaper_processor.h>
 #include <cmath>
 
-using namespace Jonssonic;
+using namespace jonssonic::core::nonlinear;
 
 // Typedef for a simple float, hardclip distortion stage
 using TestWaveShaperProcessor = WaveShaperProcessor<float, WaveShaperType::HardClip>;
@@ -20,7 +20,7 @@ TEST(WaveShaperProcessor, DefaultConstruction)
 TEST(WaveShaperProcessor, PrepareAndReset)
 {
 	TestWaveShaperProcessor stage;
-	stage.prepare(2, 44100.0f, 5.0f);
+	stage.prepare(2, 44100.0f);
 	stage.setInputGain(2.0f, true);
 	stage.setOutputGain(0.5f, true);
 	stage.setBias(0.1f, true);
@@ -32,7 +32,7 @@ TEST(WaveShaperProcessor, PrepareAndReset)
 TEST(WaveShaperProcessor, ProcessSample)
 {
 	TestWaveShaperProcessor stage;
-	stage.prepare(1, 44100.0f, 0.0f);
+	stage.prepare(1, 44100.0f);
 	stage.setInputGain(1.0f, true);
 	stage.setOutputGain(1.0f, true);
 	stage.setBias(0.0f, true);
@@ -48,7 +48,7 @@ TEST(WaveShaperProcessor, ProcessSample)
 TEST(WaveShaperProcessor, ParameterEffects)
 {
 	TestWaveShaperProcessor stage;
-	stage.prepare(1, 44100.0f, 0.0f);
+	stage.prepare(1, 44100.0f);
 	// Input gain
 	stage.setInputGain(2.0f, true);
 	EXPECT_FLOAT_EQ(stage.processSample(0, 0.5f), 1.0f); // 0.5*2=1, hardclip
