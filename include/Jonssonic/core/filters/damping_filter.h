@@ -5,20 +5,19 @@
 #pragma once
 
 // Internal includes
-#include "jonssonic/utils/detail/config_utils.h"
 #include "detail/filter_limits.h"
+#include "jonssonic/utils/detail/config_utils.h"
 
 // Public API includes
-#include <jonssonic/core/filters/filter_types.h>
+#include <jonssonic/core/common/quantities.h>
 #include <jonssonic/core/filters/biquad_filter.h>
+#include <jonssonic/core/filters/filter_types.h>
 #include <jonssonic/core/filters/first_order_filter.h>
 
 // Standard library includes
-#include <cmath>
 #include <algorithm>
 #include <cassert>
-
-
+#include <cmath>
 
 namespace jonssonic::core::filters {
 
@@ -26,8 +25,7 @@ namespace jonssonic::core::filters {
 // Template Declaration
 // =============================================================================
 /// DampingFilter class template
-template<typename T, DampingType Type = DampingType::OnePole>
-class DampingFilter;
+template <typename T, DampingType Type = DampingType::OnePole> class DampingFilter;
 
 // =============================================================================
 // One-Pole Damping Filter Specialization
@@ -37,9 +35,8 @@ class DampingFilter;
  * @brief DampingFilter specialization for One-Pole type.
  *       Implements a one-pole lowpass filter parametrized by T60 at a frequency.
  */
-template<typename T>
-class DampingFilter<T, DampingType::OnePole> {
-public:
+template <typename T> class DampingFilter<T, DampingType::OnePole> {
+  public:
     /// Default constructor.
     DampingFilter() = default;
     /**
@@ -52,7 +49,7 @@ public:
     }
     /// Default destructor.
     ~DampingFilter() = default;
-    
+
     /**
      * @brief Prepare the filter for processing.
      * @param newSampleRate Sample rate in Hz.
@@ -78,8 +75,8 @@ public:
         assert(sampleRate > T(0) && "Sample rate must be set and greater than zero.");
 
         // Early exit if not prepared
-        if (!togglePrepared) 
-            return; 
+        if (!togglePrepared)
+            return;
 
         // Clamp T60 values
         T60_DC = std::clamp(T60_DC,
@@ -119,13 +116,13 @@ public:
     /// Check if the filter is prepared
     bool isPrepared() const { return togglePrepared; }
 
-private:
+  private:
     bool togglePrepared = false;
     T sampleRate = T(44100);
     size_t numChannels = 0;
-    std::vector<T> a;   // feedforward coefficient
-    std::vector<T> b;   // feedback coefficient
-    std::vector<T> z1;  // state per channel
+    std::vector<T> a;  // feedforward coefficient
+    std::vector<T> b;  // feedback coefficient
+    std::vector<T> z1; // state per channel
 };
 
 // =============================================================================
@@ -136,9 +133,8 @@ private:
  *       Implements a biquad shelving filter parametrized
  *       by crossover frequency and T60 below and above it.
  */
-template<typename T>
-class DampingFilter<T, DampingType::BiquadShelf> {
-public:
+template <typename T> class DampingFilter<T, DampingType::BiquadShelf> {
+  public:
     /// Default constructor.
     DampingFilter() = default;
 
@@ -152,10 +148,10 @@ public:
     }
 
     /// No copy nor move semantics
-    DampingFilter(const DampingFilter&) = delete;
-    DampingFilter& operator=(const DampingFilter&) = delete;
-    DampingFilter(DampingFilter&&) = delete;
-    DampingFilter& operator=(DampingFilter&&) = delete;
+    DampingFilter(const DampingFilter &) = delete;
+    DampingFilter &operator=(const DampingFilter &) = delete;
+    DampingFilter(DampingFilter &&) = delete;
+    DampingFilter &operator=(DampingFilter &&) = delete;
 
     /**
      * @brief Prepare the filter for processing.
@@ -183,21 +179,21 @@ public:
         assert(ch < numChannels && "Channel index out of bounds.");
         assert(sampleRate > T(0) && "Sample rate must be set and greater than zero.");
         // Early exit if not prepared
-        if (!togglePrepared) 
+        if (!togglePrepared)
             return;
 
         // Clamp crossover frequency
-        crossOverFreqHz = std::clamp(crossOverFreqHz, 
+        crossOverFreqHz = std::clamp(crossOverFreqHz,
                                      detail::FilterLimits<T>::MIN_FREQ_NORM * sampleRate,
                                      detail::FilterLimits<T>::MAX_FREQ_NORM * sampleRate);
         // Clamp T60 values
         T60_Low = std::clamp(T60_Low,
-                            detail::DampingLimits<T>::MIN_T60,
-                            detail::DampingLimits<T>::MAX_T60);
-
-        T60_High = std::clamp(T60_High,
                              detail::DampingLimits<T>::MIN_T60,
                              detail::DampingLimits<T>::MAX_T60);
+
+        T60_High = std::clamp(T60_High,
+                              detail::DampingLimits<T>::MIN_T60,
+                              detail::DampingLimits<T>::MAX_T60);
 
         // Set crossover frequency
         shelf.setFreq(crossOverFreqHz);
@@ -210,14 +206,13 @@ public:
         gHigh < gLow
             ? shelf.setType(BiquadType::Highshelf) // damp high frequencies if gHigh < gBase
             : shelf.setType(BiquadType::Lowshelf); // damp low frequencies if gLow < gBase
-        
+
         // Base gain = max of the two gains i.e. least damping
         gBase[ch] = std::max(gLow, gHigh);
 
         // Compute shelf gain relative to base gain
         T shelfGain = std::min(gLow, gHigh) / gBase[ch];
         shelf.setGainLinear(shelfGain);
-
     }
 
     /**
@@ -226,9 +221,7 @@ public:
      * @param x Input sample
      * @return Filtered output sample
      */
-    T processSample(size_t ch, T x) {
-        return shelf.processSample(ch, gBase[ch] * x);
-    }
+    T processSample(size_t ch, T x) { return shelf.processSample(ch, gBase[ch] * x); }
 
     /// Reset the filter state
     void reset() { shelf.reset(); }
@@ -238,12 +231,13 @@ public:
 
     /// Check if the filter is prepared
     bool isPrepared() const { return togglePrepared; }
-private:
+
+  private:
     bool togglePrepared = false;
     T sampleRate = T(44100);
     size_t numChannels = 0;
-    std::vector<T> gBase; 
-    BiquadFilter<T> shelf; 
+    std::vector<T> gBase;
+    BiquadFilter<T> shelf;
 };
 
 // =============================================================================
@@ -254,9 +248,8 @@ private:
  *       Implements a first-order shelving filter parametrized
  *       by crossover frequency and T60 below and above it.
  */
-template<typename T>
-class DampingFilter<T, DampingType::FirstOrderShelf> {
-public:
+template <typename T> class DampingFilter<T, DampingType::FirstOrderShelf> {
+  public:
     /// Default constructor.
     DampingFilter() = default;
 

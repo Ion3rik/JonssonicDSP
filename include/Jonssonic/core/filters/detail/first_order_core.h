@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
+#include "jonssonic/utils/detail/config_utils.h"
 #include <jonssonic/core/common/audio_buffer.h>
 #include <vector>
 #include <cassert>

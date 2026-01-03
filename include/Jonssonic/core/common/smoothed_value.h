@@ -3,20 +3,16 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include <jonssonic/utils/detail/config_utils.h>
-#include <cmath>
+#include "jonssonic/utils/detail/config_utils.h"
 #include <algorithm>
-#include <vector>
 #include <cassert>
-
+#include <cmath>
+#include <jonssonic/core/common/quantities.h>
+#include <vector>
 
 namespace jonssonic::core::common {
-/// Smoothing algorithm types 
-enum class SmootherType {
-    None,
-    OnePole,
-    Linear
-};
+/// Smoothing algorithm types
+enum class SmootherType { None, OnePole, Linear };
 
 /**
  * @brief SmoothedValue class template for smoothing parameter changes.
@@ -25,17 +21,14 @@ enum class SmootherType {
  * @tparam Order Order of the smoothing filter.
  * @note Order is only applicable for OnePole smoother.
  */
-template<typename T, SmootherType Type = SmootherType::OnePole, size_t Order = 1>
+template <typename T, SmootherType Type = SmootherType::OnePole, size_t Order = 1>
 class SmoothedValue;
 constexpr int SmoothedValueMaxOrder = 8; // Maximum allowed order for cascaded smoothing filters
 
 /// Type aliases for common smoother types
-template<typename T>
-using OnePoleSmoother = SmoothedValue<T, SmootherType::OnePole, 1>;
+template <typename T> using OnePoleSmoother = SmoothedValue<T, SmootherType::OnePole, 1>;
 
-template<typename T>
-using LinearSmoother = SmoothedValue<T, SmootherType::Linear, 1>;
-
+template <typename T> using LinearSmoother = SmoothedValue<T, SmootherType::Linear, 1>;
 
 // =============================================================
 // None specialization (passthrough)
@@ -43,10 +36,9 @@ using LinearSmoother = SmoothedValue<T, SmootherType::Linear, 1>;
 /**
  * @brief No smoothing, passthrough implementation.
  */
-template<typename T, size_t Order>
-class SmoothedValue<T, SmootherType::None, Order> {
+template <typename T, size_t Order> class SmoothedValue<T, SmootherType::None, Order> {
 
-public:
+  public:
     /// Default constructor.
     SmoothedValue() = default;
     /**
@@ -61,23 +53,19 @@ public:
     ~SmoothedValue() = default;
 
     /// No copy nor move semantics.
-    SmoothedValue(const SmoothedValue&) = delete;
-    SmoothedValue& operator=(const SmoothedValue&) = delete;
-    SmoothedValue(SmoothedValue&&) = delete;
-    SmoothedValue& operator=(SmoothedValue&&) = delete;
+    SmoothedValue(const SmoothedValue &) = delete;
+    SmoothedValue &operator=(const SmoothedValue &) = delete;
+    SmoothedValue(SmoothedValue &&) = delete;
+    SmoothedValue &operator=(SmoothedValue &&) = delete;
 
     /**
      * Prepare for a given number of channels.
      * @param newNumChannels Number of channels
      */
-    void prepare(size_t newNumChannels, T) {
-        value.assign(newNumChannels, T(0));
-    }
+    void prepare(size_t newNumChannels, T) { value.assign(newNumChannels, T(0)); }
 
     /// Reset the smoothed value (sets all channels to zero).
-    void reset() {
-        for (auto& v : value) v = T(0);
-    }
+    void reset() { std::fill(value.begin(), value.end(), T(0)); }
 
     /// Process (passthrough no smoothing)
     T process(size_t ch, T target) {
@@ -86,46 +74,34 @@ public:
     }
 
     /// Apply smoothed value to buffer (passthrough no smoothing)
-    void applyToBuffer(T* const* buffer, size_t numSamples) {
+    void applyToBuffer(T *const *buffer, size_t numSamples) {
         for (size_t ch = 0; ch < value.size(); ++ch)
             for (size_t n = 0; n < numSamples; ++n)
                 buffer[ch][n] *= value[ch];
     }
 
     /// Set smoothing time in milliseconds (no effect for None)
-    void setTimeMs(T) { }
-
-    /// Set smoothing time in samples (no effect for None)
-    void setTimeSamples(size_t) { }
+    void setTime(Time<T>) {}
 
     /// Set all channels to the same target value (no smoothing, just set value)
     void setTarget(T newValue, bool skipSmoothing = false) {
-        for (auto& v : value) v = newValue;
+        std::fill(value.begin(), value.end(), newValue);
     }
 
     /// Set target value for specific channel
-    void setTarget(size_t ch, T newValue, bool skipSmoothing = false) {
-        value[ch] = newValue;
-    }
+    void setTarget(size_t ch, T newValue, bool skipSmoothing = false) { value[ch] = newValue; }
 
     /// Get next value for a channel (no smoothing, just return value)
-    T getNextValue(size_t ch) {
-        return value[ch];
-    }
+    T getNextValue(size_t ch) { return value[ch]; }
 
     // Get current value for a channel
-    T getCurrentValue(size_t ch) const {
-        return value[ch];
-    }
+    T getCurrentValue(size_t ch) const { return value[ch]; }
 
     /// Get target value for a channel (same as current for None)
-    T getTargetValue(size_t ch) const {
-        return value[ch];
-    }
+    T getTargetValue(size_t ch) const { return value[ch]; }
 
-private:
+  private:
     std::vector<T> value;
-
 };
 // =============================================================
 // OnePole specialization (arbitrary order)
@@ -133,17 +109,18 @@ private:
 /**
  * @brief One-pole (exponential) smoothing implementation, arbitrary order.
  */
-template<typename T, size_t Order>
-class SmoothedValue<T, SmootherType::OnePole, Order> {
-    static_assert(Order >= 1 && Order <= SmoothedValueMaxOrder, "Order must be between 1 and SmoothedValueMaxOrder (8)");
-public:
+template <typename T, size_t Order> class SmoothedValue<T, SmootherType::OnePole, Order> {
+    static_assert(Order >= 1 && Order <= SmoothedValueMaxOrder,
+                  "Order must be between 1 and SmoothedValueMaxOrder (8)");
+
+  public:
     /// Default constructor
     SmoothedValue() = default;
     /**
      * @brief Parameterized constructor that calls @ref prepare.
      * @param newNumChannels Number of channels
      * @param newSampleRate Sample rate in Hz
-     */    
+     */
     SmoothedValue(size_t newNumChannels, T newSampleRate) {
         prepare(newNumChannels, newSampleRate);
     }
@@ -152,10 +129,10 @@ public:
     ~SmoothedValue() = default;
 
     /// No copy nor move semantics.
-    SmoothedValue(const SmoothedValue&) = delete;
-    const SmoothedValue& operator=(const SmoothedValue&) = delete;
-    SmoothedValue(SmoothedValue&&) = delete;
-    const SmoothedValue& operator=(SmoothedValue&&) = delete;
+    SmoothedValue(const SmoothedValue &) = delete;
+    const SmoothedValue &operator=(const SmoothedValue &) = delete;
+    SmoothedValue(SmoothedValue &&) = delete;
+    const SmoothedValue &operator=(SmoothedValue &&) = delete;
 
     /**
      * @brief Prepare the smoother for processing.
@@ -168,24 +145,19 @@ public:
         current.assign(numChannels, T(0));
         target.assign(numChannels, T(0));
         stage.resize(numChannels);
-        for (auto& s : stage)
+        for (auto &s : stage)
             s.fill(T(0));
         togglePrepared = true;
     }
 
-    void setTimeMs(T newTimeMs) {
-        timeMs = newTimeMs;
-        updateSmoothingParams();
-    }
-
-    void setTimeSamples(size_t timeSamples) {
-        assert(sampleRate > T(0));
-        timeMs = (T(timeSamples) / sampleRate) * T(1000);
+    /// Set smoothing time in various units
+    void setTime(Time<T> newTime) {
+        timeSec = newTime.toSeconds(sampleRate);
         updateSmoothingParams();
     }
 
     void reset() {
-        for (auto& s : stage)
+        for (auto &s : stage)
             s.fill(T(0));
         for (size_t ch = 0; ch < current.size(); ++ch) {
             current[ch] = target[ch] = T(0);
@@ -199,7 +171,7 @@ public:
     }
 
     // Apply smoothed value to buffer
-    void applyToBuffer(T* const* buffer, size_t numSamples) {
+    void applyToBuffer(T *const *buffer, size_t numSamples) {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t n = 0; n < numSamples; ++n) {
                 buffer[ch][n] *= getNextValue(ch);
@@ -218,7 +190,7 @@ public:
                 }
             }
         } else {
-            for (auto& t : target)
+            for (auto &t : target)
                 t = value;
         }
     }
@@ -248,40 +220,34 @@ public:
             stage[ch][i] += coeff * (input - stage[ch][i]);
             input = stage[ch][i];
         }
-        current[ch] = stage[ch][Order-1];
+        current[ch] = stage[ch][Order - 1];
         return current[ch];
     }
 
     /// Get current value for a channel
-    T getCurrentValue(size_t ch) const {
-         return current[ch];
-    }
+    T getCurrentValue(size_t ch) const { return current[ch]; }
 
     /// Get target value for a channel
-    T getTargetValue(size_t ch) const {
-        return target[ch];
-    }
+    T getTargetValue(size_t ch) const { return target[ch]; }
 
-private:
+  private:
     bool togglePrepared = false;
     T sampleRate = 44100;
     size_t numChannels = 0;
     std::vector<T> current;
     std::vector<T> target;
-    T timeMs = 10;
+    T timeSec = 0.01;
     T coeff = 0;
     std::vector<std::array<T, Order>> stage; // stage[channel][order]
 
     void updateSmoothingParams() {
         // Early exit if not prepared
-        if (!togglePrepared) 
+        if (!togglePrepared)
             return;
-        // Calculate coeff for one-pole smoothing
-        T tau = timeMs * 0.001;
-        coeff = 1 - std::exp(-1.0 / (tau * sampleRate));
+        // Calculate coeff for one-pole smoothing;
+        coeff = 1 - std::exp(-1.0 / (timeSec * sampleRate));
     }
 };
-
 
 // =============================================================
 // Linear specialization
@@ -289,16 +255,15 @@ private:
 /**
  * @brief Linear ramp smoothing implementation.
  */
-template<typename T, size_t Order>
-class SmoothedValue<T, SmootherType::Linear, Order> {
-public:
+template <typename T, size_t Order> class SmoothedValue<T, SmootherType::Linear, Order> {
+  public:
     /// Default constructor
     SmoothedValue() = default;
     /**
      * @brief Parameterized constructor that calls @ref prepare.
      * @param newNumChannels Number of channels
      * @param newSampleRate Sample rate in Hz
-     */    
+     */
     SmoothedValue(size_t newNumChannels, T newSampleRate) {
         prepare(newNumChannels, newSampleRate);
     }
@@ -307,10 +272,10 @@ public:
     ~SmoothedValue() = default;
 
     /// No copy semantics nor move semantics
-    SmoothedValue(const SmoothedValue&) = delete;
-    const SmoothedValue& operator=(const SmoothedValue&) = delete;
-    SmoothedValue(SmoothedValue&&) = delete;
-    const SmoothedValue& operator=(SmoothedValue&&) = delete;
+    SmoothedValue(const SmoothedValue &) = delete;
+    const SmoothedValue &operator=(const SmoothedValue &) = delete;
+    SmoothedValue(SmoothedValue &&) = delete;
+    const SmoothedValue &operator=(SmoothedValue &&) = delete;
 
     /**
      * @brief Prepare the smoother for processing.
@@ -324,18 +289,16 @@ public:
         target.assign(numChannels, T(0));
         rampStep.assign(numChannels, T(0));
         rampSamples = 0;
+        togglePrepared = true;
     }
 
-    /// Set smoothing time in milliseconds
-    void setTimeMs(T newTimeMs) {
-        timeMs = newTimeMs;
-        updateSmoothingParams();
-    }
+    /// Set smoothing time in various units via Time class (quantities.h)
+    void setTime(Time<T> newTime) {
+        // Early exit if not prepared
+        if (!togglePrepared)
+            return;
 
-    /// Set smoothing time in samples
-    void setTimeSamples(size_t timeSamples) {
-        assert(sampleRate > T(0));
-        timeMs = (T(timeSamples) / sampleRate) * T(1000);
+        timeSec = newTime.toSeconds(sampleRate);
         updateSmoothingParams();
     }
 
@@ -363,7 +326,7 @@ public:
      * @param buffer Audio buffer (array of pointers to channel data)
      * @param numSamples Number of samples per channel
      */
-    void applyToBuffer(T* const* buffer, size_t numSamples) {
+    void applyToBuffer(T *const *buffer, size_t numSamples) {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t n = 0; n < numSamples; ++n) {
                 buffer[ch][n] *= getNextValue(ch);
@@ -403,7 +366,8 @@ public:
             rampStep[ch] = T(0);
         } else {
             target[ch] = value;
-            rampStep[ch] = (target[ch] - current[ch]) / static_cast<T>(rampSamples > 0 ? rampSamples : 1);
+            rampStep[ch] =
+                (target[ch] - current[ch]) / static_cast<T>(rampSamples > 0 ? rampSamples : 1);
         }
     }
 
@@ -419,31 +383,27 @@ public:
     }
 
     /// Get current value for a channel
-    T getCurrentValue(size_t ch) const {
-         return current[ch];
-    }
+    T getCurrentValue(size_t ch) const { return current[ch]; }
 
     // Get target value for a channel
-    T getTargetValue(size_t ch) const {
-        return target[ch];
-    }
+    T getTargetValue(size_t ch) const { return target[ch]; }
 
-private:
-
+  private:
+    bool togglePrepared = false;
     T sampleRate = 44100;
     size_t numChannels = 0;
-    T timeMs = 10;
+    T timeSec = 0.01;
     std::vector<T> current;
     std::vector<T> target;
     std::vector<T> rampStep;
     size_t rampSamples = 0;
 
     void updateSmoothingParams() {
-        rampSamples = std::max<size_t>(1, static_cast<size_t>(timeMs * 0.001 * sampleRate));
+        rampSamples = std::max<size_t>(1, static_cast<size_t>(timeSec * sampleRate));
         for (size_t ch = 0; ch < numChannels; ++ch) {
             rampStep[ch] = (target[ch] - current[ch]) / static_cast<T>(rampSamples);
         }
     }
 };
 
-} // namespace jonssonic::common
+} // namespace jonssonic::core::common

@@ -4,6 +4,7 @@
 
 #pragma once
 #include <jonssonic/core/common/audio_buffer.h>
+#include "jonssonic/utils/detail/config_utils.h"
 
 namespace jonssonic::core::filters::detail
 {

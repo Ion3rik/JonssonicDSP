@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
+#include "jonssonic/utils/detail/config_utils.h"
 #include <vector>
 #include <cassert>
 
@@ -108,6 +109,7 @@ public:
 
     /**
      * @brief Get pointers to a single sample index across all channels (for write access).
+     * @note For planar, this is less efficient due to non-contiguous memory access, but can be useful for some algorithms.
      */
     std::vector<T*> writeSamplePtr(size_t sampleIdx) {
         assert(sampleIdx < m_numSamples && "Sample index out of bounds");
@@ -119,6 +121,7 @@ public:
 
     /**
      * @brief Get pointers to a single sample index across all channels (for read-only access).
+     * @note For planar, this is less efficient due to non-contiguous memory access, but can be useful for some algorithms.
      */
     std::vector<const T*> readSamplePtr(size_t sampleIdx) const {
         assert(sampleIdx < m_numSamples && "Sample index out of bounds");
@@ -405,7 +408,7 @@ public:
     /**
      * @brief Get pointers to a single channel across all samples (for write access).
      * @param channel Channel index
-     * @note For interleaved, this is less efficient than planar, but can be useful for some algorithms.
+     * @note For interleaved, this is less efficient due to non-contiguous memory access, but can be useful for some algorithms.
      */
     std::vector<T*> writeChannelPtr(size_t channel) {
         assert(channel < m_numChannels && "Channel index out of bounds");
@@ -418,7 +421,7 @@ public:
     /**
      * @brief Get pointers to a single channel across all samples (for read-only access).
      * @param channel Channel index
-     * @note For interleaved, this is less efficient than planar, but can be useful for some algorithms.
+     * @note For interleaved, this is less efficient due to non-contiguous memory access, but can be useful for some algorithms.
      */
     std::vector<const T*> readChannelPtr(size_t channel) const {
         assert(channel < m_numChannels && "Channel index out of bounds");

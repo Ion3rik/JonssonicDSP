@@ -3,8 +3,9 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
+#include "jonssonic/utils/detail/config_utils.h"
 #include <cmath>
-#include "../../utils/math_utils.h"
+#include <jonssonic/utils/math_utils.h>
 
 namespace jonssonic::core::filters::detail
 { 

@@ -4,6 +4,8 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
+
+#include "jonssonic/utils/detail/config_utils.h"
 #include <cmath>
 #include <jonssonic/utils/math_utils.h>
 

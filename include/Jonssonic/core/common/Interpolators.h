@@ -9,6 +9,7 @@
  */
 
 #pragma once
+#include "jonssonic/utils/detail/config_utils.h"
 
 namespace jonssonic::core::common
 {

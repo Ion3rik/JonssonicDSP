@@ -5,10 +5,11 @@
 #include <gtest/gtest.h>
 #include <jonssonic/core/common/smoothed_value.h>
 
-namespace jonssonic::core::common {
+using namespace jonssonic::core::common;
+using namespace jonssonic::literals;
 
 class SmoothedValueTest : public ::testing::Test {
-protected:
+  protected:
     void SetUp() override {}
     void TearDown() override {}
 };
@@ -16,7 +17,7 @@ protected:
 TEST_F(SmoothedValueTest, OnePoleOrder1BasicSmoothing) {
     SmoothedValue<float, SmootherType::OnePole, 1> smoother;
     smoother.prepare(1, 1000);
-    smoother.setTimeMs(10);
+    smoother.setTime(10.0_ms);
     smoother.reset();
     smoother.setTarget(1.0f);
     float last = 0.0f;
@@ -29,7 +30,7 @@ TEST_F(SmoothedValueTest, OnePoleOrder1BasicSmoothing) {
 TEST_F(SmoothedValueTest, OnePoleOrder2Cascaded) {
     SmoothedValue<float, SmootherType::OnePole, 2> smoother;
     smoother.prepare(1, 1000);
-    smoother.setTimeMs(10);
+    smoother.setTime(10.0_ms);
     smoother.reset();
     smoother.setTarget(1.0f);
     float last = 0.0f;
@@ -42,7 +43,7 @@ TEST_F(SmoothedValueTest, OnePoleOrder2Cascaded) {
 TEST_F(SmoothedValueTest, LinearBasic) {
     LinearSmoother<float> smoother;
     smoother.prepare(1, 1000);
-    smoother.setTimeMs(10);
+    smoother.setTime(10.0_ms);
     smoother.reset();
     smoother.setTarget(1.0f);
     float val = 0.0f;
@@ -55,7 +56,7 @@ TEST_F(SmoothedValueTest, LinearBasic) {
 TEST_F(SmoothedValueTest, LinearReachesTargetExactly) {
     LinearSmoother<float> smoother;
     smoother.prepare(1, 1000);
-    smoother.setTimeMs(20);
+    smoother.setTime(20.0_ms);
     smoother.reset();
     smoother.setTarget(2.0f);
     float val = 0.0f;
@@ -68,7 +69,7 @@ TEST_F(SmoothedValueTest, LinearReachesTargetExactly) {
 TEST_F(SmoothedValueTest, ResetSetsCurrentAndTarget) {
     SmoothedValue<float, SmootherType::OnePole, 1> smoother;
     smoother.prepare(1, 1000);
-    smoother.setTimeMs(10);
+    smoother.setTime(10.0_ms);
     smoother.reset();
     smoother.setTarget(0.5f);
     // After setTarget, current is still at reset value (0), target is 0.5
@@ -79,10 +80,10 @@ TEST_F(SmoothedValueTest, ResetSetsCurrentAndTarget) {
 TEST_F(SmoothedValueTest, SetSampleRateAndTime) {
     SmoothedValue<float, SmootherType::OnePole, 1> smoother;
     smoother.prepare(1, 1000);
-    smoother.setTimeMs(10);
-    // To change sample rate and time, call prepare and setTimeMs again with new values
+    smoother.setTime(10.0_ms);
+    // To change sample rate and time, call prepare and setTime again with new values
     smoother.prepare(1, 2000);
-    smoother.setTimeMs(20);
+    smoother.setTime(20.0_ms);
     smoother.reset();
     smoother.setTarget(1.0f);
     float last = 0.0f;
@@ -97,7 +98,7 @@ TEST_F(SmoothedValueTest, OnePoleMultiChannel) {
     constexpr size_t numChannels = 4;
     SmoothedValue<float, SmootherType::OnePole, 1> smoother;
     smoother.prepare(numChannels, 1000);
-    smoother.setTimeMs(10);
+    smoother.setTime(10.0_ms);
     smoother.reset();
     // Set different targets for each channel
     for (size_t ch = 0; ch < numChannels; ++ch) {
@@ -118,7 +119,7 @@ TEST_F(SmoothedValueTest, LinearMultiChannel) {
     constexpr size_t numChannels = 3;
     LinearSmoother<float> smoother;
     smoother.prepare(numChannels, 1000);
-    smoother.setTimeMs(10);
+    smoother.setTime(10.0_ms);
     smoother.reset();
     // Set different targets for each channel
     for (size_t ch = 0; ch < numChannels; ++ch) {
@@ -134,6 +135,3 @@ TEST_F(SmoothedValueTest, LinearMultiChannel) {
         EXPECT_NEAR(last[ch], static_cast<float>(ch + 2), 1e-3f);
     }
 }
-
-    
-} // namespace Jonssonic

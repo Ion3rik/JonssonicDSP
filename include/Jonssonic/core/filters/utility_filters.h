@@ -3,8 +3,9 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include <vector>
+#include "jonssonic/utils/detail/config_utils.h"
 #include <cmath>
+#include <vector>
 
 namespace jonssonic::core::filters {
 
@@ -13,9 +14,8 @@ namespace jonssonic::core::filters {
  * @param T Sample data type (e.g., float, double)
  */
 
-template<typename T>
-class DCBlocker {
-public:
+template <typename T> class DCBlocker {
+  public:
     /// Default constructor
     DCBlocker() = default;
 
@@ -24,18 +24,16 @@ public:
      * @param newNumChannels Number of channels
      * @param newSampleRate Sample rate in Hz
      */
-    DCBlocker(size_t newNumChannels, T newSampleRate) {
-        prepare(newNumChannels, newSampleRate);
-    }
+    DCBlocker(size_t newNumChannels, T newSampleRate) { prepare(newNumChannels, newSampleRate); }
 
     /// Default destructor
     ~DCBlocker() = default;
 
     /// No copy or move semantics
-    DCBlocker(const DCBlocker&) = delete;
-    DCBlocker& operator=(const DCBlocker&) = delete;
-    DCBlocker(DCBlocker&&) = delete;
-    DCBlocker& operator=(DCBlocker&&) = delete;
+    DCBlocker(const DCBlocker &) = delete;
+    DCBlocker &operator=(const DCBlocker &) = delete;
+    DCBlocker(DCBlocker &&) = delete;
+    DCBlocker &operator=(DCBlocker &&) = delete;
 
     /**
      * @brief Prepare the DC blocker for processing.
@@ -49,8 +47,10 @@ public:
         constexpr T cutoffHz = T(10);
         if (sampleRate > T(0)) {
             R = T(1) - (T(2) * T(M_PI) * cutoffHz / sampleRate);
-            if (R < T(0)) R = T(0);
-            if (R > T(0.9999)) R = T(0.9999);
+            if (R < T(0))
+                R = T(0);
+            if (R > T(0.9999))
+                R = T(0.9999);
         }
         x1.assign(numChannels, T(0));
         y1.assign(numChannels, T(0));
@@ -70,7 +70,8 @@ public:
      * @note Must call @ref prepare before processing.
      */
     T processSample(size_t ch, T input) {
-        if (ch >= numChannels) return input;
+        if (ch >= numChannels)
+            return input;
         T y = input - x1[ch] + R * y1[ch];
         x1[ch] = input;
         y1[ch] = y;
@@ -84,7 +85,7 @@ public:
      * @param numSamples Number of samples to process
      * @note Must call @ref prepare before processing.
      */
-    void processBlock(const T* const* input, T* const* output, size_t numSamples) {
+    void processBlock(const T *const *input, T *const *output, size_t numSamples) {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t n = 0; n < numSamples; ++n) {
                 output[ch][n] = processSample(ch, input[ch][n]);
@@ -92,11 +93,11 @@ public:
         }
     }
 
-private:
-    size_t numChannels = 0; 
+  private:
+    size_t numChannels = 0;
     T sampleRate = T(44100);
-    T R = T(0.995); // Pole radius
+    T R = T(0.995);        // Pole radius
     std::vector<T> x1, y1; // State variables
 };
 
-} // namespace jonssonic::filters
+} // namespace jonssonic::core::filters

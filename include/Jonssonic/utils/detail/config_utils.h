@@ -6,8 +6,18 @@
 #include <jonssonic/jonssonic_config.h>
 #include <algorithm>
 #include <cstddef>
+#include <type_traits>
 
 namespace jonssonic::utils::detail {
+
+/**
+ * @brief Compile-time check for supported sample types.
+ *        Currently only floating-point types are supported, but this can be extended.
+ */
+template<typename T>
+constexpr void requireSupportedType() {
+    static_assert(std::is_floating_point<T>::value, "T must be a supported (floating-point) type");
+}
 
 /**
  * @brief Clamp a sample rate to the supported range.
