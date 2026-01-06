@@ -11,4 +11,5 @@ ReflowComments: true
 BinPackArguments: false
 BinPackParameters: false
 AllowAllArgumentsOnNextLine: false
+AlwaysBreakTemplateDeclarations: Yes
 # Add or adjust options as needed for your style
