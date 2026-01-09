@@ -5,6 +5,7 @@
 #pragma once
 
 #include "jonssonic/utils/detail/config_utils.h"
+#include <cassert>
 #include <cmath>
 #include <jonssonic/core/common/dsp_param.h>
 #include <jonssonic/core/common/quantities.h>
@@ -12,23 +13,34 @@
 
 namespace jonssonic::core::dynamics {
 
+/// Envelope follower type enumeration
 enum class EnvelopeType {
     Peak,
     RMS
     // Add more types as needed
 };
+
 // =============================================================================
 // Template Declaration
 // =============================================================================
-template <typename T, EnvelopeType Type> class EnvelopeFollower;
+/// Envelope Follower class template
+template <typename T, EnvelopeType Type>
+class EnvelopeFollower;
 
 // =============================================================================
 // Peak Envelope Follower Specialization
 // =============================================================================
 /// Peak Envelope Follower Specialization
-template <typename T> class EnvelopeFollower<T, EnvelopeType::Peak> {
+template <typename T>
+class EnvelopeFollower<T, EnvelopeType::Peak> {
     /// Type aliases for convenience, readability and future-proofing
     using DspParamType = jonssonic::core::common::DspParam<T>;
+
+    /// Envelope parameter struct
+    struct EnvelopeParams {
+        T attackTimeSec;
+        T releaseTimeSec;
+    };
 
   public:
     /// Default constructor.
@@ -45,10 +57,10 @@ template <typename T> class EnvelopeFollower<T, EnvelopeType::Peak> {
     ~EnvelopeFollower() = default;
 
     /// No copy nor move semantics
-    EnvelopeFollower(const EnvelopeFollower &) = delete;
-    EnvelopeFollower &operator=(const EnvelopeFollower &) = delete;
-    EnvelopeFollower(EnvelopeFollower &&) = delete;
-    EnvelopeFollower &operator=(EnvelopeFollower &&) = delete;
+    EnvelopeFollower(const EnvelopeFollower&) = delete;
+    EnvelopeFollower& operator=(const EnvelopeFollower&) = delete;
+    EnvelopeFollower(EnvelopeFollower&&) = delete;
+    EnvelopeFollower& operator=(EnvelopeFollower&&) = delete;
 
     /**
      * @brief Prepare the envelope follower for processing.
@@ -77,13 +89,22 @@ template <typename T> class EnvelopeFollower<T, EnvelopeType::Peak> {
      * @return Envelope value
      */
     T processSample(size_t ch, T input) {
-        T rectified = std::abs(input); // abs for peak follower
-        T &env = envelope[ch];         // reference to current envelope value
-        T coeff = (rectified > env)
-                      ? attackCoeff.getNextValue(ch)
-                      : releaseCoeff.getNextValue(ch); // choose coefficient based on attack/release
-        env += coeff * (rectified - env);              // exponential smoothing
-        return env;
+        // Rectify input (i.e. find peak level)
+        T rectified = std::abs(input);
+
+        // What stage are we in?
+        T inAttack = static_cast<T>(rectified > envelope[ch]);
+        T inRelease = T(1) - inAttack;
+
+        // Compute the smoothing coefficient
+        T coeff =
+            inAttack * attackCoeff.getNextValue(ch) + inRelease * releaseCoeff.getNextValue(ch);
+
+        // Apply smoothing to the rectified value
+        envelope[ch] += coeff * (rectified - envelope[ch]);
+
+        // Return the envelope value
+        return envelope[ch];
     }
 
     /**
@@ -92,7 +113,7 @@ template <typename T> class EnvelopeFollower<T, EnvelopeType::Peak> {
      * @param output Output (envelope) sample pointers (one per channel)
      * @param numSamples Number of samples to process
      */
-    void processBlock(const T *const *input, T *const *output, size_t numSamples) {
+    void processBlock(const T* const* input, T* const* output, size_t numSamples) {
         for (size_t ch = 0; ch < numChannels; ++ch)
             for (size_t n = 0; n < numSamples; ++n) {
                 {
@@ -120,7 +141,7 @@ template <typename T> class EnvelopeFollower<T, EnvelopeType::Peak> {
         if (!togglePrepared)
             return;
 
-        attackTimeSec = time.toSeconds(sampleRate);
+        params.attackTimeSec = time.toSeconds(sampleRate);
         updateCoefficients(skipSmoothing);
     }
     /**
@@ -133,12 +154,36 @@ template <typename T> class EnvelopeFollower<T, EnvelopeType::Peak> {
         if (!togglePrepared)
             return;
 
-        releaseTimeSec = time.toSeconds(sampleRate);
+        params.releaseTimeSec = time.toSeconds(sampleRate);
         updateCoefficients(skipSmoothing);
     }
 
+    /// Get number of channels.
     size_t getNumChannels() const { return numChannels; }
+
+    /// Get sample rate.
     T getSampleRate() const { return sampleRate; }
+
+    /// Check if prepared.
+    bool isPrepared() const { return togglePrepared; }
+
+    /// Get the envelope state
+    std::vector<T> getState() const { return envelope; }
+
+    /// Set the envelope state
+    void setState(const std::vector<T>& newState) {
+        assert(newState.size() == numChannels && "State size must match number of channels");
+        envelope = newState;
+    }
+
+    /// Get parameters
+    EnvelopeParams getParams() const { return params; }
+
+    /// Set parameters
+    void setParams(const EnvelopeParams& newParams, bool skipSmoothing = false) {
+        params = newParams;
+        updateCoefficients(skipSmoothing);
+    }
 
   private:
     // Global parameters
@@ -150,23 +195,27 @@ template <typename T> class EnvelopeFollower<T, EnvelopeType::Peak> {
     std::vector<T> envelope;
 
     // User Parameters
-    T attackTimeSec;
-    T releaseTimeSec;
+    EnvelopeParams params;
+
+    // DSP Parameters
     DspParamType attackCoeff;
     DspParamType releaseCoeff;
 
     void updateCoefficients(bool skipSmoothing) {
 
         // Set target coefficients based on current attack and release times
-        attackCoeff.setTarget(1.0 - std::exp(-1.0 / (attackTimeSec * sampleRate)), skipSmoothing);
-        releaseCoeff.setTarget(1.0 - std::exp(-1.0 / (releaseTimeSec * sampleRate)), skipSmoothing);
+        attackCoeff.setTarget(1.0 - std::exp(-1.0 / (params.attackTimeSec * sampleRate)),
+                              skipSmoothing);
+        releaseCoeff.setTarget(1.0 - std::exp(-1.0 / (params.releaseTimeSec * sampleRate)),
+                               skipSmoothing);
     }
 };
 
 // =============================================================================
 // RMS Envelope Follower Specialization
 // =============================================================================
-template <typename T> class EnvelopeFollower<T, EnvelopeType::RMS> {
+template <typename T>
+class EnvelopeFollower<T, EnvelopeType::RMS> {
     /// Type aliases for convenience, readability and future-proofing
     using DspParamType = jonssonic::core::common::DspParam<T>;
 
@@ -179,10 +228,10 @@ template <typename T> class EnvelopeFollower<T, EnvelopeType::RMS> {
     ~EnvelopeFollower() = default;
 
     // No copy or move semantics
-    EnvelopeFollower(const EnvelopeFollower &) = delete;
-    EnvelopeFollower &operator=(const EnvelopeFollower &) = delete;
-    EnvelopeFollower(EnvelopeFollower &&) = delete;
-    EnvelopeFollower &operator=(EnvelopeFollower &&) = delete;
+    EnvelopeFollower(const EnvelopeFollower&) = delete;
+    EnvelopeFollower& operator=(const EnvelopeFollower&) = delete;
+    EnvelopeFollower(EnvelopeFollower&&) = delete;
+    EnvelopeFollower& operator=(EnvelopeFollower&&) = delete;
 
     /**
      * @brief Prepare the envelope follower for processing.
@@ -211,13 +260,22 @@ template <typename T> class EnvelopeFollower<T, EnvelopeType::RMS> {
      * @return Envelope value
      */
     T processSample(size_t ch, T input) {
-        T squared = input * input; // square for RMS follower
-        T &env = envelope[ch];     // reference to current envelope value
-        T coeff = (squared > env)
-                      ? attackCoeff.getNextValue(ch)
-                      : releaseCoeff.getNextValue(ch); // choose coefficient based on attack/release
-        env += coeff * (squared - env);                // exponential smoothing
-        return std::sqrt(env);                         // return RMS value
+        // Square the input for RMS calculation
+        T squared = input * input;
+
+        // What stage are we in?
+        T inAttack = static_cast<T>(squared > envelope[ch]);
+        T inRelease = T(1) - inAttack;
+
+        // Compute the smoothing coefficient
+        T coeff =
+            inAttack * attackCoeff.getNextValue(ch) + inRelease * releaseCoeff.getNextValue(ch);
+
+        // Apply smoothing to the squared value
+        envelope[ch] += coeff * (squared - envelope[ch]);
+
+        // Return the square root of the envelope for RMS
+        return std::sqrt(envelope[ch]);
     }
 
     /**
@@ -226,7 +284,7 @@ template <typename T> class EnvelopeFollower<T, EnvelopeType::RMS> {
      * @param output Output sample pointers (one per channel)
      * @param numSamples Number of samples to process
      */
-    void processBlock(const T *const *input, T *const *output, size_t numSamples) {
+    void processBlock(const T* const* input, T* const* output, size_t numSamples) {
         for (size_t ch = 0; ch < numChannels; ++ch)
             for (size_t n = 0; n < numSamples; ++n) {
                 {
