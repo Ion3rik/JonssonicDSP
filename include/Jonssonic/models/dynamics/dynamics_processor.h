@@ -1,9 +1,10 @@
 // JonssonicDSP - A Modular Realtime C++ Audio DSP Library
-// GainControlStage class header file
+// DynamicsProcessor class header file
 // SPDX-License-Identifier: MIT
 
 #pragma once
 #include "jonssonic/utils/detail/config_utils.h"
+#include <jonssonic/core/common/dsp_param.h>
 #include <jonssonic/core/common/quantities.h>
 #include <jonssonic/core/dynamics/_dynamics.h>
 #include <jonssonic/core/filters/biquad_filter.h>
@@ -14,7 +15,7 @@ enum class DetectorType { Feedforward, Feedback };
 
 // =============================================================================
 /**
- * @brief GainControlStage combines an Envelope Follower, Gain Computer, and Gain Smoother into a
+ * @brief DynamicsProcessor combines an Envelope Follower, Gain Computer, and Gain Smoother into a
  * single processing stage.
  * @tparam T Sample type
  * @tparam EnvelopeType Type of envelope follower (default: RMS)
@@ -22,42 +23,45 @@ enum class DetectorType { Feedforward, Feedback };
  * @tparam GainSmootherType Type of gain smoother (default: AttackRelease)
  * @tparam DetectorType Type of detector (default: Feedforward)
  * @tparam Toggle SideChainFilter If true, enables side-chain filtering (default: false)
+ * @tparam Toggle Metering If true, enables metering (default: true)
  */
 template <typename T,
           EnvelopeType EnvelopeType = EnvelopeType::RMS,
           typename GainPolicy = CompressorPolicy<T>,
           GainSmootherType GainSmootherType = GainSmootherType::AttackRelease,
           DetectorType DetectorType = DetectorType::Feedforward,
-          bool SideChainFilter = false>
-class GainControlStage {
+          bool SideChainFilter = false,
+          bool Metering = true>
+class DynamicsProcessor {
     /// Type aliases for convenience
     using EnvelopeFollowerType = core::dynamics::EnvelopeFollower<T, EnvelopeType>;
     using GainComputerType = core::dynamics::GainComputer<T, GainPolicy>;
     using GainSmootherTypeAlias = core::dynamics::GainSmoother<T, GainSmootherType>;
     using SideChainFilterType = core::filters::BiquadFilter<T>;
+    using DspParamType = jonssonic::core::common::DspParam<T>;
 
   public:
     /// Default constructor.
-    GainControlStage() = default;
+    DynamicsProcessor() = default;
 
     /**
      * @brief Parameterized constructor that calls @ref prepare.
      * @param numChannels Number of channels
      * @param sampleRate Sample rate in Hz
      */
-    GainControlStage(size_t numChannels, T sampleRate) { prepare(numChannels, sampleRate); }
+    DynamicsProcessor(size_t numChannels, T sampleRate) { prepare(numChannels, sampleRate); }
 
     /// Default destructor.
-    ~GainControlStage() = default;
+    ~DynamicsProcessor() = default;
 
     /// No copy nor move semantics
-    GainControlStage(const GainControlStage &) = delete;
-    GainControlStage &operator=(const GainControlStage &) = delete;
-    GainControlStage(GainControlStage &&) = delete;
-    GainControlStage &operator=(GainControlStage &&) = delete;
+    DynamicsProcessor(const DynamicsProcessor&) = delete;
+    DynamicsProcessor& operator=(const DynamicsProcessor&) = delete;
+    DynamicsProcessor(DynamicsProcessor&&) = delete;
+    DynamicsProcessor& operator=(DynamicsProcessor&&) = delete;
 
     /**
-     * @brief Prepare the gain control stage for processing.
+     * @brief Prepare the dynamics processor for processing.
      * @param newNumChannels Number of channels
      * @param newSampleRate Sample rate in Hz
      */
@@ -75,14 +79,19 @@ class GainControlStage {
         if constexpr (SideChainFilter) {
             sideChainFilter.prepare(numChannels, sampleRate);
         }
+        // Prepare metering state if enabled
+        if constexpr (Metering) {
+            maxGainReduction.resize(numChannels, T(1));
+        }
+
         // Resize state variables for feedback detector
         if constexpr (DetectorType == DetectorType::Feedback) {
-            previousGainLin.resize(numChannels, T(1));
+            previousOutput.resize(numChannels, T(1));
         }
     }
 
     /**
-     * @brief Reset the gain control stage state.
+     * @brief Reset the dynamics processor state.
      */
     void reset() {
         envelopeFollower.reset();
@@ -91,7 +100,7 @@ class GainControlStage {
             sideChainFilter.reset();
         }
         if constexpr (DetectorType == DetectorType::Feedback) {
-            std::fill(previousGainLin.begin(), previousGainLin.end(), T(1));
+            std::fill(previousOutput.begin(), previousOutput.end(), T(0));
         }
     }
 
@@ -119,13 +128,17 @@ class GainControlStage {
             // Gain smoothing
             T smoothGainLin = gainSmoother.processSample(ch, gainDb);
 
+            // Update max gain reduction for metering (max reduction is min gain in linear)
+            if constexpr (Metering)
+                maxGainReduction[ch] = std::min(maxGainReduction[ch], smoothGainLin);
+
             // Apply gain
             return input * smoothGainLin;
         }
         // FEEDBACK DETECTOR
         else if constexpr (DetectorType == DetectorType::Feedback) {
-            // Apply feedback gain to detector input
-            T detectorSignal = detectorInput * previousGainLin[ch];
+            // Detector signal from previous output
+            T detectorSignal = previousOutput[ch];
 
             // Side chain filtering if exists
             if constexpr (SideChainFilter) {
@@ -141,9 +154,13 @@ class GainControlStage {
             // Gain smoothing
             T smoothGainLin = gainSmoother.processSample(ch, gainDb);
 
+            // Update max gain reduction for metering (max reduction is min gain in linear)
+            if constexpr (Metering)
+                maxGainReduction[ch] = std::min(maxGainReduction[ch], smoothGainLin);
+
             // Apply gain and update feedback state
-            previousGainLin[ch] = smoothGainLin;
-            return input * smoothGainLin;
+            previousOutput[ch] = input * smoothGainLin;
+            return previousOutput[ch];
         }
     }
 
@@ -153,15 +170,29 @@ class GainControlStage {
      * @param detectorInput Detector input sample pointers (one per channel)
      * @param output Output (processed signal) sample pointers (one per channel)
      * @param numSamples Number of samples to process
+     * @param gainReductionOutput Output (max gain reduction) sample pointers (one per channel) -
+     * only if metering enabled
      * @note Must call @ref prepare before processing.
      */
-    void processBlock(const T *const *input,
-                      const T *const *detectorInput,
-                      T *const *output,
-                      size_t numSamples) {
+    void processBlock(const T* const* input,
+                      const T* const* detectorInput,
+                      T* const* output,
+                      size_t numSamples,
+                      T* gainReductionOutput = nullptr) {
+        // Reset metering state if enabled
+        if constexpr (Metering)
+            std::fill(maxGainReduction.begin(), maxGainReduction.end(), T(1));
+
+        // Process loop
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t n = 0; n < numSamples; ++n) {
                 output[ch][n] = processSample(ch, input[ch][n], detectorInput[ch][n]);
+            }
+            // Output max gain reduction if enabled
+            if constexpr (Metering) {
+                if (gainReductionOutput) {
+                    gainReductionOutput[ch] = maxGainReduction[ch];
+                }
             }
         }
     }
@@ -261,6 +292,25 @@ class GainControlStage {
     SideChainFilterType sideChainFilter;
 
     // State variables
-    std::vector<T> previousGainLin; // Needed for feedback detector
+    std::vector<T> previousOutput;   // Needed for feedback detector
+    std::vector<T> maxGainReduction; // For metering
 };
+
+// =============================================================================
+// Type aliases for common dynamics processors
+// =============================================================================
+/// Compressor type alias
+template <typename T,
+          EnvelopeType EnvelopeType = EnvelopeType::RMS,
+          GainSmootherType GainSmootherType = GainSmootherType::AttackRelease,
+          DetectorType DetectorType = DetectorType::Feedforward,
+          bool SideChainFilter = false,
+          bool Metering = true>
+using CompressorProcessor = DynamicsProcessor<T,
+                                              EnvelopeType,
+                                              CompressorPolicy<T>,
+                                              GainSmootherType,
+                                              DetectorType,
+                                              SideChainFilter>;
+
 } // namespace jonssonic::models::dynamics

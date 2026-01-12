@@ -3,95 +3,50 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include "../core/dynamics/EnvelopeFollower.h"
-#include "../core/dynamics/GainComputer.h"
-#include "../core/dynamics/GainSmoother.h"
+#include "jonssonic/utils/detail/config_utils.h"
+#include <jonssonic/core/common/dsp_param.h>
+#include <jonssonic/core/common/quantities.h>
+#include <jonssonic/models/dynamics/dynamics_processor.h>
+#include <jonssonic/utils/buffer_utils.h>
+#include <jonssonic/utils/math_utils.h>
 
-#include "../core/nonlinear/WaveShaperProcessor.h"
-#include "../core/oversampling/Oversampler.h"
-#include "../core//common/AudioBuffer.h"
-#include "../utils/MathUtils.h"
-#include "../core/mixing/DryWetMixer.h"
-#include "../core/common/SmoothedValue.h"
-#include "../utils/BufferUtils.h"
-
-namespace Jonssonic::effects {
+namespace jonssonic::effects {
 /**
- * @brief Compressor effect with threshold, attack, release, ratio, mix and output gain.
- *        Additional character mode which adds mild harmonic distortion and modifies the gain smoother.
- * @param T Sample data type (e.g., float, double)
+ * @brief Example compressor effect.
+ * @tparam T Sample data type (e.g., float, double)
  */
-template<typename T>
+template <typename T>
 class Compressor {
-public:
-    // TUNABLE CONSTANTS
     /**
-     * @brief Oversampling factor
+     * @brief Tunable constants for the compressor effect
+     * @param CONTROL_SMOOTH_TIME_MS Control smoothing time in milliseconds.
+     * @param GAIN_SMOOTH_ATTACK_MS Gain smoother attack time in milliseconds.
+     * @param GAIN_SMOOTH_RELEASE_MS Gain smoother release time in milliseconds.
      */
-    static constexpr size_t OVERSAMPLING_FACTOR = 4;
+    static constexpr T CONTROL_SMOOTH_TIME_MS = T(50);
+    static constexpr T GAIN_SMOOTH_ATTACK_MS = T(0.1);
+    static constexpr T GAIN_SMOOTH_RELEASE_MS = T(5);
 
-    /**
-     * @brief Smoothing time in milliseconds for parameter changes.
-     */
-    static constexpr T PARAM_SMOOTH_TIME_MS = T(50);
+    /// Type aliases for convenience
+    using DspParamType = jonssonic::core::common::DspParam<T>;
+    using CompressorProcessorType = jonssonic::models::dynamics::CompressorProcessor<T>;
 
-    /**
-     * @brief Base drive gain for character mode saturation.
-     */
-    static constexpr T DRIVE_BASE_GAIN_DB = T(6.0);
-
-    /**
-     * @brief Maximum drive gain for character mode saturation.
-     */
-    static constexpr T DRIVE_MAX_GAIN_DB = T(24.0);
-
-    /**
-     * @brief Drive scaling factor for character mode saturation.
-     */
-    static constexpr T DRIVE_SCALE_FACTOR = T(0.4);
-
-    /**
-     * @brief Mode dependent smoother attack ranges in ms.
-     */
-    static constexpr T NORMAL_SMOOTHER_ATTACK_MIN_MS = T(0.1);
-    static constexpr T NORMAL_SMOOTHER_ATTACK_MAX_MS = T(30.0);
-    static constexpr T CHARACTER_SMOOTHER_ATTACK_MIN_MS = T(3.0);
-    static constexpr T CHARACTER_SMOOTHER_ATTACK_MAX_MS = T(60.0);
-
-    /**
-     * @brief Mode dependent smoother release ranges in ms.
-     */
-    static constexpr T NORMAL_SMOOTHER_RELEASE_MIN_MS = T(30.0);
-    static constexpr T NORMAL_SMOOTHER_RELEASE_MAX_MS = T(400.0);
-    static constexpr T CHARACTER_SMOOTHER_RELEASE_MIN_MS = T(100.0);
-    static constexpr T CHARACTER_SMOOTHER_RELEASE_MAX_MS = T(1500.0);
-
-    /**
-     * @brief Mode dependent envelope attack times.
-     */
-    static constexpr T NORMAL_ENVELOPE_ATTACK_MS = T(0.1);
-    static constexpr T CHARACTER_ENVELOPE_ATTACK_MS = T(10.0);
-
-    /**
-     * @brief Mode dependent envelope release times.
-     */
-    static constexpr T NORMAL_ENVELOPE_RELEASE_MS = T(10.0);
-    static constexpr T CHARACTER_ENVELOPE_RELEASE_MS = T(100.0);
-
-    /**
-     * @brief Mode dependent Knee widths in dB
-     */
-    static constexpr T CHARACTER_MODE_KNEE_DB = T(10.0);
-    static constexpr T NORMAL_MODE_KNEE_DB = T(1.0);
-
-    // Constructor and Destructor
+  public:
+    /// Default constructor.
     Compressor() = default;
-    Compressor(size_t newNumChannels, size_t newMaxBlockSize, T newSampleRate) {
-        prepare(newNumChannels, newMaxBlockSize, newSampleRate);
-    }
+
+    /**
+     * @brief Parameterized constructor that calls @ref prepare.
+     * @param newNumChannels Number of channels
+     * @param newMaxBlockSize Maximum block size for processing (at base sample rate)
+     * @param newSampleRate Sample rate in Hz
+     */
+    Compressor(size_t newNumChannels, T newSampleRate) { prepare(newNumChannels, newSampleRate); }
+
+    /// Default destructor.
     ~Compressor() = default;
 
-    // No copy or move semantics
+    /// No copy nor move semantics.
     Compressor(const Compressor&) = delete;
     Compressor& operator=(const Compressor&) = delete;
     Compressor(Compressor&&) = delete;
@@ -103,256 +58,148 @@ public:
      * @param newMaxBlockSize Maximum block size for processing (at base sample rate)
      * @param newSampleRate Sample rate in Hz
      */
-    void prepare(size_t newNumChannels, size_t newMaxBlockSize, T newSampleRate) {
+    void prepare(size_t newNumChannels, T newSampleRate) {
 
         // Store global parameters
-        numChannels = newNumChannels;
-        sampleRate = newSampleRate;
+        numChannels = utils::detail::clampChannels(newNumChannels);
+        sampleRate = utils::detail::clampSampleRate(newSampleRate);
 
         // Prepare compressor components
-        peakFollower.prepare(newNumChannels, newSampleRate, PARAM_SMOOTH_TIME_MS);
-        rmsFollower.prepare(newNumChannels, newSampleRate, PARAM_SMOOTH_TIME_MS);
-        gainComputer.prepare(newNumChannels, newSampleRate, PARAM_SMOOTH_TIME_MS);
-        gainSmoother.prepare(newNumChannels, newSampleRate, PARAM_SMOOTH_TIME_MS);
+        compressor.prepare(numChannels, sampleRate);
+        outputGain.prepare(numChannels, sampleRate);
+        gainReductionOutput.resize(numChannels, T(1));
 
-        shaper.prepare(newNumChannels, newSampleRate, PARAM_SMOOTH_TIME_MS);
-  
-        // Prepare dry/wet mixer with latency compensation and output gain
-        size_t oversamplerLatencySamples = oversampler.getLatencySamples(); 
-        dryWetMixer.prepare(newNumChannels, newSampleRate, PARAM_SMOOTH_TIME_MS, oversamplerLatencySamples);
-        outputGain.prepare(newNumChannels, newSampleRate, PARAM_SMOOTH_TIME_MS);
-
-        // Prepare internal buffers and oversampler
-        fxBuffer.resize(newNumChannels, newMaxBlockSize);
-        oversampler.prepare(newNumChannels, newMaxBlockSize);
-        oversampledBuffer.resize(newNumChannels, newMaxBlockSize * OVERSAMPLING_FACTOR);
+        // Configure fixed parameters
+        compressor.setGainSmootherAttackTime(GAIN_SMOOTH_ATTACK_MS);
+        compressor.setGainSmootherReleaseTime(GAIN_SMOOTH_RELEASE_MS);
+        compressor.setControlSmoothingTime(CONTROL_SMOOTH_TIME_MS);
+        outputGain.setSmoothingTime(Time<T>::Milliseconds(CONTROL_SMOOTH_TIME_MS));
 
         // Set Default Parameters
-        setThreshold(T(-24.0), true);  // -24 dB
-        setAttack(T(0.5), true);      // 50 % relative
-        setRelease(T(0.5), true);    // 50 % relative
-        setRatio(T(4.0), true);        // 4:1
-        setMix(T(1.0), true);          // 100% wet
-        setOutputGain(T(1.0), true);   // 0 dB
-        setCharacterMode(false);       // Character mode off
-
-        // Set fixed envelope follower times 
-        peakFollower.setAttackTime(NORMAL_ENVELOPE_ATTACK_MS, true);
-        peakFollower.setReleaseTime(NORMAL_ENVELOPE_RELEASE_MS, true);
-        rmsFollower.setAttackTime(CHARACTER_ENVELOPE_ATTACK_MS, true);
-        rmsFollower.setReleaseTime(CHARACTER_ENVELOPE_RELEASE_MS, true);
+        setThreshold(T(-24), true);
+        setRatio(T(4), true);
+        setKnee(T(6), true);
+        setAttackTime(T(10), true);
+        setReleaseTime(T(100), true);
+        setOutputGain(T(0), true);
 
         // Mark as prepared
         togglePrepared = true;
     }
 
     void reset() {
-        peakFollower.reset();
-        rmsFollower.reset();
-        gainComputer.reset();
-        gainSmoother.reset();
-        shaper.reset();
-        oversampler.reset();
-        dryWetMixer.reset();
+        compressor.reset();
         outputGain.reset();
-        fxBuffer.clear();
-        oversampledBuffer.clear();
     }
 
     /**
      * @brief Process a block of samples for all channels.
      * @param input Input buffer (numChannels x numSamples)
+     * @param detectorInput Detector input buffer (numChannels x numSamples)
      * @param output Output buffer (numChannels x numSamples)
      * @param numSamples Number of samples to process
      */
-    void processBlock(const T* const* input, T* const* output, size_t numSamples)
-    {   
-        // Copy input to fxBuffer for processing
-        Jonssonic::copyToBuffer<T>(input, fxBuffer.writePtrs(), numChannels, numSamples);
-        
-        // CHARACTER MODE PROCESSING
-        if (toggleCharacterMode) {
-            // Upsample
-            size_t numOversampledSamples = oversampler.upsample(fxBuffer.readPtrs(), oversampledBuffer.writePtrs(), numSamples);
+    void processBlock(const T* const* input,
+                      const T* const* detectorInput,
+                      T* const* output,
+                      size_t numSamples) {
 
-            // Process waveshaper
-            shaper.processBlock(oversampledBuffer.readPtrs(), oversampledBuffer.writePtrs(), numOversampledSamples);
-
-            // Downsample
-            oversampler.downsample(oversampledBuffer.readPtrs(), fxBuffer.writePtrs(), numSamples);
-        } 
-        // NORMAL MODE PROCESSING
-        T characterModeMask = static_cast<T>(toggleCharacterMode); // check per block if character mode is enabled (1.0 or 0.0)
-        T minGain = T(1); // track for metering
-        for (size_t ch = 0; ch < numChannels; ++ch) {
-            for (size_t n = 0; n < numSamples; ++n) {
-
-                // Compute envelope 
-                T envValue = characterModeMask * rmsFollower.processSample(ch, fxBuffer[ch][n])
-                             + (static_cast<T>(1) - characterModeMask) * peakFollower.processSample(ch, fxBuffer[ch][n]);
-                
-                // Compute target gain from compressor curve
-                T targetGainDb = gainComputer.processSample(ch, envValue);
-                
-                // Smooth gain
-                T smoothedGainLinear = gainSmoother.processSample(ch, targetGainDb);
-                minGain = std::min(smoothedGainLinear, minGain); // track min gain for metering
-
-                // Apply gain to sample
-                fxBuffer[ch][n] = fxBuffer[ch][n] * smoothedGainLinear;
-            }
-        }
-
-        // Apply dry/wet mixing (with delay compensation if oversampling)
-        size_t dryDelaySamples = static_cast<size_t>(characterModeMask) * oversampler.getLatencySamples();
-        dryWetMixer.processBlock(input, fxBuffer.readPtrs(), output, numSamples, dryDelaySamples);
+        // Process through compressor
+        compressor.processBlock(input,
+                                detectorInput,
+                                output,
+                                numSamples,
+                                gainReductionOutput.data());
 
         // Apply output gain
         outputGain.applyToBuffer(output, numSamples);
 
-        // Update gain reduction metering value
-        gainReduction.store(minGain);
+        // Update gain reduction metering (max reduction across channels)
+        gainReduction.store(
+            *std::max_element(gainReductionOutput.begin(), gainReductionOutput.end()));
     }
 
     // SETTERS FOR PARAMETERS
 
-    /** 
+    /**
      * @brief Set threshold in dB.
-    */
+     * @param newthresholdDb New threshold value in dB
+     * @param skipSmoothing If true, skip smoothing and set immediately.
+     */
     void setThreshold(T newthresholdDb, bool skipSmoothing = false) {
-        gainComputer.setThreshold(newthresholdDb, skipSmoothing);
-
-        // Update drive gain for character mode based on threshold
-        T driveGainDb = DRIVE_BASE_GAIN_DB -newthresholdDb * DRIVE_SCALE_FACTOR; // drive increases as threshold decreases
-        driveGainDb = std::clamp(driveGainDb, T(0), DRIVE_MAX_GAIN_DB); // clamp (0 dB to max)
-        shaper.setInputGain(dB2Mag(driveGainDb), skipSmoothing); // set input gain for waveshaper in linear
-        T driveCompensation = T(1) / std::sqrt(dB2Mag(driveGainDb)); // approximate compensation to retain overall level
-        shaper.setOutputGain(driveCompensation, skipSmoothing); // set output gain to retain overall level
+        compressor.setThreshold(newthresholdDb, skipSmoothing);
     }
 
     /**
-     * @brief Set attack time normalized (0.0 to 1.0).
+     * @brief Set attack time in milliseconds.
+     * @param attackTimeMs Attack time in milliseconds
+     * @param skipSmoothing If true, skip smoothing and set immediately.
      */
-    void setAttack(T attackTimeNorm, bool skipSmoothing = false) {
-
-        // Map to actual time in ms based on mode
-        T attackTimeMs = T(0);
-        toggleCharacterMode ?
-        attackTimeMs = mapTime(attackTimeNorm, CHARACTER_SMOOTHER_ATTACK_MIN_MS, CHARACTER_SMOOTHER_ATTACK_MAX_MS) :
-        attackTimeMs = mapTime(attackTimeNorm, NORMAL_SMOOTHER_ATTACK_MIN_MS, NORMAL_SMOOTHER_ATTACK_MAX_MS);
-        // Gain smoother attack
-        gainSmoother.setAttackTime(attackTimeMs, skipSmoothing);
+    void setAttackTime(T attackTimeMs, bool skipSmoothing = false) {
+        compressor.setEnvelopeAttackTime(Time<T>::Milliseconds(attackTimeMs), skipSmoothing);
     }
 
     /**
      * @brief Set release time in milliseconds.
+     * @param releaseTimeMs Release time in milliseconds
+     * @param skipSmoothing If true, skip smoothing and set immediately.
      */
-    void setRelease(T releaseTimeMs, bool skipSmoothing = false) {
-        // Map to actual time in ms based on mode
-        T mappedReleaseTimeMs = T(0);
-        toggleCharacterMode ?
-        mappedReleaseTimeMs = mapTime(releaseTimeMs, CHARACTER_SMOOTHER_RELEASE_MIN_MS, CHARACTER_SMOOTHER_RELEASE_MAX_MS) :
-        mappedReleaseTimeMs = mapTime(releaseTimeMs, NORMAL_SMOOTHER_RELEASE_MIN_MS, NORMAL_SMOOTHER_RELEASE_MAX_MS);
-        // Gain smoother release
-        gainSmoother.setReleaseTime(mappedReleaseTimeMs, skipSmoothing);
+    void setReleaseTime(T releaseTimeMs, bool skipSmoothing = false) {
+        compressor.setEnvelopeReleaseTime(Time<T>::Milliseconds(releaseTimeMs), skipSmoothing);
     }
 
     /**
      * @brief Set compression ratio.
+     * @param newRatio New ratio value
+     * @param skipSmoothing If true, skip smoothing and set immediately.
      */
     void setRatio(T newRatio, bool skipSmoothing = false) {
-        gainComputer.setRatio(newRatio, skipSmoothing);
+        compressor.setRatio(newRatio, skipSmoothing);
     }
 
-    
     /**
-     * @brief Set mix between dry and wet signal.
-     * @param mixNormalized Mix amount in normalized range [0, 1] (0 = full dry, 1 = full wet).
+     * @brief Set knee width in dB.
+     * @param newKneeDb New knee width in dB
+     * @param skipSmoothing If true, skip smoothing and set immediately.
      */
-    void setMix(T mixNormalized, bool skipSmoothing) {
-        dryWetMixer.setMix(mixNormalized, skipSmoothing);
+    void setKnee(T newKneeDb, bool skipSmoothing = false) {
+        compressor.setKnee(newKneeDb, skipSmoothing);
     }
 
     /**
      * @brief Set output gain in dB.
+     * @param gainDb Output gain in dB
+     * @param skipSmoothing If true, skip smoothing and set immediately.
      */
     void setOutputGain(T gainDb, bool skipSmoothing = false) {
-        T gainLinear = dB2Mag(gainDb); // Convert dB to linear
-        outputGain.setTarget(gainLinear, skipSmoothing);
+        outputGain.setTarget(utils::dB2mag(gainDb), skipSmoothing);
     }
 
-    /**
-     * @brief Enable or disable character mode.
-     */
-    void setCharacterMode(bool newMode, bool skipSmoothing = false) {
-        toggleCharacterMode = newMode;
-        toggleCharacterMode 
-            ? gainComputer.setKnee(CHARACTER_MODE_KNEE_DB, skipSmoothing) // softer knee for character mode
-            : gainComputer.setKnee(NORMAL_MODE_KNEE_DB, skipSmoothing); // harder knee for normal mode
-    }
+    /// Get number of channels.
+    size_t getNumChannels() const { return numChannels; }
 
+    /// Get sample rate.
+    T getSampleRate() const { return sampleRate; }
 
+    /// Check if the processor is prepared.
+    bool isPrepared() const { return togglePrepared; }
 
-    // GETTERS FOR GLOBAL PARAMETERS
-    size_t getNumChannels() const {
-        return numChannels;
-    }
-    T getSampleRate() const {
-        return sampleRate;
-    }
-    bool isPrepared() const {
-        return togglePrepared;
-    }
-    size_t getLatencySamples() const {
-        if (toggleCharacterMode) {
-            return oversampler.getLatencySamples(); // latency due to oversampling
-        } else {
-            return 0; // otherwise no latency
-        }
-    }
+    /// Get gain reduction value.
+    T getGainReduction() const { return gainReduction.load(); }
 
-    // GETTER FOR METERING
-    T getGainReduction() const {
-        return gainReduction.load();
-    }
-
-private:
-    
-    // GLOBAL PARAMETERS
+  private:
+    // Config variables
     size_t numChannels = 0;
     T sampleRate = T(44100);
     bool togglePrepared = false;
-    bool toggleCharacterMode = false;
 
-    // GLOBAL COMPONENTS
-    core::GainComputer<T, core::GainType::Compressor> gainComputer; // Gain computer for compression curve
-    core::GainSmoother<T, core::GainSmootherType::AttackRelease> gainSmoother; // Gain smoother for smooth gain changes
-    DryWetMixer<T> dryWetMixer; // dry/wet mixer
-    SmoothedValue<float> outputGain; // Smoothed output gain parameter
+    // COMPONENTS
+    CompressorProcessorType compressor;
+    DspParamType outputGain;
 
-    // NORMAL MODE COMPONENTS
-    core::EnvelopeFollower<T, core::EnvelopeType::Peak> peakFollower; // Envelope follower for normal mode
-
-    // CHARACTER MODE COMPONENTS
-    core::EnvelopeFollower<T, core::EnvelopeType::RMS> rmsFollower; // Envelope follower for the character mode
-    WaveShaperProcessor<T, WaveShaperType::Tanh> shaper; // Waveshaper for character mode
-    Oversampler<T, OVERSAMPLING_FACTOR> oversampler; // oversampler for character mode
-    AudioBuffer<T> oversampledBuffer; // buffer for oversampling
-    AudioBuffer<T> fxBuffer; // buffer for the effect processing
-
-    // Metering variable
-    std::atomic<T> gainReduction { T(1) };
-
-    /**
-     * @brief Map normalized attack time [0.0, 1.0] exponentially to time range [min, max].
-     */
-    T mapTime(T attackTimeNorm, T min, T max) const {
-        attackTimeNorm = std::clamp(attackTimeNorm, T(0), T(1)); // safety clamp
-        T attackTime = T(0);
-        attackTime = min * std::pow((max / min), attackTimeNorm); // exponential mapping
-        return attackTime;
-    }
-
+    // Metering variables
+    std::vector<T> gainReductionOutput;
+    std::atomic<T> gainReduction{T(1)};
 };
 
-} // namespace Jonssonic::effects
+} // namespace jonssonic::effects

@@ -24,12 +24,14 @@ enum class GainSmootherType {
 // =============================================================================
 // Template Declaration
 // =============================================================================
-template <typename T, GainSmootherType Type = GainSmootherType::AttackRelease> class GainSmoother;
+template <typename T, GainSmootherType Type = GainSmootherType::AttackRelease>
+class GainSmoother;
 
 // =============================================================================
 // Attack-Release Gain Smoother Specialization
 // =============================================================================
-template <typename T> class GainSmoother<T, GainSmootherType::AttackRelease> {
+template <typename T>
+class GainSmoother<T, GainSmootherType::AttackRelease> {
     /// Type aliases for convenience, readability and future-proofing
     using DspParamType = jonssonic::core::common::DspParam<T>;
 
@@ -47,10 +49,10 @@ template <typename T> class GainSmoother<T, GainSmootherType::AttackRelease> {
     ~GainSmoother() = default;
 
     // No copy or move semantics
-    GainSmoother(const GainSmoother &) = delete;
-    GainSmoother &operator=(const GainSmoother &) = delete;
-    GainSmoother(GainSmoother &&) = delete;
-    GainSmoother &operator=(GainSmoother &&) = delete;
+    GainSmoother(const GainSmoother&) = delete;
+    GainSmoother& operator=(const GainSmoother&) = delete;
+    GainSmoother(GainSmoother&&) = delete;
+    GainSmoother& operator=(GainSmoother&&) = delete;
 
     /**
      * @brief Prepare the gain smoother for processing.
@@ -84,11 +86,14 @@ template <typename T> class GainSmoother<T, GainSmootherType::AttackRelease> {
      * @note The smoothing is performed in dB domain for better perceptual results.
      */
     T processSample(size_t ch, T targetGainDb) {
-        T attackPhaseMask = static_cast<T>(targetGainDb < gainDb[ch]); // mask for attack phase
-        T releasePhaseMask = T(1) - attackPhaseMask;                   // mask for release phase
-        T coeff = attackPhaseMask * attackCoeff.getNextValue(ch) +
-                  releasePhaseMask * releaseCoeff.getNextValue(ch); // select coefficient
-        gainDb[ch] += coeff * (targetGainDb - gainDb[ch]);          // exponential smoothing
+        // What stage are we in?
+        T inAttack = static_cast<T>(targetGainDb < gainDb[ch]);
+        T inRelease = T(1) - inAttack;
+
+        // Compute the smoothing coefficient
+        T coeff =
+            inAttack * attackCoeff.getNextValue(ch) + inRelease * releaseCoeff.getNextValue(ch);
+        gainDb[ch] += coeff * (targetGainDb - gainDb[ch]);
         return utils::dB2Mag(gainDb[ch]); // convert smoothed dB gain to linear
     }
 
@@ -99,7 +104,7 @@ template <typename T> class GainSmoother<T, GainSmootherType::AttackRelease> {
      * @param numSamples Number of samples to process
      */
 
-    void processBlock(const T *const *input, T *const *output, size_t numSamples) {
+    void processBlock(const T* const* input, T* const* output, size_t numSamples) {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t n = 0; n < numSamples; ++n) {
                 output[ch][n] = processSample(ch, input[ch][n]);

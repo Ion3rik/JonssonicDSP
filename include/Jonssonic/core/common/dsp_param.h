@@ -12,7 +12,8 @@ namespace jonssonic::core::common {
 /**
  * @brief DSP parameter class with smoothing and safe modulation capabilities.
  */
-template <typename T, SmootherType Type = SmootherType::OnePole, int Order = 1> class DspParam {
+template <typename T, SmootherType Type = SmootherType::OnePole, int Order = 1>
+class DspParam {
   public:
     /// Default constructor
     DspParam() = default;
@@ -27,10 +28,10 @@ template <typename T, SmootherType Type = SmootherType::OnePole, int Order = 1> 
     ~DspParam() = default;
 
     /// No copy semantics nor move semantics
-    DspParam(const DspParam &) = delete;
-    const DspParam &operator=(const DspParam &) = delete;
-    DspParam(DspParam &&) = delete;
-    const DspParam &operator=(DspParam &&) = delete;
+    DspParam(const DspParam&) = delete;
+    const DspParam& operator=(const DspParam&) = delete;
+    DspParam(DspParam&&) = delete;
+    const DspParam& operator=(DspParam&&) = delete;
 
     /**
      * @brief Prepare the parameter for processing.
@@ -88,6 +89,15 @@ template <typename T, SmootherType Type = SmootherType::OnePole, int Order = 1> 
     void setTarget(size_t ch, T value, bool skipSmoothing = false) {
         T clampedValue = clamp(value);
         smoother.setTarget(ch, clampedValue, skipSmoothing);
+    }
+
+    /**
+     * @brief Apply to buffer of samples.
+     * @param buffer Audio buffer (array of pointers to channel data)
+     * @param numSamples Number of samples per channel
+     */
+    void applyToBuffer(T* const* buffer, size_t numSamples) {
+        smoother.applyToBuffer(buffer, numSamples);
     }
 
     /// Get next smoothed value for a channel.
