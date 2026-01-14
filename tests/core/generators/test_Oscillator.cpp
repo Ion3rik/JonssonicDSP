@@ -7,9 +7,7 @@
 #include <gtest/gtest.h>
 #include <jonssonic/core/generators/oscillator.h>
 
-using namespace jonssonic::core::generators;
-using namespace jonssonic::literals;
-using namespace jonssonic::core::common;
+using namespace jnsc;
 
 class OscillatorTest : public ::testing::Test {
   protected:
@@ -43,9 +41,9 @@ class OscillatorTest : public ::testing::Test {
     }
 
     Oscillator<float> osc;
-    std::vector<float *> output;
+    std::vector<float*> output;
     std::vector<float> outputData;
-    std::vector<const float *> phaseMod;
+    std::vector<const float*> phaseMod;
     std::vector<float> phaseModData;
 };
 
@@ -317,7 +315,7 @@ TEST_F(OscillatorTest, MultiChannelIndependence) {
     quadOsc.setFrequency(3, 1760.0_hz, true);
     quadOsc.setWaveform(Waveform::Sine);
 
-    std::vector<float *> quadOutput(4);
+    std::vector<float*> quadOutput(4);
     std::vector<float> quadOutputData(4 * 100);
     for (size_t ch = 0; ch < 4; ++ch) {
         quadOutput[ch] = &quadOutputData[ch * 100];
@@ -435,7 +433,7 @@ TEST_F(OscillatorTest, ProcessSampleMatchesProcessBlock) {
     osc1.setFrequency(440.0_hz, true);
     osc1.setWaveform(Waveform::Sine);
 
-    std::vector<float *> output1(2);
+    std::vector<float*> output1(2);
     std::vector<float> outputData1(2 * 10);
     for (size_t ch = 0; ch < 2; ++ch) {
         output1[ch] = &outputData1[ch * 10];
@@ -452,7 +450,7 @@ TEST_F(OscillatorTest, ProcessSampleMatchesProcessBlock) {
     osc2.setFrequency(440.0_hz, true);
     osc2.setWaveform(Waveform::Sine);
 
-    std::vector<float *> output2(2);
+    std::vector<float*> output2(2);
     std::vector<float> outputData2(2 * 10);
     for (size_t ch = 0; ch < 2; ++ch) {
         output2[ch] = &outputData2[ch * 10];

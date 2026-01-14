@@ -10,20 +10,15 @@
 #include <jonssonic/core/common/quantities.h>
 #include <vector>
 
-namespace jonssonic::core::generators {
+namespace jnsc {
 /// Waveform types
 enum class Waveform { Sine, Saw, Square, Triangle };
 /**
  * @brief Waveform generator class.
  * This class generates basic waveforms (sine, square, sawtooth, triangle) at a specified frequency.
  */
-template <typename T,
-          common::SmootherType SmootherType = common::SmootherType::OnePole,
-          int SmootherOrder = 1>
+template <typename T>
 class Oscillator {
-    /// Type aliases for convenience, readability and future-proofing
-    using DspParam = common::DspParam<T, SmootherType, SmootherOrder>;
-
   public:
     /// Default constructor
     Oscillator() : numChannels(0), sampleRate(T(0)) {}
@@ -40,10 +35,10 @@ class Oscillator {
     ~Oscillator() = default;
 
     /// No copy semantics nor move semantics
-    Oscillator(const Oscillator &) = delete;
-    const Oscillator &operator=(const Oscillator &) = delete;
-    Oscillator(Oscillator &&) = delete;
-    const Oscillator &operator=(Oscillator &&) = delete;
+    Oscillator(const Oscillator&) = delete;
+    const Oscillator& operator=(const Oscillator&) = delete;
+    Oscillator(Oscillator&&) = delete;
+    const Oscillator& operator=(Oscillator&&) = delete;
 
     /**
      * @brief Prepare the oscillator for processing.
@@ -106,7 +101,7 @@ class Oscillator {
      * @param output Output sample pointers (one per channel)
      * @param numSamples Number of samples to process
      */
-    void processBlock(T *const *output, size_t numSamples) {
+    void processBlock(T* const* output, size_t numSamples) {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t i = 0; i < numSamples; ++i) {
                 // Generate waveform at current phase
@@ -125,7 +120,7 @@ class Oscillator {
      * @param phaseMod Phase modulation sample pointers (one per channel)
      * @param numSamples Number of samples to process
      */
-    void processBlock(T *const *output, const T *const *phaseMod, size_t numSamples) {
+    void processBlock(T* const* output, const T* const* phaseMod, size_t numSamples) {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t i = 0; i < numSamples; ++i) {
 
@@ -211,7 +206,7 @@ class Oscillator {
     Waveform waveform = Waveform::Sine;
     bool useAntiAliasing = false;
 
-    std::vector<T> phase;    // Phase per channel
-    DspParam phaseIncrement; // Phase increment per channel
+    std::vector<T> phase;       // Phase per channel
+    DspParam<T> phaseIncrement; // Phase increment per channel
 };
-} // namespace jonssonic::core::generators
+} // namespace jnsc

@@ -11,7 +11,7 @@
 #include <jonssonic/core/nonlinear/wave_shaper.h>
 #include <vector>
 
-namespace jonssonic::core::nonlinear {
+namespace jnsc {
 
 /**
  * @brief Parametric wave shaping stage with gain, bias, and asymmetry.
@@ -19,15 +19,9 @@ namespace jonssonic::core::nonlinear {
  * @tparam SampleType   Sample data type (e.g., float, double)
  * @tparam ShaperType   Nonlinear shaping type (from WaveShaperType)
  */
-template <typename T,
-          WaveShaperType ShaperType,
-          common::SmootherType SmootherType = common::SmootherType::OnePole,
-          int SmootherOrder = 1>
+template <typename T, WaveShaperType ShaperType>
 
 class WaveShaperProcessor {
-    /// Type aliases for convenience, readability and future-proofing
-    using DspParamType = common::DspParam<T, SmootherType, SmootherOrder>;
-
   public:
     /// Default constructor
     WaveShaperProcessor() = default;
@@ -45,10 +39,10 @@ class WaveShaperProcessor {
     ~WaveShaperProcessor() = default;
 
     /// No copy semantics nor move semantics
-    WaveShaperProcessor(const WaveShaperProcessor &) = delete;
-    const WaveShaperProcessor &operator=(const WaveShaperProcessor &) = delete;
-    WaveShaperProcessor(WaveShaperProcessor &&) = delete;
-    const WaveShaperProcessor &operator=(WaveShaperProcessor &&) = delete;
+    WaveShaperProcessor(const WaveShaperProcessor&) = delete;
+    const WaveShaperProcessor& operator=(const WaveShaperProcessor&) = delete;
+    WaveShaperProcessor(WaveShaperProcessor&&) = delete;
+    const WaveShaperProcessor& operator=(WaveShaperProcessor&&) = delete;
 
     /**
      * @brief Prepare the wave shaper processor for processing.
@@ -111,7 +105,7 @@ class WaveShaperProcessor {
      * @param output Output sample pointers (one per channel)
      * @param numSamples Number of samples to process
      */
-    void processBlock(const T *const *input, T *const *output, size_t numSamples) {
+    void processBlock(const T* const* input, T* const* output, size_t numSamples) {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t n = 0; n < numSamples; ++n) {
                 // Get input sample
@@ -243,12 +237,12 @@ class WaveShaperProcessor {
   private:
     size_t numChannels = 0;
     T sampleRate = T(44100);
-    DspParamType inputGain;
-    DspParamType outputGain;
-    DspParamType bias;
-    DspParamType asymmetry;
-    DspParamType shape;
+    DspParam<T> inputGain;
+    DspParam<T> outputGain;
+    DspParam<T> bias;
+    DspParam<T> asymmetry;
+    DspParam<T> shape;
     WaveShaper<T, ShaperType> shaper;
 };
 
-} // namespace jonssonic::core::nonlinear
+} // namespace jnsc

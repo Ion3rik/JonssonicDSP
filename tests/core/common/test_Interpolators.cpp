@@ -6,10 +6,10 @@
 #include <gtest/gtest.h>
 #include <jonssonic/core/common/interpolators.h>
 
-namespace jonssonic::core::common {
+using namespace jnsc;
 
 class InterpolatorTest : public ::testing::Test {
-protected:
+  protected:
     void SetUp() override {
         // common setup code
     }
@@ -78,5 +78,3 @@ TEST_F(InterpolatorTest, NearestForwardUp) {
     float result = NearestInterpolator<float>::interpolateForward(buffer, 1, 0.7f, bufferSize);
     EXPECT_FLOAT_EQ(result, 20.0f); // buffer[2] (nextIdx)
 }
-
-} // namespace Jonssonic

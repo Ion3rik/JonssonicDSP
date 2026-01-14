@@ -14,13 +14,14 @@
 #include <jonssonic/core/filters/filter_types.h>
 #include <jonssonic/utils/math_utils.h>
 
-namespace jonssonic::core::filters {
+namespace jnsc {
 
 /**
  * @brief Multi-section biquad filter chain class.
  * @param T Sample data type (e.g., float, double)
  */
-template <typename T> class BiquadChain {
+template <typename T>
+class BiquadChain {
   public:
     /// Default constructor
     BiquadChain() = default;
@@ -40,10 +41,10 @@ template <typename T> class BiquadChain {
     ~BiquadChain() = default;
 
     // No copy or move semantics
-    BiquadChain(const BiquadChain &) = delete;
-    BiquadChain &operator=(const BiquadChain &) = delete;
-    BiquadChain(BiquadChain &&) = delete;
-    BiquadChain &operator=(BiquadChain &&) = delete;
+    BiquadChain(const BiquadChain&) = delete;
+    BiquadChain& operator=(const BiquadChain&) = delete;
+    BiquadChain(BiquadChain&&) = delete;
+    BiquadChain& operator=(BiquadChain&&) = delete;
 
     /**
      * @brief Prepare the biquad chain for processing.
@@ -91,7 +92,7 @@ template <typename T> class BiquadChain {
      * @param numSamples Number of samples to process
      * @note Must call @ref prepare before processing.
      */
-    void processBlock(const T *const *input, T *const *output, size_t numSamples) {
+    void processBlock(const T* const* input, T* const* output, size_t numSamples) {
         biquadCore.processBlock(input, output, numSamples);
     }
 
@@ -267,4 +268,4 @@ template <typename T> class BiquadChain {
         }
     }
 };
-} // namespace jonssonic::core::filters
+} // namespace jnsc

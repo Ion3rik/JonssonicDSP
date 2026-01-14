@@ -6,24 +6,39 @@
 #include <jonssonic/core/common/audio_buffer.h>
 #include <jonssonic/core/oversampling/oversampler.h>
 
-namespace jonssonic::core::oversampling {
+namespace jnsc {
+// =============================================================================
+// Template Declaration
+// =============================================================================
+/**
+ * @brief OversampledProcessor class template.
+ *        Compile-time and runtime-switchable oversampling processor wrappers.
+ * @tparam T Sample data type (e.g., float, double)
+ * @tparam Factor Oversampling factor (supported factors: 2, 4, 8, 16)
+ * @note If Factor is 0, runtime-switchable specialization is used.
+ */
+template <typename T, size_t Factor = 0>
+class OversampledProcessor;
 
+// =============================================================================
+// Run time specialization:
+// =============================================================================
 /**
  * @brief Runtime-switchable oversampling processor wrapper
- * 
+ *
  * Wraps multiple compile-time configured Oversampler instances and provides
  * runtime switching between oversampling factors (1x, 2x, 4x, 8x, 16x).
- * 
+ *
  * This class handles all oversampling orchestration (upsample → process → downsample)
  * and allows you to provide any processing function via a callback/lambda.
- * 
+ *
  * @tparam T Sample data type (e.g., float, double)
- * 
+ *
  * Example usage:
  * @code
  *   OversampledProcessor<float> processor;
  *   processor.prepare(2, 512); // 2 channels, 512 samples max input block size
- *   
+ *
  *   // Process with 4x oversampling
  *   processor.process(4, input, output, 2, 512,
  *       [&](const auto** in, auto** out, size_t ch, size_t n) {
@@ -31,9 +46,9 @@ namespace jonssonic::core::oversampling {
  *       });
  * @endcode
  */
-template<typename T>
-class OversampledProcessor {
-public:
+template <typename T>
+class OversampledProcessor<T, 0> {
+  public:
     OversampledProcessor() = default;
     ~OversampledProcessor() = default;
 
@@ -49,12 +64,12 @@ public:
      * @param maxBlockSize Maximum block size in samples
      */
     void prepare(size_t newNumChannels, size_t maxInputBlockSize) {
-        numChannels = newNumChannels;
+        numChannels = utils::detail::clampChannels(newNumChannels);
         oversampler2x.prepare(numChannels, maxInputBlockSize);
         oversampler4x.prepare(numChannels, maxInputBlockSize);
         oversampler8x.prepare(numChannels, maxInputBlockSize);
         oversampler16x.prepare(numChannels, maxInputBlockSize);
-        
+
         // Allocate buffer for maximum oversampling (16x)
         oversampledBuffer.resize(numChannels, maxInputBlockSize * 16);
     }
@@ -77,41 +92,57 @@ public:
      * @param input Input audio buffer (array of channel pointers)
      * @param output Output audio buffer (array of channel pointers)
      * @param numSamples Number of samples per channel
-     * @param processFunc Function to call for processing: (const T**, T**, size_t channels, size_t samples)
-     * 
+     * @param processFunc Function to call for processing: (const T**, T**, size_t channels, size_t
+     * samples)
+     *
      * The processFunc is called with upsampled audio and should process in-place or to output.
      */
-    template<typename ProcessFunc>
-    void processBlock(int factor, const T* const* input, T* const* output, 
-                 size_t numSamples, ProcessFunc&& processFunc) {
+    template <typename ProcessFunc>
+    void processBlock(int factor,
+                      const T* const* input,
+                      T* const* output,
+                      size_t numSamples,
+                      ProcessFunc&& processFunc) {
         switch (factor) {
-            case 1:  // No oversampling
-                processFunc(input, output, numSamples);
-                break;
-                
-            case 2:  // 2x oversampling
-                processWithOversampling(oversampler2x, input, output, numSamples, 
-                                       std::forward<ProcessFunc>(processFunc));
-                break;
-                
-            case 4:  // 4x oversampling
-                processWithOversampling(oversampler4x, input, output, numSamples,
-                                       std::forward<ProcessFunc>(processFunc));
-                break;
-                
-            case 8:  // 8x oversampling
-                processWithOversampling(oversampler8x, input, output, numSamples,
-                                       std::forward<ProcessFunc>(processFunc));
-                break;
-                
-            case 16: // 16x oversampling
-                processWithOversampling(oversampler16x, input, output, numSamples,
-                                       std::forward<ProcessFunc>(processFunc));
-                break;
-                
-            default: // Fallback to no oversampling
-                processFunc(input, output, numSamples);
-                break;
+        case 1: // No oversampling
+            processFunc(input, output, numSamples);
+            break;
+
+        case 2: // 2x oversampling
+            processWithOversampling(oversampler2x,
+                                    input,
+                                    output,
+                                    numSamples,
+                                    std::forward<ProcessFunc>(processFunc));
+            break;
+
+        case 4: // 4x oversampling
+            processWithOversampling(oversampler4x,
+                                    input,
+                                    output,
+                                    numSamples,
+                                    std::forward<ProcessFunc>(processFunc));
+            break;
+
+        case 8: // 8x oversampling
+            processWithOversampling(oversampler8x,
+                                    input,
+                                    output,
+                                    numSamples,
+                                    std::forward<ProcessFunc>(processFunc));
+            break;
+
+        case 16: // 16x oversampling
+            processWithOversampling(oversampler16x,
+                                    input,
+                                    output,
+                                    numSamples,
+                                    std::forward<ProcessFunc>(processFunc));
+            break;
+
+        default: // Fallback to no oversampling
+            processFunc(input, output, numSamples);
+            break;
         }
     }
 
@@ -122,28 +153,38 @@ public:
      */
     size_t getLatencySamples(int factor) const {
         switch (factor) {
-            case 2:  return oversampler2x.getLatencySamples();
-            case 4:  return oversampler4x.getLatencySamples();
-            case 8:  return oversampler8x.getLatencySamples();
-            case 16: return oversampler16x.getLatencySamples();
-            default: return 0;
+        case 2:
+            return oversampler2x.getLatencySamples();
+        case 4:
+            return oversampler4x.getLatencySamples();
+        case 8:
+            return oversampler8x.getLatencySamples();
+        case 16:
+            return oversampler16x.getLatencySamples();
+        default:
+            return 0;
         }
     }
 
-private:
+  private:
     /**
      * @brief Internal helper: upsample → process → downsample
      */
-    template<size_t Factor, typename ProcessFunc>
-    void processWithOversampling(Oversampler<T, Factor>& Oversampler, 
-                                const T* const* input, T* const* output,
-                                size_t numSamples, ProcessFunc&& processFunc) {
+    template <size_t Factor, typename ProcessFunc>
+    void processWithOversampling(Oversampler<T, Factor>& Oversampler,
+                                 const T* const* input,
+                                 T* const* output,
+                                 size_t numSamples,
+                                 ProcessFunc&& processFunc) {
         // Upsample
-        size_t oversampledSamples = Oversampler.upsample(input, oversampledBuffer.writePtrs(), numSamples);
-        
+        size_t oversampledSamples =
+            Oversampler.upsample(input, oversampledBuffer.writePtrs(), numSamples);
+
         // Process at higher sample rate
-        processFunc(oversampledBuffer.readPtrs(), oversampledBuffer.writePtrs(), oversampledSamples);
-        
+        processFunc(oversampledBuffer.readPtrs(),
+                    oversampledBuffer.writePtrs(),
+                    oversampledSamples);
+
         // Downsample
         Oversampler.downsample(oversampledBuffer.readPtrs(), output, numSamples);
     }
@@ -156,9 +197,91 @@ private:
     Oversampler<T, 4> oversampler4x;
     Oversampler<T, 8> oversampler8x;
     Oversampler<T, 16> oversampler16x;
-    
+
     // Internal buffer for oversampled audio
-    common::AudioBuffer<T> oversampledBuffer;
+    AudioBuffer<T> oversampledBuffer;
 };
 
-} // namespace jonssonic::core::oversampling
+/**
+ * @brief Compile time version of OversampledProcessor with fixed oversampling factor.
+ *       This class uses a single Oversampler instance configured at compile time.
+ * @tparam T Sample data type (e.g., float, double)
+ * @tparam Factor Oversampling factor (supported factors: 2, 4, 8, 16)
+ * @note This class is more efficient when the oversampling factor is known at compile time.
+ */
+
+template <typename T, size_t Factor>
+class OversampledProcessor {
+    static_assert(Factor == 2 || Factor == 4 || Factor == 8 || Factor == 16,
+                  "Supported oversampling Factors are 2, 4, 8, and 16");
+
+  public:
+    /// Default constructor.
+    OversampledProcessor() = default;
+
+    /// Default destructor.
+    ~OversampledProcessor() = default;
+
+    /// No copy nor move semantics
+    OversampledProcessor(const OversampledProcessor&) = delete;
+    OversampledProcessor& operator=(const OversampledProcessor&) = delete;
+    OversampledProcessor(OversampledProcessor&&) = delete;
+    OversampledProcessor& operator=(OversampledProcessor&&) = delete;
+
+    /**
+     * @brief Prepare the oversampled processor for processing.
+     * @param numChannels Number of audio channels
+     * @param maxBlockSize Maximum block size in samples
+     */
+    void prepare(size_t newNumChannels, size_t maxInputBlockSize) {
+        numChannels = utils::detail::clampChannels(newNumChannels);
+        oversampler.prepare(numChannels, maxInputBlockSize);
+        oversampledBuffer.resize(numChannels, maxInputBlockSize * Factor);
+    }
+
+    /**
+     * @brief Reset the oversampled processor state.
+     */
+    void reset() {
+        oversampler.reset();
+        oversampledBuffer.clear();
+    }
+
+    /**
+     * @brief Process audio with the configured oversampling factor
+     * @param input Input audio buffer (array of channel pointers)
+     * @param output Output audio buffer (array of channel pointers)
+     * @param numSamples Number of samples per channel
+     * @param processFunc Function to call for processing: (const T**, T**, size_t)
+     */
+    template <typename ProcessFunc>
+    void processBlock(const T* const* input,
+                      T* const* output,
+                      size_t numSamples,
+                      ProcessFunc&& processFunc) {
+        // Upsample
+        size_t oversampledSamples =
+            oversampler.upsample(input, oversampledBuffer.writePtrs(), numSamples);
+
+        // Process at higher sample rate
+        processFunc(oversampledBuffer.readPtrs(),
+                    oversampledBuffer.writePtrs(),
+                    oversampledSamples);
+
+        // Downsample
+        oversampler.downsample(oversampledBuffer.readPtrs(), output, numSamples);
+    }
+
+    /**
+     * @brief Get total latency in samples at base sample rate
+     * @return Latency in samples
+     */
+    size_t getLatencySamples() const { return oversampler.getLatencySamples(); }
+
+  private:
+    size_t numChannels = 0;
+    Oversampler<T, Factor> oversampler;
+    AudioBuffer<T> oversampledBuffer;
+};
+
+} // namespace jnsc

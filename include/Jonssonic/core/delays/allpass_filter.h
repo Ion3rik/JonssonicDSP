@@ -9,14 +9,15 @@
 #include <jonssonic/core/common/quantities.h>
 #include <jonssonic/core/delays/delay_line.h>
 
-namespace jonssonic::core::delays {
+namespace jnsc {
 // MODULATION STRUCTURES
 namespace AllpassMod {
 /**
  * @brief Modulation input structure for AllpassFilter single sample processing
  * @param T Sample data type (e.g., float, double)
  */
-template <typename T> struct Sample : public common::ModulationInput<T> {
+template <typename T>
+struct Sample : public ModulationInput<T> {
     T delayMod = T(0);
     T gainMod = T(1);
 };
@@ -25,9 +26,10 @@ template <typename T> struct Sample : public common::ModulationInput<T> {
  * @brief Modulation input structure for AllpassFilter block processing
  * @param T Sample data type (e.g., float, double)
  */
-template <typename T> struct Block : public common::ModulationInput<T> {
-    const T *const *delayMod = nullptr; // modulation buffer for delay time (in samples)
-    const T *const *gainMod = nullptr;  // modulation buffer for gain
+template <typename T>
+struct Block : public ModulationInput<T> {
+    const T* const* delayMod = nullptr; // modulation buffer for delay time (in samples)
+    const T* const* gainMod = nullptr;  // modulation buffer for gain
 };
 } // namespace AllpassMod
 
@@ -35,19 +37,9 @@ template <typename T> struct Block : public common::ModulationInput<T> {
  * @brief Allpass Filter
  * @param T Sample data type (e.g., float, double)
  * @param Interpolator Interpolator type for fractional delay support (default: LinearInterpolator)
- * @param SmootherType Type of smoother for delay time modulation (default: OnePole)
- * @param SmootherOrder Order of the smoother for delay time modulation (default: 1)
- * @param SmoothingTimeMs Smoothing time in milliseconds for delay time changes (default: 10ms)
  */
-template <typename T,
-          typename Interpolator = common::LinearInterpolator<T>,
-          common::SmootherType SmootherType = common::SmootherType::OnePole,
-          int SmootherOrder = 1>
+template <typename T, typename Interpolator = LinearInterpolator<T>>
 class AllpassFilter {
-    /// Type aliases for convenience, readability, and future-proofing
-    using DelayLineType = DelayLine<T, Interpolator, SmootherType, SmootherOrder>;
-    using DspParamType = common::DspParam<T, SmootherType, SmootherOrder>;
-
   public:
     /// Default constructor
     AllpassFilter() = default;
@@ -65,10 +57,10 @@ class AllpassFilter {
     ~AllpassFilter() = default;
 
     /// No copy semantics nor move semantics
-    AllpassFilter(const AllpassFilter &) = delete;
-    const AllpassFilter &operator=(const AllpassFilter &) = delete;
-    AllpassFilter(AllpassFilter &&) = delete;
-    const AllpassFilter &operator=(AllpassFilter &&) = delete;
+    AllpassFilter(const AllpassFilter&) = delete;
+    const AllpassFilter& operator=(const AllpassFilter&) = delete;
+    AllpassFilter(AllpassFilter&&) = delete;
+    const AllpassFilter& operator=(AllpassFilter&&) = delete;
 
     /**
      * @brief Prepare the allpass filter for processing.
@@ -124,7 +116,7 @@ class AllpassFilter {
      * @param modStruct Modulation structure containing modulation data
      * @return Output sample
      */
-    T processSample(size_t ch, T input, AllpassMod::Sample<T> &modStruct) {
+    T processSample(size_t ch, T input, AllpassMod::Sample<T>& modStruct) {
         // Apply modulation to feedback and feedforward gains
         T modulatedGain = gain.applyMultiplicativeMod(ch, modStruct.gainMod);
 
@@ -148,7 +140,7 @@ class AllpassFilter {
      * @param numSamples Number of samples to process
      * @note Input and output must have the same number of channels as prepared.
      */
-    void processBlock(const T *const *input, T *const *output, size_t numSamples) {
+    void processBlock(const T* const* input, T* const* output, size_t numSamples) {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t i = 0; i < numSamples; ++i) {
                 // Get smoothed gain value
@@ -175,9 +167,9 @@ class AllpassFilter {
      * @param numSamples Number of samples to process
      * @note Input and output must have the same number of channels as prepared.
      */
-    void processBlock(const T *const *input,
-                      T *const *output,
-                      AllpassMod::Block<T> &modStruct,
+    void processBlock(const T* const* input,
+                      T* const* output,
+                      AllpassMod::Block<T>& modStruct,
                       size_t numSamples) {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t i = 0; i < numSamples; ++i) {
@@ -242,9 +234,12 @@ class AllpassFilter {
     }
 
   private:
+    // Config variables
     size_t numChannels = 0;
     T sampleRate = T(44100);
-    DelayLineType delayLine;
-    DspParamType gain;
+
+    // DSP Components
+    DelayLine<T, Interpolator> delayLine;
+    DspParam<T> gain;
 };
-} // namespace jonssonic::core::delays
+} // namespace jnsc

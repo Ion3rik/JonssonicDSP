@@ -9,7 +9,7 @@
 #include <jonssonic/core/dynamics/_dynamics.h>
 #include <jonssonic/core/filters/biquad_filter.h>
 
-namespace jonssonic::models::dynamics {
+namespace jnsc::models {
 /// Detector type enumeration (feedforward or feedback)
 enum class DetectorType { Feedforward, Feedback };
 
@@ -33,13 +33,6 @@ template <typename T,
           bool SideChainFilter = false,
           bool Metering = true>
 class DynamicsProcessor {
-    /// Type aliases for convenience
-    using EnvelopeFollowerType = core::dynamics::EnvelopeFollower<T, EnvelopeType>;
-    using GainComputerType = core::dynamics::GainComputer<T, GainPolicy>;
-    using GainSmootherTypeAlias = core::dynamics::GainSmoother<T, GainSmootherType>;
-    using SideChainFilterType = core::filters::BiquadFilter<T>;
-    using DspParamType = jonssonic::core::common::DspParam<T>;
-
   public:
     /// Default constructor.
     DynamicsProcessor() = default;
@@ -299,18 +292,33 @@ class DynamicsProcessor {
 // =============================================================================
 // Type aliases for common dynamics processors
 // =============================================================================
-/// Compressor type alias
+/// Feedforward RMS Compressor
 template <typename T,
           EnvelopeType EnvelopeType = EnvelopeType::RMS,
           GainSmootherType GainSmootherType = GainSmootherType::AttackRelease,
           DetectorType DetectorType = DetectorType::Feedforward,
           bool SideChainFilter = false,
           bool Metering = true>
-using CompressorProcessor = DynamicsProcessor<T,
-                                              EnvelopeType,
-                                              CompressorPolicy<T>,
-                                              GainSmootherType,
-                                              DetectorType,
-                                              SideChainFilter>;
+using CompressorRMSFeedforward = DynamicsProcessor<T,
+                                                   EnvelopeType,
+                                                   CompressorPolicy<T>,
+                                                   GainSmootherType,
+                                                   DetectorType,
+                                                   SideChainFilter,
+                                                   Metering>;
 
-} // namespace jonssonic::models::dynamics
+/// Feedback RMS Compressor
+template <typename T,
+          EnvelopeType EnvelopeType = EnvelopeType::RMS,
+          GainSmootherType GainSmootherType = GainSmootherType::AttackRelease,
+          bool SideChainFilter = false,
+          bool Metering = true>
+using CompressorRMSFeedback = DynamicsProcessor<T,
+                                                EnvelopeType,
+                                                CompressorPolicy<T>,
+                                                GainSmootherType,
+                                                DetectorType::Feedback,
+                                                SideChainFilter,
+                                                Metering>;
+
+} // namespace jnsc::models

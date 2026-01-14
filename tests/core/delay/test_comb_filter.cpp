@@ -10,10 +10,8 @@
 #include <jonssonic/utils/math_utils.h>
 #include <vector>
 
-using namespace jonssonic::core::delays;
-using namespace jonssonic::utils;
-using namespace jonssonic::core::common;
-using namespace jonssonic::literals;
+using namespace jnsc;
+using namespace jnsc::utils;
 
 class CombFilterTest : public ::testing::Test {
   protected:
@@ -112,8 +110,8 @@ TEST_F(CombFilterTest, ProcessBlock_NoModulation) {
     inputBuffer[1][0] = 1.0f;
 
     // Create raw pointers for processing
-    std::vector<const float *> inputPtrs(numChannels);
-    std::vector<float *> outputPtrs(numChannels);
+    std::vector<const float*> inputPtrs(numChannels);
+    std::vector<float*> outputPtrs(numChannels);
     for (size_t ch = 0; ch < numChannels; ++ch) {
         inputPtrs[ch] = inputBuffer[ch].data();
         outputPtrs[ch] = outputBuffer[ch].data();
@@ -161,11 +159,11 @@ TEST_F(CombFilterTest, ProcessBlock_WithModulation) {
     inputBuffer[1][0] = 1.0f;
 
     // Create raw pointers
-    std::vector<const float *> inputPtrs(numChannels);
-    std::vector<float *> outputPtrs(numChannels);
-    std::vector<const float *> delayModPtrs(numChannels);
-    std::vector<const float *> fbModPtrs(numChannels);
-    std::vector<const float *> ffModPtrs(numChannels);
+    std::vector<const float*> inputPtrs(numChannels);
+    std::vector<float*> outputPtrs(numChannels);
+    std::vector<const float*> delayModPtrs(numChannels);
+    std::vector<const float*> fbModPtrs(numChannels);
+    std::vector<const float*> ffModPtrs(numChannels);
 
     for (size_t ch = 0; ch < numChannels; ++ch) {
         inputPtrs[ch] = inputBuffer[ch].data();

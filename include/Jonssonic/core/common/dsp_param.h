@@ -5,10 +5,10 @@
 #pragma once
 #include "jonssonic/core/common/quantities.h"
 #include "jonssonic/utils/detail/config_utils.h"
-#include <jonssonic/core/common/smoothed_value.h>
+#include <jonssonic/core/common/detail/smoothed_value.h>
 #include <limits>
 
-namespace jonssonic::core::common {
+namespace jnsc {
 /**
  * @brief DSP parameter class with smoothing and safe modulation capabilities.
  */
@@ -110,7 +110,7 @@ class DspParam {
     T getTargetValue(size_t ch) const { return smoother.getTargetValue(ch); }
 
   private:
-    SmoothedValue<T, Type, Order> smoother;
+    detail::SmoothedValue<T, Type, Order> smoother;
     T min = std::numeric_limits<T>::lowest();
     T max = std::numeric_limits<T>::max();
 
@@ -118,4 +118,4 @@ class DspParam {
     T clamp(T value) const { return std::clamp(value, min, max); }
 };
 
-} // namespace jonssonic::core::common
+} // namespace jnsc

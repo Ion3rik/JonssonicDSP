@@ -5,10 +5,8 @@
 #include <jonssonic/utils/math_utils.h>
 #include <vector>
 
-using namespace jonssonic::core::dynamics;
-using namespace jonssonic::utils;
-using namespace jonssonic::literals;
-using namespace jonssonic::core::common;
+using namespace jnsc;
+using namespace jnsc::utils;
 
 class GainSmootherTest : public ::testing::Test {
   protected:

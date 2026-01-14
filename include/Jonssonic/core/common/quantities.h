@@ -7,7 +7,7 @@
 #include <jonssonic/utils/math_utils.h>
 #include <limits>
 
-namespace jonssonic::core::common {
+namespace jnsc {
 
 /**
  * @brief This file contains structures for representing quantities with units,
@@ -20,7 +20,8 @@ namespace jonssonic::core::common {
 enum class TimeUnit { Samples, Milliseconds, Seconds };
 
 /// Time quantity structure
-template <typename T> struct Time {
+template <typename T>
+struct Time {
   private:
     Time(T v, TimeUnit u) : value(v), unit(u) {}
 
@@ -84,7 +85,8 @@ template <typename T> struct Time {
 enum class FrequencyUnit { Hertz, Kilohertz, Normalized };
 
 /// Frequency quantity structure
-template <typename T> struct Frequency {
+template <typename T>
+struct Frequency {
   private:
     Frequency(T v, FrequencyUnit u) : value(v), unit(u) {}
 
@@ -150,7 +152,8 @@ template <typename T> struct Frequency {
 enum class GainUnit { Linear, Decibels };
 
 /// Gain quantity structure
-template <typename T> struct Gain {
+template <typename T>
+struct Gain {
   private:
     Gain(T v, GainUnit u) : value(v), unit(u) {}
 
@@ -201,19 +204,10 @@ template <typename T> struct Gain {
     Gain operator-() const { return Gain(-value, unit); }
 };
 
-} // namespace jonssonic::core::common
+// =============================================================
+// Literal operators for quantities
+// =============================================================
 
-/// Convenient type aliases directly in the jonssonic namespace
-namespace jonssonic {
-template <typename T> using Time = core::common::Time<T>;
-
-template <typename T> using Frequency = core::common::Frequency<T>;
-
-template <typename T> using Gain = core::common::Gain<T>;
-} // namespace jonssonic
-
-/// User-defined literals for ergonomic construction of quantities (float)
-namespace jonssonic::literals {
 // Time literals
 inline Time<float> operator""_ms(long double v) {
     return Time<float>::Milliseconds(static_cast<float>(v));
@@ -243,4 +237,5 @@ inline Gain<float> operator""_db(long double v) {
 inline Gain<float> operator""_lin(long double v) {
     return Gain<float>::Linear(static_cast<float>(v));
 }
-} // namespace jonssonic::literals
+
+} // namespace jnsc

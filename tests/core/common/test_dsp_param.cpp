@@ -6,8 +6,7 @@
 #include <jonssonic/core/common/dsp_param.h>
 #include <jonssonic/core/common/quantities.h>
 
-namespace jonssonic::core::common {
-using namespace jonssonic::literals;
+using namespace jnsc;
 
 class DspParamTest : public ::testing::Test {
   protected:
@@ -149,5 +148,3 @@ TEST_F(DspParamTest, MultiplicativeModMultiChannel) {
         EXPECT_NEAR(result[ch], 4.0f, 1e-2f);
     }
 }
-
-} // namespace jonssonic::core::common

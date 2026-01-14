@@ -2,10 +2,10 @@
 // Unit tests for AudioBuffer class
 // SPDX-License-Identifier: MIT
 
-#include <jonssonic/core/common/audio_buffer.h>
 #include <gtest/gtest.h>
+#include <jonssonic/core/common/audio_buffer.h>
 
-using namespace jonssonic::core::common;
+using namespace jnsc;
 
 TEST(AudioBufferTest, ResizeAndAccess) {
     AudioBuffer<float> buffer;

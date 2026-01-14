@@ -7,10 +7,8 @@
 #include <jonssonic/core/filters/biquad_filter.h>
 #include <jonssonic/utils/math_utils.h>
 
-using namespace jonssonic::core::filters;
-using namespace jonssonic::utils;
-using namespace jonssonic::literals;
-using namespace jonssonic::core::common;
+using namespace jnsc;
+using namespace jnsc::utils;
 
 class BiquadFilterTest : public ::testing::Test {
   protected:

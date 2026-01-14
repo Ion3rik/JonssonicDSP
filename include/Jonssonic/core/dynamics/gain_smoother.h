@@ -9,7 +9,7 @@
 #include <jonssonic/core/common/quantities.h>
 #include <jonssonic/utils/math_utils.h>
 
-namespace jonssonic::core::dynamics {
+namespace jnsc {
 
 /**
  * @brief Gain smoother type enumeration.
@@ -32,9 +32,6 @@ class GainSmoother;
 // =============================================================================
 template <typename T>
 class GainSmoother<T, GainSmootherType::AttackRelease> {
-    /// Type aliases for convenience, readability and future-proofing
-    using DspParamType = jonssonic::core::common::DspParam<T>;
-
   public:
     /// Default constructor.
     GainSmoother() = default;
@@ -168,8 +165,8 @@ class GainSmoother<T, GainSmootherType::AttackRelease> {
     T releaseTimeSec;
 
     // Coefficient smoothers
-    DspParamType attackCoeff;
-    DspParamType releaseCoeff;
+    DspParam<T> attackCoeff;
+    DspParam<T> releaseCoeff;
 
     void updateCoefficients(bool skipSmoothing = false) {
         // Set target coefficients based on current attack and release times
@@ -178,4 +175,4 @@ class GainSmoother<T, GainSmootherType::AttackRelease> {
     }
 };
 
-} // namespace jonssonic::core::dynamics
+} // namespace jnsc

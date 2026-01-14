@@ -13,13 +13,14 @@
 #include <jonssonic/core/common/quantities.h>
 #include <jonssonic/core/filters/filter_types.h>
 
-namespace jonssonic::core::filters {
+namespace jnsc {
 
 /**
  * @brief Single section first-order filter wrapper class.
  * @param T Sample data type (e.g., float, double).
  */
-template <typename T> class FirstOrderFilter {
+template <typename T>
+class FirstOrderFilter {
   public:
     /// Default constructor.
     FirstOrderFilter() = default;
@@ -40,10 +41,10 @@ template <typename T> class FirstOrderFilter {
     ~FirstOrderFilter() = default;
 
     /// No copy nor move semantics.
-    FirstOrderFilter(const FirstOrderFilter &) = delete;
-    FirstOrderFilter &operator=(const FirstOrderFilter &) = delete;
-    FirstOrderFilter(FirstOrderFilter &&) = delete;
-    FirstOrderFilter &operator=(FirstOrderFilter &&) = delete;
+    FirstOrderFilter(const FirstOrderFilter&) = delete;
+    FirstOrderFilter& operator=(const FirstOrderFilter&) = delete;
+    FirstOrderFilter(FirstOrderFilter&&) = delete;
+    FirstOrderFilter& operator=(FirstOrderFilter&&) = delete;
 
     /**
      * @brief Prepare the first-order filter for processing.
@@ -81,7 +82,7 @@ template <typename T> class FirstOrderFilter {
      * @param numSamples Number of samples to process.
      * @note Must call @ref prepare before processing.
      */
-    void processBlock(const T *const *input, T *const *output, size_t numSamples) {
+    void processBlock(const T* const* input, T* const* output, size_t numSamples) {
         FirstOrderCore.processBlock(input, output, numSamples);
     }
 
@@ -179,4 +180,4 @@ template <typename T> class FirstOrderFilter {
     }
 };
 
-} // namespace jonssonic::core::filters
+} // namespace jnsc

@@ -2,10 +2,10 @@
 // Unit tests for CircularBuffer class
 // SPDX-License-Identifier: MIT
 
-#include <jonssonic/core/common/circular_audio_buffer.h>
 #include <gtest/gtest.h>
+#include <jonssonic/core/common/circular_audio_buffer.h>
 
-using namespace jonssonic::core::common;
+using namespace jnsc;
 
 TEST(CircularAudioBufferTest, ResizeAndWriteRead) {
     CircularAudioBuffer<float> buffer;
@@ -23,7 +23,8 @@ TEST(CircularAudioBufferTest, WrapAround) {
     CircularAudioBuffer<float> buffer;
     buffer.resize(1, 4);
     // Write more than buffer size to test wrap
-    for (int i = 0; i < 6; ++i) buffer.write(0, float(i));
+    for (int i = 0; i < 6; ++i)
+        buffer.write(0, float(i));
     // The most recent is 5, then 4, 3, 2
     EXPECT_FLOAT_EQ(buffer.read(0, 0), 5.0f);
     EXPECT_FLOAT_EQ(buffer.read(0, 1), 4.0f);

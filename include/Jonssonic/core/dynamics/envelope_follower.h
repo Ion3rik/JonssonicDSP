@@ -11,7 +11,7 @@
 #include <jonssonic/core/common/quantities.h>
 #include <vector>
 
-namespace jonssonic::core::dynamics {
+namespace jnsc {
 
 /// Envelope follower type enumeration
 enum class EnvelopeType {
@@ -33,9 +33,6 @@ class EnvelopeFollower;
 /// Peak Envelope Follower Specialization
 template <typename T>
 class EnvelopeFollower<T, EnvelopeType::Peak> {
-    /// Type aliases for convenience, readability and future-proofing
-    using DspParamType = jonssonic::core::common::DspParam<T>;
-
     /// Envelope parameter struct
     struct EnvelopeParams {
         T attackTimeSec;
@@ -198,8 +195,8 @@ class EnvelopeFollower<T, EnvelopeType::Peak> {
     EnvelopeParams params;
 
     // DSP Parameters
-    DspParamType attackCoeff;
-    DspParamType releaseCoeff;
+    DspParam<T> attackCoeff;
+    DspParam<T> releaseCoeff;
 
     void updateCoefficients(bool skipSmoothing) {
 
@@ -216,9 +213,6 @@ class EnvelopeFollower<T, EnvelopeType::Peak> {
 // =============================================================================
 template <typename T>
 class EnvelopeFollower<T, EnvelopeType::RMS> {
-    /// Type aliases for convenience, readability and future-proofing
-    using DspParamType = jonssonic::core::common::DspParam<T>;
-
   public:
     // Constructors and Destructor
     EnvelopeFollower() = default;
@@ -298,8 +292,8 @@ class EnvelopeFollower<T, EnvelopeType::RMS> {
      * @note Not to be confused with attack/release times.
      */
     void setControlSmoothingTime(Time<T> time) {
-        attackCoeff.setSmoothingTimeMs(time);
-        releaseCoeff.setSmoothingTimeMs(time);
+        attackCoeff.setSmoothingTime(time);
+        releaseCoeff.setSmoothingTime(time);
     }
 
     /**
@@ -344,8 +338,8 @@ class EnvelopeFollower<T, EnvelopeType::RMS> {
     // User Parameters
     T attackTimeSec;
     T releaseTimeSec;
-    DspParamType attackCoeff;
-    DspParamType releaseCoeff;
+    DspParam<T> attackCoeff;
+    DspParam<T> releaseCoeff;
 
     void updateCoefficients(bool skipSmoothing) {
         // Set target coefficients based on current attack and release times
@@ -354,4 +348,4 @@ class EnvelopeFollower<T, EnvelopeType::RMS> {
     }
 };
 
-} // namespace jonssonic::core::dynamics
+} // namespace jnsc

@@ -10,7 +10,7 @@
 #include <jonssonic/utils/buffer_utils.h>
 #include <jonssonic/utils/math_utils.h>
 
-namespace jonssonic::effects {
+namespace jnsc::effects {
 /**
  * @brief Example compressor effect.
  * @tparam T Sample data type (e.g., float, double)
@@ -26,10 +26,6 @@ class Compressor {
     static constexpr T CONTROL_SMOOTH_TIME_MS = T(50);
     static constexpr T GAIN_SMOOTH_ATTACK_MS = T(0.1);
     static constexpr T GAIN_SMOOTH_RELEASE_MS = T(5);
-
-    /// Type aliases for convenience
-    using DspParamType = jonssonic::core::common::DspParam<T>;
-    using CompressorProcessorType = jonssonic::models::dynamics::CompressorProcessor<T>;
 
   public:
     /// Default constructor.
@@ -70,9 +66,9 @@ class Compressor {
         gainReductionOutput.resize(numChannels, T(1));
 
         // Configure fixed parameters
-        compressor.setGainSmootherAttackTime(GAIN_SMOOTH_ATTACK_MS);
-        compressor.setGainSmootherReleaseTime(GAIN_SMOOTH_RELEASE_MS);
-        compressor.setControlSmoothingTime(CONTROL_SMOOTH_TIME_MS);
+        compressor.setGainSmootherAttackTime(Time<T>::Milliseconds(GAIN_SMOOTH_ATTACK_MS));
+        compressor.setGainSmootherReleaseTime(Time<T>::Milliseconds(GAIN_SMOOTH_RELEASE_MS));
+        compressor.setControlSmoothingTime(Time<T>::Milliseconds(CONTROL_SMOOTH_TIME_MS));
         outputGain.setSmoothingTime(Time<T>::Milliseconds(CONTROL_SMOOTH_TIME_MS));
 
         // Set Default Parameters
@@ -172,7 +168,7 @@ class Compressor {
      * @param skipSmoothing If true, skip smoothing and set immediately.
      */
     void setOutputGain(T gainDb, bool skipSmoothing = false) {
-        outputGain.setTarget(utils::dB2mag(gainDb), skipSmoothing);
+        outputGain.setTarget(utils::dB2Mag(gainDb), skipSmoothing);
     }
 
     /// Get number of channels.
@@ -194,12 +190,12 @@ class Compressor {
     bool togglePrepared = false;
 
     // COMPONENTS
-    CompressorProcessorType compressor;
-    DspParamType outputGain;
+    models::CompressorRMSFeedforward<T> compressor;
+    DspParam<T> outputGain;
 
     // Metering variables
     std::vector<T> gainReductionOutput;
     std::atomic<T> gainReduction{T(1)};
 };
 
-} // namespace jonssonic::effects
+} // namespace jnsc::effects

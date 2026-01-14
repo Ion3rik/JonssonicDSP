@@ -7,14 +7,15 @@
 #include <cmath>
 #include <vector>
 
-namespace jonssonic::core::filters {
+namespace jnsc {
 
 /**
  * @brief DC Blocker - A first-order highpass filter with very low cutoff
  * @param T Sample data type (e.g., float, double)
  */
 
-template <typename T> class DCBlocker {
+template <typename T>
+class DCBlocker {
   public:
     /// Default constructor
     DCBlocker() = default;
@@ -30,10 +31,10 @@ template <typename T> class DCBlocker {
     ~DCBlocker() = default;
 
     /// No copy or move semantics
-    DCBlocker(const DCBlocker &) = delete;
-    DCBlocker &operator=(const DCBlocker &) = delete;
-    DCBlocker(DCBlocker &&) = delete;
-    DCBlocker &operator=(DCBlocker &&) = delete;
+    DCBlocker(const DCBlocker&) = delete;
+    DCBlocker& operator=(const DCBlocker&) = delete;
+    DCBlocker(DCBlocker&&) = delete;
+    DCBlocker& operator=(DCBlocker&&) = delete;
 
     /**
      * @brief Prepare the DC blocker for processing.
@@ -85,7 +86,7 @@ template <typename T> class DCBlocker {
      * @param numSamples Number of samples to process
      * @note Must call @ref prepare before processing.
      */
-    void processBlock(const T *const *input, T *const *output, size_t numSamples) {
+    void processBlock(const T* const* input, T* const* output, size_t numSamples) {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t n = 0; n < numSamples; ++n) {
                 output[ch][n] = processSample(ch, input[ch][n]);
@@ -100,4 +101,4 @@ template <typename T> class DCBlocker {
     std::vector<T> x1, y1; // State variables
 };
 
-} // namespace jonssonic::core::filters
+} // namespace jnsc

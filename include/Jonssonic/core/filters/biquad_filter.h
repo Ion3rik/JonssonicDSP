@@ -14,14 +14,15 @@
 #include <jonssonic/core/filters/filter_types.h>
 #include <jonssonic/utils/math_utils.h>
 
-namespace jonssonic::core::filters {
+namespace jnsc {
 
 /**
  * @brief Biquad filter wrapper for single section with integrated coeff computation for common
  * types.
  * @param T Sample data type (e.g., float, double)
  */
-template <typename T> class BiquadFilter {
+template <typename T>
+class BiquadFilter {
   public:
     /// Default constructor
     BiquadFilter() = default;
@@ -40,10 +41,10 @@ template <typename T> class BiquadFilter {
     ~BiquadFilter() = default;
 
     /// No copy nor move semantics.
-    BiquadFilter(const BiquadFilter &) = delete;
-    BiquadFilter &operator=(const BiquadFilter &) = delete;
-    BiquadFilter(BiquadFilter &&) = delete;
-    BiquadFilter &operator=(BiquadFilter &&) = delete;
+    BiquadFilter(const BiquadFilter&) = delete;
+    BiquadFilter& operator=(const BiquadFilter&) = delete;
+    BiquadFilter(BiquadFilter&&) = delete;
+    BiquadFilter& operator=(BiquadFilter&&) = delete;
 
     /**
      * @brief Prepare the biquad filter for processing.
@@ -84,7 +85,7 @@ template <typename T> class BiquadFilter {
      * @param numSamples Number of samples to process.
      * @note Must call @ref prepare before processing.
      */
-    void processBlock(const T *const *input, T *const *output, size_t numSamples) {
+    void processBlock(const T* const* input, T* const* output, size_t numSamples) {
         biquadCore.processBlock(input, output, numSamples);
     }
 
@@ -199,4 +200,4 @@ template <typename T> class BiquadFilter {
         }
     }
 };
-} // namespace jonssonic::core::filters
+} // namespace jnsc

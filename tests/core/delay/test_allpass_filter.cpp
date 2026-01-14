@@ -9,10 +9,8 @@
 #include <jonssonic/utils/math_utils.h>
 #include <vector>
 
-using namespace jonssonic::core::delays;
-using namespace jonssonic::utils;
-using namespace jonssonic::core::common;
-using namespace jonssonic::literals;
+using namespace jnsc;
+using namespace jnsc::utils;
 
 class AllpassFilterTest : public ::testing::Test {
   protected:
@@ -108,8 +106,8 @@ TEST_F(AllpassFilterTest, ProcessBlock_NoModulation) {
     inputBuffer[1][0] = 1.0f;
 
     // Create raw pointers for processing
-    std::vector<const float *> inputPtrs(numChannels);
-    std::vector<float *> outputPtrs(numChannels);
+    std::vector<const float*> inputPtrs(numChannels);
+    std::vector<float*> outputPtrs(numChannels);
     for (size_t ch = 0; ch < numChannels; ++ch) {
         inputPtrs[ch] = inputBuffer[ch].data();
         outputPtrs[ch] = outputBuffer[ch].data();
@@ -155,10 +153,10 @@ TEST_F(AllpassFilterTest, ProcessBlock_WithModulation) {
     inputBuffer[1][0] = 1.0f;
 
     // Create raw pointers
-    std::vector<const float *> inputPtrs(numChannels);
-    std::vector<float *> outputPtrs(numChannels);
-    std::vector<const float *> delayModPtrs(numChannels);
-    std::vector<const float *> gainModPtrs(numChannels);
+    std::vector<const float*> inputPtrs(numChannels);
+    std::vector<float*> outputPtrs(numChannels);
+    std::vector<const float*> delayModPtrs(numChannels);
+    std::vector<const float*> gainModPtrs(numChannels);
 
     for (size_t ch = 0; ch < numChannels; ++ch) {
         inputPtrs[ch] = inputBuffer[ch].data();
@@ -286,7 +284,7 @@ TEST_F(AllpassFilterTest, ImpulseResponse) {
     EXPECT_NEAR(echoSample, 1.0f - 0.7f * 0.7f, 0.05f);
 
     // Allpass should produce finite output
-    for (const auto &sample : outputs) {
+    for (const auto& sample : outputs) {
         EXPECT_TRUE(std::isfinite(sample));
     }
 }

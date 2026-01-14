@@ -8,7 +8,7 @@
 #include <functional>
 #include <jonssonic/utils/math_utils.h>
 
-namespace jonssonic::core::nonlinear {
+namespace jnsc {
 
 enum class WaveShaperType {
     None,
@@ -29,7 +29,8 @@ enum class WaveShaperType {
  */
 
 // Template declaration
-template <typename T, WaveShaperType Type> class WaveShaper;
+template <typename T, WaveShaperType Type>
+class WaveShaper;
 
 // =====================================================================
 // Passthrough specialization
@@ -37,12 +38,13 @@ template <typename T, WaveShaperType Type> class WaveShaper;
 /**
  * @brief Passthrough specialization (no processing). Outputs input directly.
  */
-template <typename T> class WaveShaper<T, WaveShaperType::None> {
+template <typename T>
+class WaveShaper<T, WaveShaperType::None> {
   public:
     T processSample(T x, T /*shape*/) const { return x; }
 
-    void processBlock(const T *const *input,
-                      T *const *output,
+    void processBlock(const T* const* input,
+                      T* const* output,
                       size_t numChannels,
                       size_t numSamples) const {
         for (size_t ch = 0; ch < numChannels; ++ch) {
@@ -58,12 +60,13 @@ template <typename T> class WaveShaper<T, WaveShaperType::None> {
  * @brief Hard clipper specialization.
  *        Clamps the signal to [-1, 1].
  */
-template <typename T> class WaveShaper<T, WaveShaperType::HardClip> {
+template <typename T>
+class WaveShaper<T, WaveShaperType::HardClip> {
   public:
     T processSample(T x, T shape = T(0)) const { return std::max<T>(-1, std::min<T>(1, x)); }
 
-    void processBlock(const T *const *input,
-                      T *const *output,
+    void processBlock(const T* const* input,
+                      T* const* output,
                       size_t numChannels,
                       size_t numSamples) const {
         for (size_t ch = 0; ch < numChannels; ++ch) {
@@ -80,12 +83,13 @@ template <typename T> class WaveShaper<T, WaveShaperType::HardClip> {
  * @brief Atan shaper specialization.
  *        Applies atan(x) for smooth limiting, normalized to [-1, 1].
  */
-template <typename T> class WaveShaper<T, WaveShaperType::Atan> {
+template <typename T>
+class WaveShaper<T, WaveShaperType::Atan> {
   public:
     T processSample(T x, T shape = T(0)) const { return std::atan(x) * utils::inv_atan_1<T>; }
 
-    void processBlock(const T *const *input,
-                      T *const *output,
+    void processBlock(const T* const* input,
+                      T* const* output,
                       size_t numChannels,
                       size_t numSamples) const {
         for (size_t ch = 0; ch < numChannels; ++ch) {
@@ -103,12 +107,13 @@ template <typename T> class WaveShaper<T, WaveShaperType::Atan> {
  * @brief Tanh shaper specialization.
  *        Applies std::tanh(x) for smooth saturation.
  */
-template <typename T> class WaveShaper<T, WaveShaperType::Tanh> {
+template <typename T>
+class WaveShaper<T, WaveShaperType::Tanh> {
   public:
     T processSample(T x, T shape = T(0)) const { return std::tanh(x); }
 
-    void processBlock(const T *const *input,
-                      T *const *output,
+    void processBlock(const T* const* input,
+                      T* const* output,
                       size_t numChannels,
                       size_t numSamples) const {
         for (size_t ch = 0; ch < numChannels; ++ch) {
@@ -126,12 +131,13 @@ template <typename T> class WaveShaper<T, WaveShaperType::Tanh> {
  * @brief Full-wave rectifier specialization.
  *        Outputs the absolute value of the input.
  */
-template <typename T> class WaveShaper<T, WaveShaperType::FullWaveRectifier> {
+template <typename T>
+class WaveShaper<T, WaveShaperType::FullWaveRectifier> {
   public:
     T processSample(T x, T shape = T(0)) const { return std::abs(x); }
 
-    void processBlock(const T *const *input,
-                      T *const *output,
+    void processBlock(const T* const* input,
+                      T* const* output,
                       size_t numChannels,
                       size_t numSamples) const {
         for (size_t ch = 0; ch < numChannels; ++ch) {
@@ -149,12 +155,13 @@ template <typename T> class WaveShaper<T, WaveShaperType::FullWaveRectifier> {
  * @brief Half-wave rectifier specialization.
  *        Outputs zero for negative input, passes positive input.
  */
-template <typename T> class WaveShaper<T, WaveShaperType::HalfWaveRectifier> {
+template <typename T>
+class WaveShaper<T, WaveShaperType::HalfWaveRectifier> {
   public:
     T processSample(T x, T shape = T(0)) const { return x < 0 ? 0 : x; }
 
-    void processBlock(const T *const *input,
-                      T *const *output,
+    void processBlock(const T* const* input,
+                      T* const* output,
                       size_t numChannels,
                       size_t numSamples) const {
         for (size_t ch = 0; ch < numChannels; ++ch) {
@@ -173,12 +180,13 @@ template <typename T> class WaveShaper<T, WaveShaperType::HalfWaveRectifier> {
  *        Applies a cubic nonlinearity for soft clipping.
  * 	  f(x) = x - (1/3)x^3
  */
-template <typename T> class WaveShaper<T, WaveShaperType::Cubic> {
+template <typename T>
+class WaveShaper<T, WaveShaperType::Cubic> {
   public:
     T processSample(T x, T shape = T(0)) const { return x - (T(1) / T(3)) * x * x * x; }
 
-    void processBlock(const T *const *input,
-                      T *const *output,
+    void processBlock(const T* const* input,
+                      T* const* output,
                       size_t numChannels,
                       size_t numSamples) const {
         for (size_t ch = 0; ch < numChannels; ++ch) {
@@ -197,7 +205,8 @@ template <typename T> class WaveShaper<T, WaveShaperType::Cubic> {
  *        Applies a shape-controlled clipping.
  *        Shape parameter controls the clipping curvature.
  */
-template <typename T> class WaveShaper<T, WaveShaperType::Dynamic> {
+template <typename T>
+class WaveShaper<T, WaveShaperType::Dynamic> {
   public:
     /**
      * @param x     Input sample
@@ -207,9 +216,9 @@ template <typename T> class WaveShaper<T, WaveShaperType::Dynamic> {
         return x * T(1) / std::pow(T(1) + std::pow(std::abs(x), shape), T(1) / shape);
     }
 
-    void processBlock(const T *const *input,
-                      T *const *output,
-                      const T *const *shape,
+    void processBlock(const T* const* input,
+                      T* const* output,
+                      const T* const* shape,
                       size_t numChannels,
                       size_t numSamples) const {
         for (size_t ch = 0; ch < numChannels; ++ch) {
@@ -229,14 +238,15 @@ template <typename T> class WaveShaper<T, WaveShaperType::Dynamic> {
  *
  * @note  Requires a function to be provided at construction.
  */
-template <typename T> class WaveShaper<T, WaveShaperType::Custom> {
+template <typename T>
+class WaveShaper<T, WaveShaperType::Custom> {
   public:
     using FnType = std::function<T(T)>;
     WaveShaper(FnType fn) : customFn(std::move(fn)) {}
     T processSample(T x, T shape = T(0)) const { return customFn ? customFn(x) : x; }
 
-    void processBlock(const T *const *input,
-                      T *const *output,
+    void processBlock(const T* const* input,
+                      T* const* output,
                       size_t numChannels,
                       size_t numSamples) const {
         for (size_t ch = 0; ch < numChannels; ++ch) {
@@ -250,4 +260,4 @@ template <typename T> class WaveShaper<T, WaveShaperType::Custom> {
     FnType customFn;
 };
 
-} // namespace jonssonic::core::nonlinear
+} // namespace jnsc

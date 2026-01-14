@@ -2,8 +2,7 @@
 #include <jonssonic/core/dynamics/envelope_follower.h>
 #include <vector>
 
-using namespace jonssonic::core::dynamics;
-using namespace jonssonic::literals;
+using namespace jnsc;
 
 TEST(EnvelopeFollowerTest, PeakTracksStepInput) {
     EnvelopeFollower<float, EnvelopeType::Peak> env;

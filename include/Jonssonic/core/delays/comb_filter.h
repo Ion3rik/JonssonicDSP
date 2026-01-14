@@ -9,14 +9,15 @@
 #include <jonssonic/core/common/quantities.h>
 #include <jonssonic/core/delays/delay_line.h>
 
-namespace jonssonic::core::delays {
+namespace jnsc {
 // MODULATION STRUCTURES
 namespace CombMod {
 /**
  * @brief Modulation input structure for CombFilter single sample processing
  * @param T Sample data type (e.g., float, double)
  */
-template <typename T> struct Sample : public common::ModulationInput<T> {
+template <typename T>
+struct Sample : public ModulationInput<T> {
     T delayMod = T(0);
     T feedbackMod = T(1);
     T feedforwardMod = T(1);
@@ -26,10 +27,11 @@ template <typename T> struct Sample : public common::ModulationInput<T> {
  * @brief Modulation input structure for CombFilter block processing
  * @param T Sample data type (e.g., float, double)
  */
-template <typename T> struct Block : public common::ModulationInput<T> {
-    const T *const *delayMod = nullptr;       // modulation buffer for delay time (in samples)
-    const T *const *feedbackMod = nullptr;    // modulation buffer for feedback gain
-    const T *const *feedforwardMod = nullptr; // modulation buffer for feedforward gain
+template <typename T>
+struct Block : public ModulationInput<T> {
+    const T* const* delayMod = nullptr;       // modulation buffer for delay time (in samples)
+    const T* const* feedbackMod = nullptr;    // modulation buffer for feedback gain
+    const T* const* feedforwardMod = nullptr; // modulation buffer for feedforward gain
 };
 } // namespace CombMod
 
@@ -37,19 +39,9 @@ template <typename T> struct Block : public common::ModulationInput<T> {
  * @brief General Comb Filter supporting feedback and feedforward
  * @param T Sample data type (e.g., float, double)
  * @param Interpolator Interpolator type for fractional delay support (default: LinearInterpolator)
- * @param SmootherType Type of smoother for delay time modulation (default: OnePole)
- * @param SmootherOrder Order of the smoother for delay time modulation (default: 1)
- * @param SmoothingTimeMs Smoothing time in milliseconds for delay time changes (default: 10ms)
  */
-template <typename T,
-          typename Interpolator = common::LinearInterpolator<T>,
-          common::SmootherType SmootherType = common::SmootherType::OnePole,
-          int SmootherOrder = 1>
+template <typename T, typename Interpolator = LinearInterpolator<T>>
 class CombFilter {
-    /// Type aliases for convenience, readability, and future-proofing
-    using DelayLineType = DelayLine<T, Interpolator, SmootherType, SmootherOrder>;
-    using DspParamType = common::DspParam<T, SmootherType, SmootherOrder>;
-
   public:
     /// Default constructor
     CombFilter() = default;
@@ -63,10 +55,10 @@ class CombFilter {
     ~CombFilter() = default;
 
     /// No copy semantics nor move semantics
-    CombFilter(const CombFilter &) = delete;
-    const CombFilter &operator=(const CombFilter &) = delete;
-    CombFilter(CombFilter &&) = delete;
-    const CombFilter &operator=(CombFilter &&) = delete;
+    CombFilter(const CombFilter&) = delete;
+    const CombFilter& operator=(const CombFilter&) = delete;
+    CombFilter(CombFilter&&) = delete;
+    const CombFilter& operator=(CombFilter&&) = delete;
 
     /**
      * @brief Prepare the comb filter for processing.
@@ -127,7 +119,7 @@ class CombFilter {
      * @param modStruct Modulation structure containing modulation data
      * @return Output sample
      */
-    T processSample(size_t ch, T input, CombMod::Sample<T> &modStruct) {
+    T processSample(size_t ch, T input, CombMod::Sample<T>& modStruct) {
         // Apply modulation to feedback and feedforward gains
         T modulatedFbGain = feedbackGain.applyMultiplicativeMod(ch, modStruct.feedbackMod);
         T modulatedFfGain = feedforwardGain.applyMultiplicativeMod(ch, modStruct.feedforwardMod);
@@ -152,7 +144,7 @@ class CombFilter {
      * @param numSamples Number of samples to process
      * @note Input and output must have the same number of channels as prepared.
      */
-    void processBlock(const T *const *input, T *const *output, size_t numSamples) {
+    void processBlock(const T* const* input, T* const* output, size_t numSamples) {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t i = 0; i < numSamples; ++i) {
                 // Get smoothed gain values
@@ -181,9 +173,9 @@ class CombFilter {
      *
      * @note Input and output must have the same number of channels as prepared.
      */
-    void processBlock(const T *const *input,
-                      T *const *output,
-                      CombMod::Block<T> &modStruct,
+    void processBlock(const T* const* input,
+                      T* const* output,
+                      CombMod::Block<T>& modStruct,
                       size_t numSamples) {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t i = 0; i < numSamples; ++i) {
@@ -273,8 +265,8 @@ class CombFilter {
   private:
     size_t numChannels = 0;
     T sampleRate = T(44100);
-    DelayLineType delayLine;
-    DspParamType feedbackGain;
-    DspParamType feedforwardGain;
+    DelayLine<T, Interpolator> delayLine;
+    DspParam<T> feedbackGain;
+    DspParam<T> feedforwardGain;
 };
-} // namespace jonssonic::core::delays
+} // namespace jnsc

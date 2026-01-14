@@ -7,7 +7,7 @@
 #include <jonssonic/core/common/quantities.h>
 #include <jonssonic/utils/math_utils.h>
 
-namespace jonssonic::core::dynamics::detail {
+namespace jnsc::detail {
 
 // =============================================================================
 // Compressor Policy
@@ -19,8 +19,6 @@ namespace jonssonic::core::dynamics::detail {
  */
 template <typename T>
 class CompressorPolicy {
-    using DspParamType = jonssonic::core::common::DspParam<T>;
-
   public:
     void prepare(size_t numChannels, T sampleRate) {
         // Prepare DSP parameters
@@ -81,10 +79,13 @@ class CompressorPolicy {
         knee.setTarget(newKneeDb, skipSmoothing);
     }
 
+    bool hasKneeParam() const { return true; }
+    bool hasRatioParam() const { return true; }
+
   private:
-    DspParamType threshold; // threshold in dB
-    DspParamType ratio;     // Compression ratio (ratio:1)
-    DspParamType knee;      // knee width in dB
+    DspParam<T> threshold; // threshold in dB
+    DspParam<T> ratio;     // Compression ratio (ratio:1)
+    DspParam<T> knee;      // knee width in dB
 };
 
 // =============================================================================
@@ -97,8 +98,6 @@ class CompressorPolicy {
  */
 template <typename T>
 class ExpanderDownPolicy {
-    using DspParamType = jonssonic::core::common::DspParam<T>;
-
   public:
     void prepare(size_t numChannels, T sampleRate) {
         // Prepare DSP parameters
@@ -159,10 +158,13 @@ class ExpanderDownPolicy {
         knee.setTarget(newKneeDb, skipSmoothing);
     }
 
+    bool hasKneeParam() const { return true; }
+    bool hasRatioParam() const { return true; }
+
   private:
-    DspParamType threshold; // threshold in dB
-    DspParamType ratio;     // Expansion ratio (1:ratio)
-    DspParamType knee;      // knee width in dB
+    DspParam<T> threshold; // threshold in dB
+    DspParam<T> ratio;     // Expansion ratio (1:ratio)
+    DspParam<T> knee;      // knee width in dB
 };
 
 // =============================================================================
@@ -175,8 +177,6 @@ class ExpanderDownPolicy {
  */
 template <typename T>
 class ExpanderUpPolicy {
-    using DspParamType = jonssonic::core::common::DspParam<T>;
-
   public:
     void prepare(size_t numChannels, T sampleRate) {
         // Prepare DSP parameters
@@ -237,10 +237,13 @@ class ExpanderUpPolicy {
         knee.setTarget(newKneeDb, skipSmoothing);
     }
 
+    bool hasKneeParam() const { return true; }
+    bool hasRatioParam() const { return true; }
+
   private:
-    DspParamType threshold; // threshold in dB
-    DspParamType ratio;     // Expansion ratio (1:ratio)
-    DspParamType knee;      // knee width in dB
+    DspParam<T> threshold; // threshold in dB
+    DspParam<T> ratio;     // Expansion ratio (1:ratio)
+    DspParam<T> knee;      // knee width in dB
 };
 
 // =============================================================================
@@ -253,8 +256,6 @@ class ExpanderUpPolicy {
  */
 template <typename T>
 class LimiterPolicy {
-    using DspParamType = jonssonic::core::common::DspParam<T>;
-
   public:
     void prepare(size_t numChannels, T sampleRate) {
         // Prepare DSP parameters
@@ -278,8 +279,11 @@ class LimiterPolicy {
         threshold.setTarget(newThresholdDb, skipSmoothing);
     }
 
+    bool hasKneeParam() const { return false; }
+    bool hasRatioParam() const { return false; }
+
   private:
-    DspParamType threshold; // threshold in dB
+    DspParam<T> threshold; // threshold in dB
 };
 
 // =============================================================================
@@ -292,8 +296,6 @@ class LimiterPolicy {
  */
 template <typename T>
 class GatePolicy {
-    using DspParamType = jonssonic::core::common::DspParam<T>;
-
   public:
     void prepare(size_t numChannels, T sampleRate) {
         // Prepare DSP parameters
@@ -317,16 +319,18 @@ class GatePolicy {
         threshold.setTarget(newThresholdDb, skipSmoothing);
     }
 
-  private:
-    DspParamType threshold; // threshold in dB
-};
+    bool hasKneeParam() const { return false; }
+    bool hasRatioParam() const { return false; }
 
-} // namespace jonssonic::core::dynamics::detail
+  private:
+    DspParam<T> threshold; // threshold in dB
+};
+} // namespace jnsc::detail
 
 // =============================================================================
 // Type Aliases for public API
 // =============================================================================
-namespace jonssonic::core::dynamics {
+namespace jnsc {
 template <typename T>
 using CompressorPolicy = detail::CompressorPolicy<T>;
 template <typename T>
@@ -337,4 +341,5 @@ template <typename T>
 using LimiterPolicy = detail::LimiterPolicy<T>;
 template <typename T>
 using GatePolicy = detail::GatePolicy<T>;
-} // namespace jonssonic::core::dynamics
+
+} // namespace jnsc

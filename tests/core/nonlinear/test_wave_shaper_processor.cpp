@@ -6,10 +6,7 @@
 #include <gtest/gtest.h>
 #include <jonssonic/core/nonlinear/wave_shaper_processor.h>
 
-using namespace jonssonic::core::nonlinear;
-using namespace jonssonic::utils;
-using namespace jonssonic::core::common;
-using namespace jonssonic::literals;
+using namespace jnsc;
 
 // Typedef for a simple float, hardclip distortion stage
 using TestWaveShaperProcessor = WaveShaperProcessor<float, WaveShaperType::HardClip>;

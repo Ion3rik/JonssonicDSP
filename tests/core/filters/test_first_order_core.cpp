@@ -2,17 +2,17 @@
 // Unit tests for the FirstOrderCore class
 // SPDX-License-Identifier: MIT
 
-#include <gtest/gtest.h>
 #include <cmath>
+#include <gtest/gtest.h>
 #include <jonssonic/core/filters/detail/first_order_core.h>
 
-using namespace jonssonic::core::filters::detail;
+using namespace jnsc::detail;
 
 class FirstOrderCoreTest : public ::testing::Test {
-protected:
+  protected:
     float sampleRate = 44100.0f;
     void SetUp() override {
-        filter.prepare(2, 1); // 2 channels, 1 section
+        filter.prepare(2, 1);             // 2 channels, 1 section
         multiSectionFilter.prepare(2, 2); // 2 channels, 2 sections
     }
     FirstOrderCore<float> filter;
@@ -108,4 +108,3 @@ TEST_F(FirstOrderCoreTest, Constants) {
     EXPECT_EQ(FirstOrderCore<float>::COEFFS_PER_SECTION, 3);
     EXPECT_EQ(FirstOrderCore<float>::STATE_VARS_PER_SECTION, 2);
 }
-

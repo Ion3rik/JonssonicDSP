@@ -8,7 +8,7 @@
 #include <jonssonic/core/common/circular_audio_buffer.h>
 #include <jonssonic/core/common/interpolators.h>
 
-namespace jonssonic::core::oversampling {
+namespace jnsc {
 /**
  * @brief Oversampler class for upsampling and downsampling audio signals.
  *        Additionally integrated latency compensation (e.g. for alligning dry/wet signals).
@@ -17,7 +17,8 @@ namespace jonssonic::core::oversampling {
  * @note Currently Fixed FIR halfband filters are used for each stage.
  */
 
-template <typename T, size_t Factor = 4> class Oversampler {
+template <typename T, size_t Factor = 4>
+class Oversampler {
     // Compile-time checks
     static_assert(Factor == 2 || Factor == 4 || Factor == 8 || Factor == 16,
                   "Supported oversampling Factors are 2, 4, 8, and 16");
@@ -27,10 +28,10 @@ template <typename T, size_t Factor = 4> class Oversampler {
     ~Oversampler() = default;
 
     // No copy or move semantics
-    Oversampler(const Oversampler &) = delete;
-    Oversampler &operator=(const Oversampler &) = delete;
-    Oversampler(Oversampler &&) = delete;
-    Oversampler &operator=(Oversampler &&) = delete;
+    Oversampler(const Oversampler&) = delete;
+    Oversampler& operator=(const Oversampler&) = delete;
+    Oversampler(Oversampler&&) = delete;
+    Oversampler& operator=(Oversampler&&) = delete;
 
     void prepare(size_t newNumChannels, size_t newMaxBlockSize) {
         numChannels = newNumChannels;
@@ -83,7 +84,7 @@ template <typename T, size_t Factor = 4> class Oversampler {
      * @note Output buffer must have space for numInputSamples * Factor samples.
      */
 
-    size_t upsample(const T *const *input, T *const *output, size_t numInputSamples) {
+    size_t upsample(const T* const* input, T* const* output, size_t numInputSamples) {
 
         // Factor 2
         if constexpr (Factor == 2) {
@@ -134,7 +135,7 @@ template <typename T, size_t Factor = 4> class Oversampler {
      * @param numOutputSamples Number of output samples per channel
      * @note Input buffer must have numOutputSamples * Factor samples.
      */
-    void downsample(const T *const *input, T *const *output, size_t numOutputSamples) {
+    void downsample(const T* const* input, T* const* output, size_t numOutputSamples) {
         // Factor 2
         if constexpr (Factor == 2) {
             stage1.downsample(input, output, numOutputSamples); // stage1 2x to 1x
@@ -210,9 +211,9 @@ template <typename T, size_t Factor = 4> class Oversampler {
     detail::FIRHalfbandStage<T, 31> stage4; // 16x stage
 
     // Intermediate buffers for multi-stage processing
-    common::AudioBuffer<T> intermediateBuffer1to2; // for 1x to 2x oversampling
-    common::AudioBuffer<T> intermediateBuffer2to4; // for 2x to 4x oversampling
-    common::AudioBuffer<T> intermediateBuffer4to8; // for 4x to 8x oversampling
+    AudioBuffer<T> intermediateBuffer1to2; // for 1x to 2x oversampling
+    AudioBuffer<T> intermediateBuffer2to4; // for 2x to 4x oversampling
+    AudioBuffer<T> intermediateBuffer4to8; // for 4x to 8x oversampling
 };
 
-} // namespace jonssonic::core::oversampling
+} // namespace jnsc

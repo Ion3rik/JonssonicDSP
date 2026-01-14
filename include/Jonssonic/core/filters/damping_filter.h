@@ -19,13 +19,14 @@
 #include <cassert>
 #include <cmath>
 
-namespace jonssonic::core::filters {
+namespace jnsc {
 
 // =============================================================================
 // Template Declaration
 // =============================================================================
 /// DampingFilter class template
-template <typename T, DampingType Type = DampingType::OnePole> class DampingFilter;
+template <typename T, DampingType Type = DampingType::OnePole>
+class DampingFilter;
 
 // =============================================================================
 // One-Pole Damping Filter Specialization
@@ -35,7 +36,8 @@ template <typename T, DampingType Type = DampingType::OnePole> class DampingFilt
  * @brief DampingFilter specialization for One-Pole type.
  *       Implements a one-pole lowpass filter parametrized by T60 at a frequency.
  */
-template <typename T> class DampingFilter<T, DampingType::OnePole> {
+template <typename T>
+class DampingFilter<T, DampingType::OnePole> {
   public:
     /// Default constructor.
     DampingFilter() = default;
@@ -133,7 +135,8 @@ template <typename T> class DampingFilter<T, DampingType::OnePole> {
  *       Implements a biquad shelving filter parametrized
  *       by crossover frequency and T60 below and above it.
  */
-template <typename T> class DampingFilter<T, DampingType::BiquadShelf> {
+template <typename T>
+class DampingFilter<T, DampingType::BiquadShelf> {
   public:
     /// Default constructor.
     DampingFilter() = default;
@@ -148,10 +151,10 @@ template <typename T> class DampingFilter<T, DampingType::BiquadShelf> {
     }
 
     /// No copy nor move semantics
-    DampingFilter(const DampingFilter &) = delete;
-    DampingFilter &operator=(const DampingFilter &) = delete;
-    DampingFilter(DampingFilter &&) = delete;
-    DampingFilter &operator=(DampingFilter &&) = delete;
+    DampingFilter(const DampingFilter&) = delete;
+    DampingFilter& operator=(const DampingFilter&) = delete;
+    DampingFilter(DampingFilter&&) = delete;
+    DampingFilter& operator=(DampingFilter&&) = delete;
 
     /**
      * @brief Prepare the filter for processing.
@@ -248,7 +251,8 @@ template <typename T> class DampingFilter<T, DampingType::BiquadShelf> {
  *       Implements a first-order shelving filter parametrized
  *       by crossover frequency and T60 below and above it.
  */
-template <typename T> class DampingFilter<T, DampingType::FirstOrderShelf> {
+template <typename T>
+class DampingFilter<T, DampingType::FirstOrderShelf> {
   public:
     /// Default constructor.
     DampingFilter() = default;

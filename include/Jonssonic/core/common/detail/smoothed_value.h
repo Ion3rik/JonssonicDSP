@@ -10,9 +10,10 @@
 #include <jonssonic/core/common/quantities.h>
 #include <vector>
 
-namespace jonssonic::core::common {
+namespace jnsc {
 /// Smoothing algorithm types
 enum class SmootherType { None, OnePole, Linear };
+namespace detail {
 
 /**
  * @brief SmoothedValue class template for smoothing parameter changes.
@@ -26,9 +27,11 @@ class SmoothedValue;
 constexpr int SmoothedValueMaxOrder = 8; // Maximum allowed order for cascaded smoothing filters
 
 /// Type aliases for common smoother types
-template <typename T> using OnePoleSmoother = SmoothedValue<T, SmootherType::OnePole, 1>;
+template <typename T>
+using OnePoleSmoother = SmoothedValue<T, SmootherType::OnePole, 1>;
 
-template <typename T> using LinearSmoother = SmoothedValue<T, SmootherType::Linear, 1>;
+template <typename T>
+using LinearSmoother = SmoothedValue<T, SmootherType::Linear, 1>;
 
 // =============================================================
 // None specialization (passthrough)
@@ -36,7 +39,8 @@ template <typename T> using LinearSmoother = SmoothedValue<T, SmootherType::Line
 /**
  * @brief No smoothing, passthrough implementation.
  */
-template <typename T, size_t Order> class SmoothedValue<T, SmootherType::None, Order> {
+template <typename T, size_t Order>
+class SmoothedValue<T, SmootherType::None, Order> {
 
   public:
     /// Default constructor.
@@ -53,10 +57,10 @@ template <typename T, size_t Order> class SmoothedValue<T, SmootherType::None, O
     ~SmoothedValue() = default;
 
     /// No copy nor move semantics.
-    SmoothedValue(const SmoothedValue &) = delete;
-    SmoothedValue &operator=(const SmoothedValue &) = delete;
-    SmoothedValue(SmoothedValue &&) = delete;
-    SmoothedValue &operator=(SmoothedValue &&) = delete;
+    SmoothedValue(const SmoothedValue&) = delete;
+    SmoothedValue& operator=(const SmoothedValue&) = delete;
+    SmoothedValue(SmoothedValue&&) = delete;
+    SmoothedValue& operator=(SmoothedValue&&) = delete;
 
     /**
      * Prepare for a given number of channels.
@@ -74,7 +78,7 @@ template <typename T, size_t Order> class SmoothedValue<T, SmootherType::None, O
     }
 
     /// Apply smoothed value to buffer (passthrough no smoothing)
-    void applyToBuffer(T *const *buffer, size_t numSamples) {
+    void applyToBuffer(T* const* buffer, size_t numSamples) {
         for (size_t ch = 0; ch < value.size(); ++ch)
             for (size_t n = 0; n < numSamples; ++n)
                 buffer[ch][n] *= value[ch];
@@ -109,7 +113,8 @@ template <typename T, size_t Order> class SmoothedValue<T, SmootherType::None, O
 /**
  * @brief One-pole (exponential) smoothing implementation, arbitrary order.
  */
-template <typename T, size_t Order> class SmoothedValue<T, SmootherType::OnePole, Order> {
+template <typename T, size_t Order>
+class SmoothedValue<T, SmootherType::OnePole, Order> {
     static_assert(Order >= 1 && Order <= SmoothedValueMaxOrder,
                   "Order must be between 1 and SmoothedValueMaxOrder (8)");
 
@@ -129,10 +134,10 @@ template <typename T, size_t Order> class SmoothedValue<T, SmootherType::OnePole
     ~SmoothedValue() = default;
 
     /// No copy nor move semantics.
-    SmoothedValue(const SmoothedValue &) = delete;
-    const SmoothedValue &operator=(const SmoothedValue &) = delete;
-    SmoothedValue(SmoothedValue &&) = delete;
-    const SmoothedValue &operator=(SmoothedValue &&) = delete;
+    SmoothedValue(const SmoothedValue&) = delete;
+    const SmoothedValue& operator=(const SmoothedValue&) = delete;
+    SmoothedValue(SmoothedValue&&) = delete;
+    const SmoothedValue& operator=(SmoothedValue&&) = delete;
 
     /**
      * @brief Prepare the smoother for processing.
@@ -145,7 +150,7 @@ template <typename T, size_t Order> class SmoothedValue<T, SmootherType::OnePole
         current.assign(numChannels, T(0));
         target.assign(numChannels, T(0));
         stage.resize(numChannels);
-        for (auto &s : stage)
+        for (auto& s : stage)
             s.fill(T(0));
         togglePrepared = true;
     }
@@ -157,7 +162,7 @@ template <typename T, size_t Order> class SmoothedValue<T, SmootherType::OnePole
     }
 
     void reset() {
-        for (auto &s : stage)
+        for (auto& s : stage)
             s.fill(T(0));
         for (size_t ch = 0; ch < current.size(); ++ch) {
             current[ch] = target[ch] = T(0);
@@ -171,7 +176,7 @@ template <typename T, size_t Order> class SmoothedValue<T, SmootherType::OnePole
     }
 
     // Apply smoothed value to buffer
-    void applyToBuffer(T *const *buffer, size_t numSamples) {
+    void applyToBuffer(T* const* buffer, size_t numSamples) {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t n = 0; n < numSamples; ++n) {
                 buffer[ch][n] *= getNextValue(ch);
@@ -190,7 +195,7 @@ template <typename T, size_t Order> class SmoothedValue<T, SmootherType::OnePole
                 }
             }
         } else {
-            for (auto &t : target)
+            for (auto& t : target)
                 t = value;
         }
     }
@@ -255,7 +260,8 @@ template <typename T, size_t Order> class SmoothedValue<T, SmootherType::OnePole
 /**
  * @brief Linear ramp smoothing implementation.
  */
-template <typename T, size_t Order> class SmoothedValue<T, SmootherType::Linear, Order> {
+template <typename T, size_t Order>
+class SmoothedValue<T, SmootherType::Linear, Order> {
   public:
     /// Default constructor
     SmoothedValue() = default;
@@ -272,10 +278,10 @@ template <typename T, size_t Order> class SmoothedValue<T, SmootherType::Linear,
     ~SmoothedValue() = default;
 
     /// No copy semantics nor move semantics
-    SmoothedValue(const SmoothedValue &) = delete;
-    const SmoothedValue &operator=(const SmoothedValue &) = delete;
-    SmoothedValue(SmoothedValue &&) = delete;
-    const SmoothedValue &operator=(SmoothedValue &&) = delete;
+    SmoothedValue(const SmoothedValue&) = delete;
+    const SmoothedValue& operator=(const SmoothedValue&) = delete;
+    SmoothedValue(SmoothedValue&&) = delete;
+    const SmoothedValue& operator=(SmoothedValue&&) = delete;
 
     /**
      * @brief Prepare the smoother for processing.
@@ -326,7 +332,7 @@ template <typename T, size_t Order> class SmoothedValue<T, SmootherType::Linear,
      * @param buffer Audio buffer (array of pointers to channel data)
      * @param numSamples Number of samples per channel
      */
-    void applyToBuffer(T *const *buffer, size_t numSamples) {
+    void applyToBuffer(T* const* buffer, size_t numSamples) {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t n = 0; n < numSamples; ++n) {
                 buffer[ch][n] *= getNextValue(ch);
@@ -405,5 +411,5 @@ template <typename T, size_t Order> class SmoothedValue<T, SmootherType::Linear,
         }
     }
 };
-
-} // namespace jonssonic::core::common
+} // namespace detail
+} // namespace jnsc

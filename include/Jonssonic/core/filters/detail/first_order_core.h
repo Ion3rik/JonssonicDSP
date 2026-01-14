@@ -4,22 +4,21 @@
 
 #pragma once
 #include "jonssonic/utils/detail/config_utils.h"
+#include <cassert>
 #include <jonssonic/core/common/audio_buffer.h>
 #include <vector>
-#include <cassert>
 
-namespace jonssonic::core::filters::detail {
+namespace jnsc::detail {
 /**
- * @brief FirstOrderCore filter class implementing a multi-channel, multi-section first-order filter.
+ * @brief FirstOrderCore filter class implementing a multi-channel, multi-section first-order
+ * filter.
  * @param T Sample data type (e.g., float, double)
  */
-template<typename T>
+template <typename T>
 class FirstOrderCore {
-    /// Type aliases for convenience, readability and future-proofing
-    using AudioBufferType = jonssonic::core::common::AudioBuffer<T>;
-public:
+  public:
     /// Constexprs for coefficient and state variable counts
-    static constexpr size_t COEFFS_PER_SECTION = 3; // b0, b1, a1
+    static constexpr size_t COEFFS_PER_SECTION = 3;     // b0, b1, a1
     static constexpr size_t STATE_VARS_PER_SECTION = 2; // x1, y1
 
     /// Default constructor
@@ -57,7 +56,6 @@ public:
     /// Reset the filter state
     void reset() { state.clear(); }
 
-
     /**
      * @brief Process a single sample for a given channel.
      * @param ch Channel index
@@ -79,14 +77,13 @@ public:
             // Fetch state variables
             T x1 = state[ch][stateBase + 0];
             T y1 = state[ch][stateBase + 1];
-        
+
             // Direct Form I
             T output = b0 * input + b1 * x1 - a1 * y1;
 
             // Update state variables
             state[ch][stateBase + 0] = input;  // x1 = input
             state[ch][stateBase + 1] = output; // y1 = output
-
 
             input = output;
         }
@@ -102,11 +99,10 @@ public:
      */
     void processBlock(const T* const* input, T* const* output, size_t numSamples) {
         assert(numChannels > 0 && "Filter not prepared");
-            for (size_t ch = 0; ch < numChannels; ++ch) 
-                for (size_t n = 0; n < numSamples; ++n) 
-                    output[ch][n] = processSample(ch, input[ch][n]);
+        for (size_t ch = 0; ch < numChannels; ++ch)
+            for (size_t n = 0; n < numSamples; ++n)
+                output[ch][n] = processSample(ch, input[ch][n]);
     }
-
 
     /**
      * @brief Set the coefficients for a specific section.
@@ -129,11 +125,11 @@ public:
     /// Get number of sections
     size_t getNumSections() const { return numSections; }
 
-private:
+  private:
     size_t numChannels = 0;
     size_t numSections = 0;
     std::vector<T> coeffs; // [b0, b1, a1] per section
-    AudioBufferType state;  // [x1, y1] per section, per channel
+    AudioBuffer<T> state;  // [x1, y1] per section, per channel
 };
 
-} // namespace jonssonic::core::filters
+} // namespace jnsc::detail

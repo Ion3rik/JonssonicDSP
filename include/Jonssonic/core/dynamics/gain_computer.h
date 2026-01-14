@@ -11,7 +11,7 @@
 #include <jonssonic/utils/math_utils.h>
 #include <limits>
 
-namespace jonssonic::core::dynamics {
+namespace jnsc {
 
 // =============================================================================
 // Template Declaration
@@ -42,10 +42,10 @@ class GainComputer {
     ~GainComputer() = default;
 
     /// No copy nor move semantics
-    GainComputer(const GainComputer &) = delete;
-    GainComputer &operator=(const GainComputer &) = delete;
-    GainComputer(GainComputer &&) = delete;
-    GainComputer &operator=(GainComputer &&) = delete;
+    GainComputer(const GainComputer&) = delete;
+    GainComputer& operator=(const GainComputer&) = delete;
+    GainComputer(GainComputer&&) = delete;
+    GainComputer& operator=(GainComputer&&) = delete;
 
     /**
      * @brief Prepare the gain computer for processing.
@@ -73,7 +73,7 @@ class GainComputer {
      * @param numSamples Number of samples to process
      * @note Have to call @ref prepare() before processing.
      */
-    void processBlock(const T *const *input, T *const *output, size_t numSamples) {
+    void processBlock(const T* const* input, T* const* output, size_t numSamples) {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t n = 0; n < numSamples; ++n) {
                 output[ch][n] = processSample(ch, input[ch][n]);
@@ -102,7 +102,8 @@ class GainComputer {
      * @param skipSmoothing If true, skip smoothing and set immediately.
      */
     void setRatio(T newRatio, bool skipSmoothing = false) {
-        policy.setRatio(newRatio, skipSmoothing);
+        if (policy.hasRatioParam())
+            policy.setRatio(newRatio, skipSmoothing);
     }
     /**
      * @brief Set the knee width in dB.
@@ -110,7 +111,8 @@ class GainComputer {
      * @param skipSmoothing If true, skip smoothing and set immediately.
      */
     void setKnee(T newKneeDb, bool skipSmoothing = false) {
-        policy.setKnee(newKneeDb, skipSmoothing);
+        if (policy.hasKneeParam())
+            policy.setKnee(newKneeDb, skipSmoothing);
     }
 
     /// Get the number of channels.
@@ -125,4 +127,4 @@ class GainComputer {
     Policy policy; // Policy instance (e.g., CompressorPolicy<T>)
 };
 
-} // namespace jonssonic::core::dynamics
+} // namespace jnsc

@@ -7,8 +7,7 @@
 #include <cmath>
 #include <jonssonic/utils/math_utils.h>
 
-namespace jonssonic::core::filters::detail
-{ 
+namespace jnsc::detail {
 
 /**
  * @brief Compute first-order lowpass filter coefficients.
@@ -17,7 +16,7 @@ namespace jonssonic::core::filters::detail
  * @param b1 Feedforward coefficient 1 (output)
  * @param a1 Feedback coefficient 1 (output)
  */
-template<typename T>
+template <typename T>
 inline void computeFirstOrderLowpassCoeffs(T normFreq, T& b0, T& b1, T& a1) {
     // Standard first-order lowpass (bilinear transform)
     // normFreq: normalized cutoff (0..0.5, where 0.5 = Nyquist)
@@ -35,7 +34,7 @@ inline void computeFirstOrderLowpassCoeffs(T normFreq, T& b0, T& b1, T& a1) {
  * @param b1 Feedforward coefficient 1 (output)
  * @param a1 Feedback coefficient 1 (output)
  */
-template<typename T>
+template <typename T>
 inline void computeFirstOrderHighpassCoeffs(T normFreq, T& b0, T& b1, T& a1) {
     T x = std::exp(-two_pi<T> * normFreq);
     b0 = (T(1) + x) / 2;
@@ -50,7 +49,7 @@ inline void computeFirstOrderHighpassCoeffs(T normFreq, T& b0, T& b1, T& a1) {
  * @param b1 Feedforward coefficient 1 (output)
  * @param a1 Feedback coefficient 1 (output)
  */
-template<typename T>
+template <typename T>
 inline void computeFirstOrderAllpassCoeffs(T normFreq, T& b0, T& b1, T& a1) {
     T x = std::exp(-two_pi<T> * normFreq);
     b0 = x;
@@ -66,7 +65,7 @@ inline void computeFirstOrderAllpassCoeffs(T normFreq, T& b0, T& b1, T& a1) {
  * @param b1 Feedforward coefficient 1 (output)
  * @param a1 Feedback coefficient 1 (output)
  */
-template<typename T>
+template <typename T>
 inline void computeFirstOrderLowshelfCoeffs(T normFreq, T gainLinear, T& b0, T& b1, T& a1) {
     // Prewarp frequency
     T omega_c = two_pi<T> * normFreq;
@@ -90,7 +89,7 @@ inline void computeFirstOrderLowshelfCoeffs(T normFreq, T gainLinear, T& b0, T& 
  * @param b1 Feedforward coefficient 1 (output)
  * @param a1 Feedback coefficient 1 (output)
  */
-template<typename T>
+template <typename T>
 inline void computeFirstOrderHighshelfCoeffs(T normFreq, T gainLinear, T& b0, T& b1, T& a1) {
     // Prewarp frequency
     T omega_c = two_pi<T> * normFreq;
@@ -106,4 +105,4 @@ inline void computeFirstOrderHighshelfCoeffs(T normFreq, T gainLinear, T& b0, T&
     a1 = (tan_wc_2 - sqrt_g) / denom;
 }
 
-} // namespace jonssonic::filters::detail
+} // namespace jnsc::detail

@@ -11,24 +11,14 @@
 #include <jonssonic/core/common/quantities.h>
 #include <jonssonic/utils/math_utils.h>
 
-namespace jonssonic::core::delays {
+namespace jnsc {
 /**
  * @brief A multichannel delay line class for audio processing with fractional delay support
  * @param T Sample data type (e.g., float, double)
  * @param Interpolator Interpolator type for fractional delay support (default: LinearInterpolator)
- * @param SmootherType Type of smoother for delay time modulation (default: OnePole)
- * @param SmootherOrder Order of the smoother for delay time modulation (default: 1)
- * @param Layout Buffer layout type (Planar or Interleaved, default: Planar)
  */
-template <typename T,
-          typename Interpolator = common::LinearInterpolator<T>,
-          common::SmootherType SmootherType = common::SmootherType::OnePole,
-          int SmootherOrder = 1>
+template <typename T, typename Interpolator = LinearInterpolator<T>>
 class DelayLine {
-    /// Type aliases for convenience, readability, and future-proofing
-    using CircularAudioBufferType = common::CircularAudioBuffer<T>;
-    using DspParamType = common::DspParam<T, SmootherType, SmootherOrder>;
-
   public:
     /// Default constructor
     DelayLine() = default;
@@ -47,10 +37,10 @@ class DelayLine {
     ~DelayLine() = default;
 
     /// No copy semantics nor move semantics
-    DelayLine(const DelayLine &) = delete;
-    const DelayLine &operator=(const DelayLine &) = delete;
-    DelayLine(DelayLine &&) = delete;
-    const DelayLine &operator=(DelayLine &&) = delete;
+    DelayLine(const DelayLine&) = delete;
+    const DelayLine& operator=(const DelayLine&) = delete;
+    DelayLine(DelayLine&&) = delete;
+    const DelayLine& operator=(DelayLine&&) = delete;
 
     /**
      * @brief Prepare the delay line for processing.
@@ -139,7 +129,7 @@ class DelayLine {
      *
      * @note Input and output must have the same number of channels as prepared.
      */
-    void processBlock(const T *const *input, T *const *output, size_t numSamples) {
+    void processBlock(const T* const* input, T* const* output, size_t numSamples) {
         for (size_t ch = 0; ch < numChannels; ++ch)
             for (size_t n = 0; n < numSamples; ++n)
                 output[ch][n] = processSample(ch, input[ch][n]);
@@ -157,9 +147,9 @@ class DelayLine {
      * bufferSize-1].
      * @note Input, output, and modulation must all have the same number of channels as prepared.
      */
-    void processBlock(const T *const *input,
-                      T *const *output,
-                      const T *const *modulation,
+    void processBlock(const T* const* input,
+                      T* const* output,
+                      const T* const* modulation,
                       size_t numSamples) {
         for (size_t ch = 0; ch < numChannels; ++ch)
             for (size_t n = 0; n < numSamples; ++n)
@@ -251,12 +241,12 @@ class DelayLine {
     size_t bufferSize;       // Maximum delay in samples (always power of two)
 
     // DSP Components
-    CircularAudioBufferType circularBuffer; // Multi-channel circular buffer
-    DspParamType delaySamples;              // Multi-channel Delay time in samples
+    CircularAudioBuffer<T> circularBuffer; // Multi-channel circular buffer
+    DspParam<T> delaySamples;              // Multi-channel Delay time in samples
 
     // Helper function to compute read index and fractional part for interpolation (in-place
     // version)
-    void computeReadIndexAndFrac(T delay, size_t writeIdx, size_t &readIndex, T &delayFrac) const {
+    void computeReadIndexAndFrac(T delay, size_t writeIdx, size_t& readIndex, T& delayFrac) const {
         // Clamp delay to valid range as safety measure
         delay = std::max(T(0), std::min(delay, static_cast<T>(bufferSize - 1)));
 
@@ -269,4 +259,4 @@ class DelayLine {
         readIndex = (writeIdx + bufferSize - delayInt) & (bufferSize - 1);
     }
 };
-} // namespace jonssonic::core::delays
+} // namespace jnsc

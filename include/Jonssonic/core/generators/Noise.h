@@ -5,44 +5,38 @@
 #pragma once
 #include "jonssonic/utils/detail/config_utils.h"
 
-#include <Jonssonic/utils/math_utils.h>
-#include <vector>
 #include <cmath>
 #include <cstdint>
+#include <jonssonic/utils/math_utils.h>
+#include <vector>
 
-
-namespace jonssonic::core::generators
-{
+namespace jnsc {
 
 // TODO: Move all types to generator_types.h and same for each module
-enum class NoiseType
-{
+enum class NoiseType {
     Uniform,
     Gaussian
     // TO DO:
-    //TotallyRandom,
-    //AdditiveRandom,
-    //Velvet
+    // TotallyRandom,
+    // AdditiveRandom,
+    // Velvet
 };
 
 // =============================================================================
 // TEMPLATE CLASS DEFINITION
 // =============================================================================
-template<typename T, NoiseType Type = NoiseType::Uniform>
+template <typename T, NoiseType Type = NoiseType::Uniform>
 class Noise;
 
 // =============================================================================
 // TEMPLATE SPECIALIZATION FOR GAUSSIAN NOISE
 // =============================================================================
-template<typename T>
-class Noise<T, NoiseType::Gaussian>
-{
-public:
+template <typename T>
+class Noise<T, NoiseType::Gaussian> {
+  public:
     // Constructors and Destructor
     Noise() = default;
-    Noise(size_t newNumChannels) {
-        prepare(newNumChannels);
-    }
+    Noise(size_t newNumChannels) { prepare(newNumChannels); }
     ~Noise() = default;
 
     // No copy semantics nor move semantics
@@ -55,8 +49,7 @@ public:
      * @brief Prepare the noise generator for processing.
      * @param newNumChannels Number of channels
      */
-    void prepare(size_t newNumChannels)
-    {
+    void prepare(size_t newNumChannels) {
         numChannels = newNumChannels;
         rngs.resize(numChannels);
         hasSpare.resize(numChannels, false);
@@ -70,8 +63,7 @@ public:
     /**
      * @brief Reseed the random number generators for all channels
      */
-    void reset()
-    {
+    void reset() {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             rngs[ch].seed(static_cast<uint32_t>(2463534242UL + ch * 7919));
             hasSpare[ch] = false;
@@ -79,10 +71,9 @@ public:
     }
 
     /**
-     * @brief Generate single sample for a specific channel 
+     * @brief Generate single sample for a specific channel
      */
-    T processSample(size_t ch)
-    {
+    T processSample(size_t ch) {
         // Gaussian white noise sample using Box-Muller transform
         if (hasSpare[ch]) {
             hasSpare[ch] = false;
@@ -100,40 +91,33 @@ public:
         return T(u * mul);
     }
 
-
     /**
-     * @brief Generate block of samples for all channels 
+     * @brief Generate block of samples for all channels
      */
-    void processBlock(T* const* output, size_t numSamples)
-    {
+    void processBlock(T* const* output, size_t numSamples) {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t n = 0; n < numSamples; ++n) {
                 output[ch][n] = processSample(ch);
             }
         }
     }
-    
 
-private:
+  private:
     size_t numChannels = 0;
     std::vector<Xorshift32> rngs;
     std::vector<bool> hasSpare;
     std::vector<float> spare;
 };
 
-
 // =============================================================================
 // TEMPLATE SPECIALIZATION FOR UNIFORM NOISE
 // =============================================================================
-template<typename T>
-class Noise<T, NoiseType::Uniform>
-{
-public:
+template <typename T>
+class Noise<T, NoiseType::Uniform> {
+  public:
     // Constructors and Destructor
     Noise() = default;
-    Noise(size_t newNumChannels) {
-        prepare(newNumChannels);
-    }
+    Noise(size_t newNumChannels) { prepare(newNumChannels); }
     ~Noise() = default;
 
     // No copy semantics nor move semantics
@@ -146,8 +130,7 @@ public:
      * @brief Prepare the noise generator for processing.
      * @param newNumChannels Number of channels
      */
-    void prepare(size_t newNumChannels)
-    {
+    void prepare(size_t newNumChannels) {
         numChannels = newNumChannels;
         rngs.resize(numChannels);
         for (size_t ch = 0; ch < numChannels; ++ch) {
@@ -158,27 +141,24 @@ public:
     /**
      * @brief Reseed the random number generators for all channels
      */
-    void reset()
-    {
+    void reset() {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             rngs[ch].seed(static_cast<uint32_t>(2463534242UL + ch * 7919));
         }
     }
 
     /**
-     * @brief Generate single sample for a specific channel 
+     * @brief Generate single sample for a specific channel
      */
-    T processSample(size_t ch)
-    {
+    T processSample(size_t ch) {
         // Uniform white noise sample in [-1, 1)
         return T(rngs[ch].nextFloat());
     }
 
     /**
-     * @brief Generate block of samples for all channels 
+     * @brief Generate block of samples for all channels
      */
-    void processBlock(T* const* output, size_t numSamples)
-    {
+    void processBlock(T* const* output, size_t numSamples) {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t n = 0; n < numSamples; ++n) {
                 output[ch][n] = processSample(ch);
@@ -186,9 +166,9 @@ public:
         }
     }
 
-private:
+  private:
     size_t numChannels = 0;
     std::vector<Xorshift32> rngs;
 };
 
-} // namespace Jonssonic
+} // namespace jnsc

@@ -4,35 +4,15 @@
 
 #pragma once
 
-namespace jonssonic::core::filters
-{  
+namespace jnsc {
 
 /// First-order filter types
-enum class FirstOrderType {
-    Lowpass,
-    Highpass,
-    Allpass,
-    Lowshelf,
-    Highshelf
-};   
+enum class FirstOrderType { Lowpass, Highpass, Allpass, Lowshelf, Highshelf };
 
 /// Biquad filter types
-enum class BiquadType {
-    Lowpass,
-    Highpass,
-    Bandpass,
-    Allpass,
-    Notch,
-    Peak,
-    Lowshelf,
-    Highshelf
-};
+enum class BiquadType { Lowpass, Highpass, Bandpass, Allpass, Notch, Peak, Lowshelf, Highshelf };
 
 /// Damping filter types
-enum class DampingType {
-    OnePole,
-    BiquadShelf,
-    FirstOrderShelf 
-};
+enum class DampingType { OnePole, BiquadShelf, FirstOrderShelf };
 
-} // namespace jonssonic::filters
+} // namespace jnsc

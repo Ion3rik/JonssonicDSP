@@ -4,16 +4,19 @@
 #pragma once
 #include <cstddef>
 
-#define JONSSONIC_VERSION_MAJOR 0
-#define JONSSONIC_VERSION_MINOR 1
-#define JONSSONIC_VERSION_PATCH 0
-#define JONSSONIC_VERSION (JONSSONIC_VERSION_MAJOR * 10000 + JONSSONIC_VERSION_MINOR * 100 + JONSSONIC_VERSION_PATCH)
+#define JONSSONIC_VERSION_MAJOR @PROJECT_VERSION_MAJOR @
+#define JONSSONIC_VERSION_MINOR @PROJECT_VERSION_MINOR @
+#define JONSSONIC_VERSION_PATCH @PROJECT_VERSION_PATCH @
+#define JONSSONIC_VERSION                                                                          \
+    (JONSSONIC_VERSION_MAJOR * 10000 + JONSSONIC_VERSION_MINOR * 100 + JONSSONIC_VERSION_PATCH)
 
-namespace jonssonic {
-    /// Maximum number of supported channels
-    constexpr size_t JONSSONIC_MAX_CHANNELS = 64;
-    /// Supported sample rate range
-    constexpr double JONSSONIC_MIN_SAMPLE_RATE = 1000;
-    constexpr double JONSSONIC_MAX_SAMPLE_RATE = 192000;
+namespace jnsc {
+// clang-format off
+/// Maximum number of supported channels
+constexpr size_t JONSSONIC_MAX_CHANNELS = 64;
+/// Supported sample rate range
+constexpr double JONSSONIC_MIN_SAMPLE_RATE = 1000;
+constexpr double JONSSONIC_MAX_SAMPLE_RATE = 192000;
 // Add other global config options here as needed
-}
+// clang-format on
+} // namespace jnsc

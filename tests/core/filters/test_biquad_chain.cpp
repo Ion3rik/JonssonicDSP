@@ -5,9 +5,7 @@
 #include <gtest/gtest.h>
 #include <jonssonic/core/filters/biquad_chain.h>
 
-using namespace jonssonic::core::filters;
-using namespace jonssonic::literals;
-using namespace jonssonic::core::common;
+using namespace jnsc;
 
 TEST(BiquadChain, ConstructionAndPrepare) {
     BiquadChain<float> chain;
@@ -34,8 +32,8 @@ TEST(BiquadChain, ProcessImpulse) {
 
     float input[8] = {1.0f, 0, 0, 0, 0, 0, 0, 0};
     float output[8] = {0};
-    const float *inPtrs[1] = {input};
-    float *outPtrs[1] = {output};
+    const float* inPtrs[1] = {input};
+    float* outPtrs[1] = {output};
 
     chain.processBlock(inPtrs, outPtrs, 8);
 
@@ -66,8 +64,8 @@ TEST(BiquadChain, MultipleSections) {
 
     float input[8] = {1.0f, 0, 0, 0, 0, 0, 0, 0};
     float output[8] = {0};
-    const float *inPtrs[1] = {input};
-    float *outPtrs[1] = {output};
+    const float* inPtrs[1] = {input};
+    float* outPtrs[1] = {output};
 
     chain.processBlock(inPtrs, outPtrs, 8);
 

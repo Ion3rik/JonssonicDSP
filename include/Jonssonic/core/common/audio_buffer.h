@@ -4,11 +4,10 @@
 
 #pragma once
 #include "jonssonic/utils/detail/config_utils.h"
-#include <vector>
 #include <cassert>
+#include <vector>
 
-namespace jonssonic::core::common
-{
+namespace jnsc {
 //==============================================================================
 // LAYOUT TYPES
 //==============================================================================
@@ -34,30 +33,25 @@ enum class BufferLayout {
  *
  * @tparam T Sample type (typically float or double)
  * @tparam BufferLayout Layout of the buffer (default: Planar)
- * @note All the Jonssonic DSP processors use planar layout internally for simplicity and performance.
+ * @note All the Jonssonic DSP processors use planar layout internally for simplicity and
+ * performance.
  */
 
-template<typename T, BufferLayout Layout = BufferLayout::Planar>
+template <typename T, BufferLayout Layout = BufferLayout::Planar>
 class AudioBuffer;
 
 //==============================================================================
 // Planar specialization
 //==============================================================================
 /// Planar layout specialization.
-template<typename T>
-class AudioBuffer<T, BufferLayout::Planar>
-{
+template <typename T>
+class AudioBuffer<T, BufferLayout::Planar> {
 
-public:
+  public:
     /**
      * @brief Default constructor - creates an uninitialized buffer.
      */
-    AudioBuffer()
-        : m_numChannels(0)
-        , m_numSamples(0)
-        , m_data()
-    {
-    }
+    AudioBuffer() : m_numChannels(0), m_numSamples(0), m_data() {}
 
     /**
      * @brief Parameterized constructor.
@@ -65,11 +59,8 @@ public:
      * @param numSamples Number of samples per channel.
      */
     AudioBuffer(size_t numChannels, size_t numSamples)
-        : m_numChannels(numChannels)
-        , m_numSamples(numSamples)
-        , m_data(numChannels * numSamples, T(0))
-    {
-    }
+        : m_numChannels(numChannels), m_numSamples(numSamples),
+          m_data(numChannels * numSamples, T(0)) {}
 
     /**
      * @brief Get array of const pointers to each channel's data (for read-only access).
@@ -109,7 +100,8 @@ public:
 
     /**
      * @brief Get pointers to a single sample index across all channels (for write access).
-     * @note For planar, this is less efficient due to non-contiguous memory access, but can be useful for some algorithms.
+     * @note For planar, this is less efficient due to non-contiguous memory access, but can be
+     * useful for some algorithms.
      */
     std::vector<T*> writeSamplePtr(size_t sampleIdx) {
         assert(sampleIdx < m_numSamples && "Sample index out of bounds");
@@ -121,7 +113,8 @@ public:
 
     /**
      * @brief Get pointers to a single sample index across all channels (for read-only access).
-     * @note For planar, this is less efficient due to non-contiguous memory access, but can be useful for some algorithms.
+     * @note For planar, this is less efficient due to non-contiguous memory access, but can be
+     * useful for some algorithms.
      */
     std::vector<const T*> readSamplePtr(size_t sampleIdx) const {
         assert(sampleIdx < m_numSamples && "Sample index out of bounds");
@@ -131,14 +124,10 @@ public:
         return ptrs;
     }
 
-
     /**
      * @brief Clear all samples in the buffer (set to zero).
      */
-    void clear()
-    {
-        std::fill(m_data.begin(), m_data.end(), T(0));
-    }
+    void clear() { std::fill(m_data.begin(), m_data.end(), T(0)); }
 
     /**
      * @brief Get the number of channels.
@@ -167,11 +156,11 @@ public:
      * @param numChannels New number of channels
      * @param numSamples New number of samples per channel
      */
-    void resize(size_t numChannels, size_t numSamples)
-    {
+    void resize(size_t numChannels, size_t numSamples) {
         m_numChannels = numChannels;
         m_numSamples = numSamples;
-        m_data.assign(numChannels * numSamples, T(0)); // This is what you expect for audio buffers not std::vector::resize()
+        m_data.assign(numChannels * numSamples,
+                      T(0)); // This is what you expect for audio buffers not std::vector::resize()
     }
 
     // ========================================================================
@@ -180,8 +169,9 @@ public:
 
     // Proxy class for channel access
     class ChannelProxy {
-    public:
-        ChannelProxy(T* channelData, size_t numSamples) : m_channelData(channelData), m_numSamples(numSamples) {}
+      public:
+        ChannelProxy(T* channelData, size_t numSamples)
+            : m_channelData(channelData), m_numSamples(numSamples) {}
         T& operator[](size_t sample) {
             assert(sample < m_numSamples && "Sample index out of bounds");
             return m_channelData[sample];
@@ -190,30 +180,33 @@ public:
             assert(sample < m_numSamples && "Sample index out of bounds");
             return m_channelData[sample];
         }
-    private:
+
+      private:
         T* m_channelData;
         size_t m_numSamples;
     };
 
     // Const proxy for channel access
     class ConstChannelProxy {
-    public:
-        ConstChannelProxy(const T* channelData, size_t numSamples) : m_channelData(channelData), m_numSamples(numSamples) {}
+      public:
+        ConstChannelProxy(const T* channelData, size_t numSamples)
+            : m_channelData(channelData), m_numSamples(numSamples) {}
         const T& operator[](size_t sample) const {
             assert(sample < m_numSamples && "Sample index out of bounds");
             return m_channelData[sample];
         }
-    private:
+
+      private:
         const T* m_channelData;
         size_t m_numSamples;
     };
-    
+
     // ========================================================================
     // Operator Overloads
     // ========================================================================
     /**
-    * @brief Get a proxy to access a specific channel.
-    * @param channel Channel index 
+     * @brief Get a proxy to access a specific channel.
+     * @param channel Channel index
      */
     ChannelProxy operator[](size_t channel) {
         assert(channel < m_numChannels && "Channel index out of bounds");
@@ -226,8 +219,7 @@ public:
     /**
      * @brief Add two buffers element-wise
      */
-    AudioBuffer operator+(const AudioBuffer& other) const
-    {
+    AudioBuffer operator+(const AudioBuffer& other) const {
         assert(m_numChannels == other.m_numChannels && m_numSamples == other.m_numSamples);
         AudioBuffer result(m_numChannels, m_numSamples);
         for (size_t i = 0; i < m_data.size(); ++i)
@@ -238,8 +230,7 @@ public:
     /**
      * @brief Add scalar to all samples
      */
-    AudioBuffer operator+(T scalar) const
-    {
+    AudioBuffer operator+(T scalar) const {
         AudioBuffer result(m_numChannels, m_numSamples);
         for (size_t i = 0; i < m_data.size(); ++i)
             result.m_data[i] = m_data[i] + scalar;
@@ -249,8 +240,7 @@ public:
     /**
      * @brief Multiply buffer by scalar (apply gain)
      */
-    AudioBuffer operator*(T scalar) const
-    {
+    AudioBuffer operator*(T scalar) const {
         AudioBuffer result(m_numChannels, m_numSamples);
         for (size_t i = 0; i < m_data.size(); ++i)
             result.m_data[i] = m_data[i] * scalar;
@@ -260,8 +250,7 @@ public:
     /**
      * @brief Multiply two buffers element-wise (ring modulation)
      */
-    AudioBuffer operator*(const AudioBuffer& other) const
-    {
+    AudioBuffer operator*(const AudioBuffer& other) const {
         assert(m_numChannels == other.m_numChannels && m_numSamples == other.m_numSamples);
         AudioBuffer result(m_numChannels, m_numSamples);
         for (size_t i = 0; i < m_data.size(); ++i)
@@ -272,8 +261,7 @@ public:
     /**
      * @brief In-place addition
      */
-    AudioBuffer& operator+=(const AudioBuffer& other)
-    {
+    AudioBuffer& operator+=(const AudioBuffer& other) {
         assert(m_numChannels == other.m_numChannels && m_numSamples == other.m_numSamples);
         for (size_t i = 0; i < m_data.size(); ++i)
             m_data[i] += other.m_data[i];
@@ -283,8 +271,7 @@ public:
     /**
      * @brief In-place addition with scalar
      */
-    AudioBuffer& operator+=(T scalar)
-    {
+    AudioBuffer& operator+=(T scalar) {
         for (size_t i = 0; i < m_data.size(); ++i)
             m_data[i] += scalar;
         return *this;
@@ -293,8 +280,7 @@ public:
     /**
      * @brief In-place multiplication (apply gain)
      */
-    AudioBuffer& operator*=(T scalar)
-    {
+    AudioBuffer& operator*=(T scalar) {
         for (size_t i = 0; i < m_data.size(); ++i)
             m_data[i] *= scalar;
         return *this;
@@ -303,8 +289,7 @@ public:
     /**
      * @brief In-place element-wise multiplication
      */
-    AudioBuffer& operator*=(const AudioBuffer& other)
-    {
+    AudioBuffer& operator*=(const AudioBuffer& other) {
         assert(m_numChannels == other.m_numChannels && m_numSamples == other.m_numSamples);
         for (size_t i = 0; i < m_data.size(); ++i)
             m_data[i] *= other.m_data[i];
@@ -314,10 +299,8 @@ public:
     /**
      * @brief Assignment operator
      */
-    AudioBuffer& operator=(const AudioBuffer& other)
-    {
-        if (this != &other)
-        {
+    AudioBuffer& operator=(const AudioBuffer& other) {
+        if (this != &other) {
             m_numChannels = other.m_numChannels;
             m_numSamples = other.m_numSamples;
             m_data = other.m_data;
@@ -325,32 +308,26 @@ public:
         return *this;
     }
 
-private:
+  private:
     size_t m_numSamples;
     size_t m_numChannels;
-    std::vector<T> m_data;  // Flat planar storage for all channels
-    
+    std::vector<T> m_data; // Flat planar storage for all channels
+
     // Cached pointer arrays for readPtrs() and writePtrs()
     mutable std::vector<const T*> m_readPtrs;
     mutable std::vector<T*> m_writePtrs;
-
 };
 
 //==============================================================================
 // Interleaved specialization
 //==============================================================================
-template<typename T>
-class AudioBuffer<T, BufferLayout::Interleaved>
-{
-public:
+template <typename T>
+class AudioBuffer<T, BufferLayout::Interleaved> {
+  public:
     /**
      * @brief Default constructor - creates an uninitialized buffer.
      */
-    AudioBuffer()
-        : m_numChannels(0)
-        , m_numSamples(0)
-        , m_data()
-    {}
+    AudioBuffer() : m_numChannels(0), m_numSamples(0), m_data() {}
 
     /**
      * @brief Constructor.
@@ -358,15 +335,13 @@ public:
      * @param numSamples Number of samples per channel
      */
     AudioBuffer(size_t numChannels, size_t numSamples)
-        : m_numChannels(numChannels)
-        , m_numSamples(numSamples)
-        , m_data(numChannels * numSamples, T(0))
-    {}
+        : m_numChannels(numChannels), m_numSamples(numSamples),
+          m_data(numChannels * numSamples, T(0)) {}
 
     /**
      * @brief Get array of const pointers to each sample's data (for read-only access).
-     * @note For interleaved, each pointer is to the first channel of a sample (i.e., &data[sample * numChannels]).
-     *       Useful for per-sample block processing.
+     * @note For interleaved, each pointer is to the first channel of a sample (i.e., &data[sample *
+     * numChannels]). Useful for per-sample block processing.
      */
     const T* const* readPtrs() const {
         m_readPtrs.resize(m_numSamples);
@@ -377,8 +352,8 @@ public:
 
     /**
      * @brief Get array of pointers to each sample's data (for write access).
-     * @note For interleaved, each pointer is to the first channel of a sample (i.e., &data[sample * numChannels]).
-     *       Useful for per-sample block processing.
+     * @note For interleaved, each pointer is to the first channel of a sample (i.e., &data[sample *
+     * numChannels]). Useful for per-sample block processing.
      */
     T* const* writePtrs() {
         m_writePtrs.resize(m_numSamples);
@@ -388,7 +363,8 @@ public:
     }
 
     /**
-     * @brief Get a pointer to the start of a sample's data (all channels at that sample, for write access).
+     * @brief Get a pointer to the start of a sample's data (all channels at that sample, for write
+     * access).
      * @param sampleIdx Sample index
      */
     T* writeSamplePtr(size_t sampleIdx) {
@@ -397,7 +373,8 @@ public:
     }
 
     /**
-     * @brief Get a pointer to the start of a sample's data (all channels at that sample, for read-only access).
+     * @brief Get a pointer to the start of a sample's data (all channels at that sample, for
+     * read-only access).
      * @param sampleIdx Sample index
      */
     const T* readSamplePtr(size_t sampleIdx) const {
@@ -408,7 +385,8 @@ public:
     /**
      * @brief Get pointers to a single channel across all samples (for write access).
      * @param channel Channel index
-     * @note For interleaved, this is less efficient due to non-contiguous memory access, but can be useful for some algorithms.
+     * @note For interleaved, this is less efficient due to non-contiguous memory access, but can be
+     * useful for some algorithms.
      */
     std::vector<T*> writeChannelPtr(size_t channel) {
         assert(channel < m_numChannels && "Channel index out of bounds");
@@ -421,7 +399,8 @@ public:
     /**
      * @brief Get pointers to a single channel across all samples (for read-only access).
      * @param channel Channel index
-     * @note For interleaved, this is less efficient due to non-contiguous memory access, but can be useful for some algorithms.
+     * @note For interleaved, this is less efficient due to non-contiguous memory access, but can be
+     * useful for some algorithms.
      */
     std::vector<const T*> readChannelPtr(size_t channel) const {
         assert(channel < m_numChannels && "Channel index out of bounds");
@@ -471,7 +450,7 @@ public:
 
     // Proxy for sample-major access: buffer[sample][channel]
     class SampleProxy {
-    public:
+      public:
         SampleProxy(T* data, size_t numChannels, size_t channelCount)
             : m_data(data), m_numChannels(numChannels), m_channelCount(channelCount) {}
         T& operator[](size_t channel) {
@@ -482,20 +461,22 @@ public:
             assert(channel < m_channelCount && "Channel index out of bounds");
             return m_data[channel];
         }
-    private:
+
+      private:
         T* m_data;
         size_t m_numChannels;
         size_t m_channelCount;
     };
     class ConstSampleProxy {
-    public:
+      public:
         ConstSampleProxy(const T* data, size_t numChannels, size_t channelCount)
             : m_data(data), m_numChannels(numChannels), m_channelCount(channelCount) {}
         const T& operator[](size_t channel) const {
             assert(channel < m_channelCount && "Channel index out of bounds");
             return m_data[channel];
         }
-    private:
+
+      private:
         const T* m_data;
         size_t m_numChannels;
         size_t m_channelCount;
@@ -508,7 +489,9 @@ public:
     }
     ConstSampleProxy operator[](size_t sample) const {
         assert(sample < m_numSamples && "Sample index out of bounds");
-        return ConstSampleProxy(m_data.data() + (sample * m_numChannels), m_numChannels, m_numChannels);
+        return ConstSampleProxy(m_data.data() + (sample * m_numChannels),
+                                m_numChannels,
+                                m_numChannels);
     }
 
     // Arithmetic and assignment operators remain unchanged
@@ -569,7 +552,7 @@ public:
         return *this;
     }
 
-private:
+  private:
     size_t m_numSamples;
     size_t m_numChannels;
     std::vector<T> m_data;
@@ -581,16 +564,14 @@ private:
 // Friend operators for scalar on left-hand side
 // ============================================================================
 
-template<typename T, BufferLayout L>
-inline AudioBuffer<T, L> operator*(T scalar, const AudioBuffer<T, L>& buffer)
-{
+template <typename T, BufferLayout L>
+inline AudioBuffer<T, L> operator*(T scalar, const AudioBuffer<T, L>& buffer) {
     return buffer * scalar;
 }
 
-template<typename T, BufferLayout L>
-inline AudioBuffer<T, L> operator+(T scalar, const AudioBuffer<T, L>& buffer)
-{
+template <typename T, BufferLayout L>
+inline AudioBuffer<T, L> operator+(T scalar, const AudioBuffer<T, L>& buffer) {
     return buffer + scalar;
 }
 
-} // namespace jonssonic::common
+} // namespace jnsc

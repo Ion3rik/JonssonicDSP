@@ -3,10 +3,10 @@
 // SPDX-License-Identifier: MIT
 
 #include <gtest/gtest.h>
-#include <jonssonic/core/common/smoothed_value.h>
+#include <jonssonic/core/common/detail/smoothed_value.h>
 
-using namespace jonssonic::core::common;
-using namespace jonssonic::literals;
+using namespace jnsc;
+using namespace jnsc::detail;
 
 class SmoothedValueTest : public ::testing::Test {
   protected:

@@ -6,4 +6,4 @@
 
 #include "envelope_follower.h"
 #include "gain_computer.h"
-#include "signal_smoother.h"
+#include "gain_smoother.h"

@@ -4,9 +4,8 @@
 #include <jonssonic/core/dynamics/gain_computer.h>
 #include <jonssonic/utils/math_utils.h>
 
-using namespace jonssonic::core::dynamics;
-using namespace jonssonic::literals;
-using namespace jonssonic::utils;
+using namespace jnsc;
+using namespace jnsc::utils;
 
 // =============================================================================
 // CompressorPolicy Tests

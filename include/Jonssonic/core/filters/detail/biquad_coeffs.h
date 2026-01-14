@@ -9,8 +9,7 @@
 #include <cmath>
 #include <jonssonic/utils/math_utils.h>
 
-namespace jonssonic::core::filters::detail
-{
+namespace jnsc::detail {
 
 /**
  * @brief Compute lowpass biquad filter coefficients.
@@ -22,9 +21,8 @@ namespace jonssonic::core::filters::detail
  * @param a1 Feedback coefficient 1 (output)
  * @param a2 Feedback coefficient 2 (output)
  */
-template<typename T>
-inline void computeLowpassCoeffs(T normFreq, T Q, T& b0, T& b1, T& b2, T& a1, T& a2)
-{
+template <typename T>
+inline void computeLowpassCoeffs(T normFreq, T Q, T& b0, T& b1, T& b2, T& a1, T& a2) {
     T w0 = utils::two_pi<T> * normFreq;
     T cosw0 = std::cos(w0);
     T sinw0 = std::sin(w0);
@@ -47,9 +45,8 @@ inline void computeLowpassCoeffs(T normFreq, T Q, T& b0, T& b1, T& b2, T& a1, T&
  * @param a1 Feedback coefficient 1 (output)
  * @param a2 Feedback coefficient 2 (output)
  */
-template<typename T>
-inline void computeHighpassCoeffs(T normFreq, T Q, T& b0, T& b1, T& b2, T& a1, T& a2)
-{
+template <typename T>
+inline void computeHighpassCoeffs(T normFreq, T Q, T& b0, T& b1, T& b2, T& a1, T& a2) {
     T w0 = utils::two_pi<T> * normFreq;
     T cosw0 = std::cos(w0);
     T sinw0 = std::sin(w0);
@@ -72,9 +69,8 @@ inline void computeHighpassCoeffs(T normFreq, T Q, T& b0, T& b1, T& b2, T& a1, T
  * @param a1 Feedback coefficient 1 (output)
  * @param a2 Feedback coefficient 2 (output)
  */
-template<typename T>
-inline void computeBandpassCoeffs(T normFreq, T Q, T& b0, T& b1, T& b2, T& a1, T& a2)
-{
+template <typename T>
+inline void computeBandpassCoeffs(T normFreq, T Q, T& b0, T& b1, T& b2, T& a1, T& a2) {
     T w0 = utils::two_pi<T> * normFreq;
     T cosw0 = std::cos(w0);
     T sinw0 = std::sin(w0);
@@ -97,9 +93,8 @@ inline void computeBandpassCoeffs(T normFreq, T Q, T& b0, T& b1, T& b2, T& a1, T
  * @param a1 Feedback coefficient 1 (output)
  * @param a2 Feedback coefficient 2 (output)
  */
-template<typename T>
-inline void computeAllpassCoeffs(T normFreq, T Q, T& b0, T& b1, T& b2, T& a1, T& a2)
-{
+template <typename T>
+inline void computeAllpassCoeffs(T normFreq, T Q, T& b0, T& b1, T& b2, T& a1, T& a2) {
     T w0 = utils::two_pi<T> * normFreq;
     T cosw0 = std::cos(w0);
     T sinw0 = std::sin(w0);
@@ -122,9 +117,8 @@ inline void computeAllpassCoeffs(T normFreq, T Q, T& b0, T& b1, T& b2, T& a1, T&
  * @param a1 Feedback coefficient 1 (output)
  * @param a2 Feedback coefficient 2 (output)
  */
-template<typename T>
-inline void computeNotchCoeffs(T normFreq, T Q, T& b0, T& b1, T& b2, T& a1, T& a2)
-{
+template <typename T>
+inline void computeNotchCoeffs(T normFreq, T Q, T& b0, T& b1, T& b2, T& a1, T& a2) {
     T w0 = utils::two_pi<T> * normFreq;
     T cosw0 = std::cos(w0);
     T sinw0 = std::sin(w0);
@@ -148,10 +142,8 @@ inline void computeNotchCoeffs(T normFreq, T Q, T& b0, T& b1, T& b2, T& a1, T& a
  * @param a1 Feedback coefficient 1 (output)
  * @param a2 Feedback coefficient 2 (output)
  */
-template<typename T>
-inline void computePeakCoeffs(T normFreq, T Q, T gainLinear,
-                               T& b0, T& b1, T& b2, T& a1, T& a2)
-{
+template <typename T>
+inline void computePeakCoeffs(T normFreq, T Q, T gainLinear, T& b0, T& b1, T& b2, T& a1, T& a2) {
     // For peaking EQ, A should be sqrt(gainLinear), not gainLinear
     T A = std::sqrt(gainLinear);
     T w0 = utils::two_pi<T> * normFreq;
@@ -178,10 +170,9 @@ inline void computePeakCoeffs(T normFreq, T Q, T gainLinear,
  * @param a1 Feedback coefficient 1 (output)
  * @param a2 Feedback coefficient 2 (output)
  */
-template<typename T>
-inline void computeLowshelfCoeffs(T normFreq, T Q, T gainLinear,
-                                   T& b0, T& b1, T& b2, T& a1, T& a2)
-{
+template <typename T>
+inline void
+computeLowshelfCoeffs(T normFreq, T Q, T gainLinear, T& b0, T& b1, T& b2, T& a1, T& a2) {
     T A = std::sqrt(gainLinear);
     T w0 = utils::two_pi<T> * normFreq;
     T cosw0 = std::cos(w0);
@@ -207,10 +198,9 @@ inline void computeLowshelfCoeffs(T normFreq, T Q, T gainLinear,
  * @param a1 Feedback coefficient 1 (output)
  * @param a2 Feedback coefficient 2 (output)
  */
-template<typename T>
-inline void computeHighshelfCoeffs(T normFreq, T Q, T gainLinear,
-                                    T& b0, T& b1, T& b2, T& a1, T& a2)
-{
+template <typename T>
+inline void
+computeHighshelfCoeffs(T normFreq, T Q, T gainLinear, T& b0, T& b1, T& b2, T& a1, T& a2) {
     T A = std::sqrt(gainLinear);
     T w0 = utils::two_pi<T> * normFreq;
     T cosw0 = std::cos(w0);
@@ -225,4 +215,4 @@ inline void computeHighshelfCoeffs(T normFreq, T Q, T gainLinear,
     a2 = ((A + T(1)) - (A - T(1)) * cosw0 - T(2) * sqrtA * alpha) / a0;
 }
 
-} // namespace jonssonic::filters::detail
+} // namespace jnsc::detail

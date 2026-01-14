@@ -4,15 +4,13 @@
 
 #pragma once
 #include "jonssonic/utils/detail/config_utils.h"
+#include <cassert>
+#include <cstddef>
 #include <jonssonic/core/common/audio_buffer.h>
 #include <jonssonic/utils/math_utils.h>
 #include <vector>
-#include <cstddef>
-#include <cassert>
 
-
-namespace jonssonic::core::common
-{
+namespace jnsc {
 
 //==============================================================================
 // CIRCULAR AUDIO BUFFER CLASS
@@ -21,15 +19,15 @@ namespace jonssonic::core::common
  * @brief A multi-channel circular audio buffer with power-of-two size for efficient wrap-around.
  * @tparam T Sample type (typically float or double)
  */
-template<typename T>
-class CircularAudioBuffer{
-public:
+template <typename T>
+class CircularAudioBuffer {
+  public:
     CircularAudioBuffer() = default;
     ~CircularAudioBuffer() = default;
 
-
     void resize(size_t newNumChannels, size_t newNumSamples) {
-        bufferSize = utils::nextPowerOfTwo(newNumSamples); // ensure power-of-two size for efficient wrap-around
+        bufferSize = utils::nextPowerOfTwo(
+            newNumSamples); // ensure power-of-two size for efficient wrap-around
         buffer.resize(newNumChannels, bufferSize);
         writeIndex.assign(newNumChannels, 0);
     }
@@ -52,30 +50,26 @@ public:
     /**
      * @brief Get a pointer to the start of a channel's data (for read-only access).
      */
-    const T* readChannelPtr(size_t channel) const {
-        return buffer.readChannelPtr(channel);
-    }
+    const T* readChannelPtr(size_t channel) const { return buffer.readChannelPtr(channel); }
 
     /**
      * @brief Get a pointer to the start of a channel's data (for write access).
      */
-    T* writeChannelPtr(size_t channel) {
-        return buffer.writeChannelPtr(channel);
-    }
+    T* writeChannelPtr(size_t channel) { return buffer.writeChannelPtr(channel); }
 
     size_t getNumChannels() const { return buffer.getNumChannels(); }
     size_t getBufferSize() const { return bufferSize; }
     size_t getChannelWriteIndex(size_t channel) const { return writeIndex[channel]; }
 
     void clear() {
-        buffer.clear(); // zero the buffer, does not deallocate
+        buffer.clear();                                // zero the buffer, does not deallocate
         writeIndex.assign(buffer.getNumChannels(), 0); // reset indices
     }
 
-private:
+  private:
     AudioBuffer<T> buffer;
     std::vector<size_t> writeIndex; // per-channel write index
     size_t bufferSize = 0;
 };
 
-} // namespace Jonssonic
+} // namespace jnsc

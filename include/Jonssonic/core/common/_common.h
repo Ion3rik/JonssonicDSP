@@ -9,4 +9,3 @@
 #include "dsp_param.h"
 #include "interpolators.h"
 #include "modulation.h"
-#include "smoothed_value.h"
