@@ -279,10 +279,10 @@ class DynamicsProcessor {
     T sampleRate = T(44100);
 
     // Components
-    EnvelopeFollowerType envelopeFollower;
-    GainComputerType gainComputer;
-    GainSmootherTypeAlias gainSmoother;
-    SideChainFilterType sideChainFilter;
+    EnvelopeFollower<T, EnvelopeType> envelopeFollower;
+    GainComputer<T, GainPolicy> gainComputer;
+    GainSmoother<T, GainSmootherType> gainSmoother;
+    BiquadFilter<T> sideChainFilter;
 
     // State variables
     std::vector<T> previousOutput;   // Needed for feedback detector

@@ -201,7 +201,7 @@ class SaturationStage {
      * @param newType New filter type
      * @note Only applicable if PreFilter is true.
      */
-    void setPreFilterType(core::filters::BiquadType newType) {
+    void setPreFilterType(BiquadType newType) {
         if constexpr (PreFilter)
             preFilter.setType(newType);
     }
@@ -223,7 +223,7 @@ class SaturationStage {
      */
     void setPreFilterFrequency(Frequency<T> newFreq) {
         if constexpr (PreFilter)
-            preFilter.setCutoffFrequency(newFreq);
+            preFilter.setFreq(newFreq);
     }
 
     /**
@@ -242,7 +242,7 @@ class SaturationStage {
      * @param newType New filter type
      * @note Only applicable if PostFilter is true.
      */
-    void setPostFilterType(core::filters::BiquadType newType) {
+    void setPostFilterType(BiquadType newType) {
         if constexpr (PostFilter)
             postFilter.setType(newType);
     }
@@ -264,7 +264,7 @@ class SaturationStage {
      */
     void setPostFilterFrequency(Frequency<T> newFreq) {
         if constexpr (PostFilter)
-            postFilter.setCutoffFrequency(newFreq);
+            postFilter.setFreq(newFreq);
     }
 
     /**
@@ -299,7 +299,7 @@ class SaturationStage {
 
     // Components
     OversampledProcessor<T, OversamplingFactor> oversampledProcessor;
-    WaveShaper<T, ShaperType> waveShaper;
+    WaveShaperProcessor<T, ShaperType> waveShaper;
     BiquadFilter<T> preFilter;
     BiquadFilter<T> postFilter;
 };

@@ -20,19 +20,36 @@ namespace jnsc {
 template <typename T, size_t Factor = 4>
 class Oversampler {
     // Compile-time checks
-    static_assert(Factor == 2 || Factor == 4 || Factor == 8 || Factor == 16,
-                  "Supported oversampling Factors are 2, 4, 8, and 16");
+    static_assert(Factor == 1 || Factor == 2 || Factor == 4 || Factor == 8 || Factor == 16,
+                  "Supported oversampling Factors are 1, 2, 4, 8, and 16");
 
   public:
+    /// Default constructor.
     Oversampler() = default;
+
+    /**
+     * @brief Parameterized constructor that calls @ref prepare.
+     * @param newNumChannels Number of channels
+     * @param newMaxBlockSize Maximum block size for processing (at base sample rate)
+     */
+    Oversampler(size_t newNumChannels, size_t newMaxBlockSize) {
+        prepare(newNumChannels, newMaxBlockSize);
+    }
+
+    /// Default destructor.
     ~Oversampler() = default;
 
-    // No copy or move semantics
+    /// No copy nor move semantics
     Oversampler(const Oversampler&) = delete;
     Oversampler& operator=(const Oversampler&) = delete;
     Oversampler(Oversampler&&) = delete;
     Oversampler& operator=(Oversampler&&) = delete;
 
+    /**
+     * @brief Prepare the oversampler for processing.
+     * @param newNumChannels Number of channels
+     * @param newMaxBlockSize Maximum block size for processing (at base sample rate)
+     */
     void prepare(size_t newNumChannels, size_t newMaxBlockSize) {
         numChannels = newNumChannels;
 
@@ -60,6 +77,7 @@ class Oversampler {
         }
     }
 
+    /// Reset the oversampler state.
     void reset() {
         if constexpr (Factor >= 2) {
             stage1.reset();
@@ -85,7 +103,12 @@ class Oversampler {
      */
 
     size_t upsample(const T* const* input, T* const* output, size_t numInputSamples) {
-
+        // Factor 1 (bypass)
+        if constexpr (Factor == 1) {
+            for (size_t ch = 0; ch < numChannels; ++ch) {
+                std::copy(input[ch], input[ch] + numInputSamples, output[ch]);
+            }
+        }
         // Factor 2
         if constexpr (Factor == 2) {
             stage1.upsample(input, output, numInputSamples); // stage1 1x to 2x
@@ -136,6 +159,12 @@ class Oversampler {
      * @note Input buffer must have numOutputSamples * Factor samples.
      */
     void downsample(const T* const* input, T* const* output, size_t numOutputSamples) {
+        // Factor 1 (bypass)
+        if constexpr (Factor == 1) {
+            for (size_t ch = 0; ch < numChannels; ++ch) {
+                std::copy(input[ch], input[ch] + numOutputSamples, output[ch]);
+            }
+        }
         // Factor 2
         if constexpr (Factor == 2) {
             stage1.downsample(input, output, numOutputSamples); // stage1 2x to 1x
@@ -184,18 +213,18 @@ class Oversampler {
     }
 
     size_t getLatencySamples() const {
-        T latency = 0;
+        T latency = 0; // Factor 1 (bypass)
         if constexpr (Factor >= 2) {
-            latency += stage1.getLatencySamples(); // run at base rate
+            latency += stage1.getLatencySamples(); // runs at 1x rate
         }
         if constexpr (Factor >= 4) {
-            latency += stage2.getLatencySamples() / 2; // run at 2x rate
+            latency += stage2.getLatencySamples() / 2; // runs at 2x rate
         }
         if constexpr (Factor >= 8) {
-            latency += stage3.getLatencySamples() / 4; // run at 4x rate
+            latency += stage3.getLatencySamples() / 4; // runs at 4x rate
         }
         if constexpr (Factor == 16) {
-            latency += stage4.getLatencySamples() / 8; // run at 8x rate
+            latency += stage4.getLatencySamples() / 8; // runs at 8x rate
         }
         return static_cast<size_t>(latency);
     }

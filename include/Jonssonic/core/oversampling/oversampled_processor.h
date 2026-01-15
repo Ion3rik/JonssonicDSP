@@ -212,8 +212,8 @@ class OversampledProcessor<T, 0> {
 
 template <typename T, size_t Factor>
 class OversampledProcessor {
-    static_assert(Factor == 2 || Factor == 4 || Factor == 8 || Factor == 16,
-                  "Supported oversampling Factors are 2, 4, 8, and 16");
+    static_assert(Factor == 1 || Factor == 2 || Factor == 4 || Factor == 8 || Factor == 16,
+                  "Supported oversampling Factors are 1, 2, 4, 8, and 16");
 
   public:
     /// Default constructor.

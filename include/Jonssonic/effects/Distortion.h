@@ -25,12 +25,14 @@ class Distortion {
      * @param ASYMMETRY_SCALE Scale factor for asymmetry control.
      * @param SHAPE_MIN Minimum shape parameter value (soft clipping).
      * @param SHAPE_MAX Maximum shape parameter value (hard clipping).
+     * @param PRE_FILTER_CUTOFF_HZ Cutoff frequency for pre-filter highpass filter.
      */
-    static constexpr size_t OVERSAMPLING_FACTOR = 8;
+    static constexpr size_t OVERSAMPLING_FACTOR = 16;
     static constexpr T PARAM_SMOOTH_TIME_MS = T(50);
     static constexpr T ASYMMETRY_SCALE = T(0.5);
     static constexpr T SHAPE_MIN = T(2);
     static constexpr T SHAPE_MAX = T(20);
+    static constexpr T PRE_FILTER_CUTOFF_HZ = T(80);
 
   public:
     /// Default constructor.
@@ -75,14 +77,14 @@ class Distortion {
         dcBlocker.prepare(newNumChannels, newSampleRate);
 
         // Setup post-filters for tone control
-        distortion.setPostFilterType(core::filters::BiquadType::Lowpass);
-        distortionOS.setPostFilterType(core::filters::BiquadType::Lowpass);
+        distortion.setPostFilterType(BiquadType::Lowpass);
+        distortionOS.setPostFilterType(BiquadType::Lowpass);
 
         // Setup pre-filters to remove low-frequency content
-        distortion.setPreFilterType(core::filters::BiquadType::Highpass);
-        distortionOS.setPreFilterType(core::filters::BiquadType::Highpass);
-        distortion.setPreFilterFrequency(Frequency<T>::Hertz(T(100)));
-        distortionOS.setPreFilterFrequency(Frequency<T>::Hertz(T(100)));
+        distortion.setPreFilterType(BiquadType::Highpass);
+        distortionOS.setPreFilterType(BiquadType::Highpass);
+        distortion.setPreFilterFrequency(Frequency<T>::Hertz(T(PRE_FILTER_CUTOFF_HZ));
+        distortionOS.setPreFilterFrequency(Frequency<T>::Hertz(T(PRE_FILTER_CUTOFF_HZ)));
 
         // Prepare dry/wet mixer with latency compensation and output gain
         size_t oversamplerLatencySamples = distortionOS.getLatencySamples();
@@ -97,11 +99,11 @@ class Distortion {
         dryWetMixer.setControlSmoothingTime(Time<T>::Milliseconds(PARAM_SMOOTH_TIME_MS));
 
         // Set Default Parameters
-        setDriveDb(T(0), true);           // 0 dB drive
-        setAsymmetry(T(0), true);         // 0 asymmetry
-        setShape(T(0.5), true);           // Mid shape
-        setToneFrequency(T(12000), true); // 12 kHz tone cutoff
-        setOutputGainDb(T(0), true);      // 0 dB output gain
+        setDriveDb(T(0), true);      // 0 dB drive
+        setAsymmetry(T(0), true);    // 0 asymmetry
+        setShape(T(0.5), true);      // Mid shape
+        setToneFrequency(T(12000));  // 12 kHz tone cutoff
+        setOutputGainDb(T(0), true); // 0 dB output gain
         setOversamplingEnabled(false);
     }
 
@@ -229,8 +231,9 @@ class Distortion {
     bool toggleOversampling = false;
 
     // PROCESSORS
-    models::SaturationStage<T, true, true, OVERSAMPLING_FACTOR> distortionOS;
-    models::SaturationStage<T, true, true, 1> distortion;
+    models::SaturationStage<T, WaveShaperType::Dynamic, true, true, OVERSAMPLING_FACTOR>
+        distortionOS;
+    models::SaturationStage<T, WaveShaperType::Dynamic, true, true, 1> distortion;
     DCBlocker<T> dcBlocker;
     DryWetMixer<T> dryWetMixer;
     DspParam<T> outputGain;
