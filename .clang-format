@@ -1,6 +1,6 @@
 BasedOnStyle: LLVM
 IndentWidth: 4
-ColumnLimit: 100
+ColumnLimit: 120
 AllowShortFunctionsOnASingleLine: Inline
 SortIncludes: true
 BreakBeforeBraces: Attach
@@ -14,4 +14,6 @@ AllowAllArgumentsOnNextLine: false
 AlwaysBreakTemplateDeclarations: Yes
 DerivePointerAlignment: false
 PointerAlignment: Left
+BreakBeforeFunctionDefinition: false
+AlwaysBreakAfterReturnType: None
 # Add or adjust options as needed for your style

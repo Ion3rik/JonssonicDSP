@@ -210,7 +210,7 @@ class DelayLine {
      */
     T readSample(size_t ch, T modulation) {
         // Calculate modulated delay time with internal clamping (base delay + modulation)
-        T modulatedDelay = delaySamples.applyAdditiveMod(modulation, ch);
+        T modulatedDelay = delaySamples.applyAdditiveMod(ch, modulation);
 
         // Calculate read index and fractional part for interpolation
         size_t readIndex;

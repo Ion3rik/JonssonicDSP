@@ -31,9 +31,7 @@ class FirstOrderFilter {
      * @param newSampleRate Sample rate in Hz.
      * @param newType Filter type (Default: Lowpass).
      */
-    FirstOrderFilter(size_t newNumChannels,
-                     T newSampleRate,
-                     FirstOrderType newType = FirstOrderType::Lowpass) {
+    FirstOrderFilter(size_t newNumChannels, T newSampleRate, FirstOrderType newType = FirstOrderType::Lowpass) {
         prepare(newNumChannels, newSampleRate, newType);
     }
 
@@ -52,9 +50,7 @@ class FirstOrderFilter {
      * @param newSampleRate Sample rate in Hz.
      * @param newType Filter type (Default: Lowpass).
      */
-    void prepare(size_t newNumChannels,
-                 T newSampleRate,
-                 FirstOrderType newType = FirstOrderType::Lowpass) {
+    void prepare(size_t newNumChannels, T newSampleRate, FirstOrderType newType = FirstOrderType::Lowpass) {
         numChannels = utils::detail::clampChannels(newNumChannels);
         sampleRate = utils::detail::clampSampleRate(newSampleRate);
         type = newType;
@@ -91,7 +87,7 @@ class FirstOrderFilter {
      * @param newFreq Cutoff frequency (clampped within filter_limits.h)
      * @note Coeffs are only updated if @ref prepare has been called before.
      */
-    void setFreq(Frequency newFreq) {
+    void setFreq(Frequency<T> newFreq) {
         // Early exit if not prepared
         if (!togglePrepared)
             return;
@@ -117,7 +113,7 @@ class FirstOrderFilter {
      * @param newGain Gain struct.
      * @note Coeffs are only updated if @ref prepare has been called before.
      */
-    void setGain(Gain newGain) {
+    void setGain(Gain<T> newGain) {
         // Early exit if not prepared
         if (!togglePrepared)
             return;
@@ -137,7 +133,7 @@ class FirstOrderFilter {
     T gain = T(1);
 
     FirstOrderType type;
-    FirstOrderCore<T> FirstOrderCore;
+    detail::FirstOrderCore<T> FirstOrderCore;
 
     void updateCoeffs() {
         // Early exit if not prepared
@@ -150,27 +146,23 @@ class FirstOrderFilter {
         // Compute coefficients based on filter type
         switch (type) {
         case FirstOrderType::Lowpass:
-            jonssonic::detail::computeFirstOrderLowpassCoeffs<T>(freqNormalized, b0, b1, a1);
+            jnsc::detail::computeFirstOrderLowpassCoeffs<T>(freqNormalized, b0, b1, a1);
             FirstOrderCore.setSectionCoeffs(0, b0, b1, a1);
             break;
         case FirstOrderType::Highpass:
-            jonssonic::detail::computeFirstOrderHighpassCoeffs<T>(freqNormalized, b0, b1, a1);
+            jnsc::detail::computeFirstOrderHighpassCoeffs<T>(freqNormalized, b0, b1, a1);
             FirstOrderCore.setSectionCoeffs(0, b0, b1, a1);
             break;
         case FirstOrderType::Allpass:
-            jonssonic::detail::computeFirstOrderAllpassCoeffs<T>(freqNormalized, b0, b1, a1);
+            jnsc::detail::computeFirstOrderAllpassCoeffs<T>(freqNormalized, b0, b1, a1);
             FirstOrderCore.setSectionCoeffs(0, b0, b1, a1);
             break;
         case FirstOrderType::Lowshelf:
-            jonssonic::detail::computeFirstOrderLowshelfCoeffs<T>(freqNormalized, gain, b0, b1, a1);
+            jnsc::detail::computeFirstOrderLowshelfCoeffs<T>(freqNormalized, gain, b0, b1, a1);
             FirstOrderCore.setSectionCoeffs(0, b0, b1, a1);
             break;
         case FirstOrderType::Highshelf:
-            jonssonic::detail::computeFirstOrderHighshelfCoeffs<T>(freqNormalized,
-                                                                   gain,
-                                                                   b0,
-                                                                   b1,
-                                                                   a1);
+            jnsc::detail::computeFirstOrderHighshelfCoeffs<T>(freqNormalized, gain, b0, b1, a1);
             FirstOrderCore.setSectionCoeffs(0, b0, b1, a1);
             break;
         default:

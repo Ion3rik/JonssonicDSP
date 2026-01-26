@@ -13,6 +13,6 @@ enum class FirstOrderType { Lowpass, Highpass, Allpass, Lowshelf, Highshelf };
 enum class BiquadType { Lowpass, Highpass, Bandpass, Allpass, Notch, Peak, Lowshelf, Highshelf };
 
 /// Damping filter types
-enum class DampingType { OnePole, BiquadShelf, FirstOrderShelf };
+enum class DampingType { Bypass, OnePole, BiquadShelf, FirstOrderShelf };
 
 } // namespace jnsc

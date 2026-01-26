@@ -1,5 +1,5 @@
 // JonssonicDSP - A Modular Realtime C++ Audio DSP Library
-// DynamicsProcessor class header file
+// DynamicsStage class header file
 // SPDX-License-Identifier: MIT
 
 #pragma once
@@ -15,7 +15,7 @@ enum class DetectorType { Feedforward, Feedback };
 
 // =============================================================================
 /**
- * @brief DynamicsProcessor combines an Envelope Follower, Gain Computer, and Gain Smoother into a
+ * @brief DynamicsStage combines an Envelope Follower, Gain Computer, and Gain Smoother into a
  * single processing stage.
  * @tparam T Sample type
  * @tparam EnvelopeType Type of envelope follower (default: RMS)
@@ -32,26 +32,26 @@ template <typename T,
           DetectorType DetectorType = DetectorType::Feedforward,
           bool SideChainFilter = false,
           bool Metering = true>
-class DynamicsProcessor {
+class DynamicsStage {
   public:
     /// Default constructor.
-    DynamicsProcessor() = default;
+    DynamicsStage() = default;
 
     /**
      * @brief Parameterized constructor that calls @ref prepare.
      * @param numChannels Number of channels
      * @param sampleRate Sample rate in Hz
      */
-    DynamicsProcessor(size_t numChannels, T sampleRate) { prepare(numChannels, sampleRate); }
+    DynamicsStage(size_t numChannels, T sampleRate) { prepare(numChannels, sampleRate); }
 
     /// Default destructor.
-    ~DynamicsProcessor() = default;
+    ~DynamicsStage() = default;
 
     /// No copy nor move semantics
-    DynamicsProcessor(const DynamicsProcessor&) = delete;
-    DynamicsProcessor& operator=(const DynamicsProcessor&) = delete;
-    DynamicsProcessor(DynamicsProcessor&&) = delete;
-    DynamicsProcessor& operator=(DynamicsProcessor&&) = delete;
+    DynamicsStage(const DynamicsStage&) = delete;
+    DynamicsStage& operator=(const DynamicsStage&) = delete;
+    DynamicsStage(DynamicsStage&&) = delete;
+    DynamicsStage& operator=(DynamicsStage&&) = delete;
 
     /**
      * @brief Prepare the dynamics processor for processing.
@@ -299,13 +299,13 @@ template <typename T,
           DetectorType DetectorType = DetectorType::Feedforward,
           bool SideChainFilter = false,
           bool Metering = true>
-using CompressorRMSFeedforward = DynamicsProcessor<T,
-                                                   EnvelopeType,
-                                                   CompressorPolicy<T>,
-                                                   GainSmootherType,
-                                                   DetectorType,
-                                                   SideChainFilter,
-                                                   Metering>;
+using CompressorRMSFeedforward = DynamicsStage<T,
+                                               EnvelopeType,
+                                               CompressorPolicy<T>,
+                                               GainSmootherType,
+                                               DetectorType,
+                                               SideChainFilter,
+                                               Metering>;
 
 /// Feedback RMS Compressor
 template <typename T,
@@ -313,12 +313,12 @@ template <typename T,
           GainSmootherType GainSmootherType = GainSmootherType::AttackRelease,
           bool SideChainFilter = false,
           bool Metering = true>
-using CompressorRMSFeedback = DynamicsProcessor<T,
-                                                EnvelopeType,
-                                                CompressorPolicy<T>,
-                                                GainSmootherType,
-                                                DetectorType::Feedback,
-                                                SideChainFilter,
-                                                Metering>;
+using CompressorRMSFeedback = DynamicsStage<T,
+                                            EnvelopeType,
+                                            CompressorPolicy<T>,
+                                            GainSmootherType,
+                                            DetectorType::Feedback,
+                                            SideChainFilter,
+                                            Metering>;
 
 } // namespace jnsc::models

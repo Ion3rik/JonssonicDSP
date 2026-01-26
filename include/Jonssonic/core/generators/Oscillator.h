@@ -27,9 +27,7 @@ class Oscillator {
      * @param newNumChannels Number of channels
      * @param newSampleRate Sample rate in Hz
      */
-    Oscillator(size_t newNumChannels, T newSampleRate, T newSmoothingTimeMs = T(10)) {
-        prepare(newNumChannels, newSampleRate, newSmoothingTimeMs);
-    }
+    Oscillator(size_t newNumChannels, T newSampleRate) { prepare(newNumChannels, newSampleRate); }
 
     /// Default destructor
     ~Oscillator() = default;
@@ -53,6 +51,8 @@ class Oscillator {
         // Resize and initialize to zero
         phase.assign(numChannels, T(0));
         phaseIncrement.prepare(numChannels, sampleRate);
+
+        togglePrepared = true;
     }
 
     /// Reset phase for all channels
@@ -150,6 +150,8 @@ class Oscillator {
      * @param skipSmoothing If true, skip smoothing and set immediately.
      */
     void setFrequency(Frequency<T> freq, bool skipSmoothing = false) {
+        if (!togglePrepared)
+            return;
         phaseIncrement.setTarget(freq.toNormalized(sampleRate), skipSmoothing);
     }
 
@@ -160,6 +162,8 @@ class Oscillator {
      * @param skipSmoothing If true, skip smoothing and set immediately.
      */
     void setFrequency(size_t channel, Frequency<T> freq, bool skipSmoothing = false) {
+        if (!togglePrepared)
+            return;
         phaseIncrement.setTarget(channel, freq.toNormalized(sampleRate), skipSmoothing);
     }
 
@@ -202,7 +206,8 @@ class Oscillator {
     }
 
     T sampleRate = 44100.0;
-    size_t numChannels;
+    size_t numChannels = 0;
+    bool togglePrepared = false;
     Waveform waveform = Waveform::Sine;
     bool useAntiAliasing = false;
 

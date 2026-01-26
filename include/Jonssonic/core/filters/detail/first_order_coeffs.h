@@ -20,7 +20,7 @@ template <typename T>
 inline void computeFirstOrderLowpassCoeffs(T normFreq, T& b0, T& b1, T& a1) {
     // Standard first-order lowpass (bilinear transform)
     // normFreq: normalized cutoff (0..0.5, where 0.5 = Nyquist)
-    T theta = two_pi<T> * normFreq;
+    T theta = utils::two_pi<T> * normFreq;
     T gamma = std::cos(theta) / (1.0 + std::sin(theta));
     a1 = -gamma;
     b0 = (1.0 - gamma) / 2.0;
@@ -36,7 +36,7 @@ inline void computeFirstOrderLowpassCoeffs(T normFreq, T& b0, T& b1, T& a1) {
  */
 template <typename T>
 inline void computeFirstOrderHighpassCoeffs(T normFreq, T& b0, T& b1, T& a1) {
-    T x = std::exp(-two_pi<T> * normFreq);
+    T x = std::exp(-utils::two_pi<T> * normFreq);
     b0 = (T(1) + x) / 2;
     b1 = -(T(1) + x) / 2;
     a1 = x;
@@ -51,7 +51,7 @@ inline void computeFirstOrderHighpassCoeffs(T normFreq, T& b0, T& b1, T& a1) {
  */
 template <typename T>
 inline void computeFirstOrderAllpassCoeffs(T normFreq, T& b0, T& b1, T& a1) {
-    T x = std::exp(-two_pi<T> * normFreq);
+    T x = std::exp(-utils::two_pi<T> * normFreq);
     b0 = x;
     b1 = T(1);
     a1 = x;
@@ -68,7 +68,7 @@ inline void computeFirstOrderAllpassCoeffs(T normFreq, T& b0, T& b1, T& a1) {
 template <typename T>
 inline void computeFirstOrderLowshelfCoeffs(T normFreq, T gainLinear, T& b0, T& b1, T& a1) {
     // Prewarp frequency
-    T omega_c = two_pi<T> * normFreq;
+    T omega_c = utils::two_pi<T> * normFreq;
     T tan_wc_2 = std::tan(omega_c / T(2));
 
     T sqrt_g = std::sqrt(gainLinear);
@@ -92,7 +92,7 @@ inline void computeFirstOrderLowshelfCoeffs(T normFreq, T gainLinear, T& b0, T& 
 template <typename T>
 inline void computeFirstOrderHighshelfCoeffs(T normFreq, T gainLinear, T& b0, T& b1, T& a1) {
     // Prewarp frequency
-    T omega_c = two_pi<T> * normFreq;
+    T omega_c = utils::two_pi<T> * normFreq;
     T tan_wc_2 = std::tan(omega_c / T(2));
 
     T sqrt_g = std::sqrt(gainLinear);

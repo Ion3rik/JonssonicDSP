@@ -6,7 +6,7 @@
 #include "jonssonic/utils/detail/config_utils.h"
 #include <jonssonic/core/common/dsp_param.h>
 #include <jonssonic/core/common/quantities.h>
-#include <jonssonic/models/dynamics/dynamics_processor.h>
+#include <jonssonic/models/dynamics/dynamics_stage.h>
 #include <jonssonic/utils/buffer_utils.h>
 #include <jonssonic/utils/math_utils.h>
 
