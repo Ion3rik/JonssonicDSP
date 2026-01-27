@@ -50,9 +50,7 @@ class SmoothedValue<T, SmootherType::None, Order> {
      * @param newNumChannels Number of channels.
      * @param newSampleRate Sample rate in Hz (not used).
      */
-    SmoothedValue(size_t newNumChannels, T newSampleRate) {
-        prepare(newNumChannels, newSampleRate);
-    }
+    SmoothedValue(size_t newNumChannels, T newSampleRate) { prepare(newNumChannels, newSampleRate); }
     /// Default destructor.
     ~SmoothedValue() = default;
 
@@ -88,9 +86,7 @@ class SmoothedValue<T, SmootherType::None, Order> {
     void setTime(Time<T>) {}
 
     /// Set all channels to the same target value (no smoothing, just set value)
-    void setTarget(T newValue, bool skipSmoothing = false) {
-        std::fill(value.begin(), value.end(), newValue);
-    }
+    void setTarget(T newValue, bool skipSmoothing = false) { std::fill(value.begin(), value.end(), newValue); }
 
     /// Set target value for specific channel
     void setTarget(size_t ch, T newValue, bool skipSmoothing = false) { value[ch] = newValue; }
@@ -126,9 +122,7 @@ class SmoothedValue<T, SmootherType::OnePole, Order> {
      * @param newNumChannels Number of channels
      * @param newSampleRate Sample rate in Hz
      */
-    SmoothedValue(size_t newNumChannels, T newSampleRate) {
-        prepare(newNumChannels, newSampleRate);
-    }
+    SmoothedValue(size_t newNumChannels, T newSampleRate) { prepare(newNumChannels, newSampleRate); }
 
     /// Default destructor.
     ~SmoothedValue() = default;
@@ -153,6 +147,7 @@ class SmoothedValue<T, SmootherType::OnePole, Order> {
         for (auto& s : stage)
             s.fill(T(0));
         togglePrepared = true;
+        updateSmoothingParams();
     }
 
     /// Set smoothing time in various units
@@ -241,7 +236,7 @@ class SmoothedValue<T, SmootherType::OnePole, Order> {
     size_t numChannels = 0;
     std::vector<T> current;
     std::vector<T> target;
-    T timeSec = 0.01;
+    T timeSec = 0.05;
     T coeff = 0;
     std::vector<std::array<T, Order>> stage; // stage[channel][order]
 
@@ -270,9 +265,7 @@ class SmoothedValue<T, SmootherType::Linear, Order> {
      * @param newNumChannels Number of channels
      * @param newSampleRate Sample rate in Hz
      */
-    SmoothedValue(size_t newNumChannels, T newSampleRate) {
-        prepare(newNumChannels, newSampleRate);
-    }
+    SmoothedValue(size_t newNumChannels, T newSampleRate) { prepare(newNumChannels, newSampleRate); }
 
     /// Default destructor
     ~SmoothedValue() = default;
@@ -372,8 +365,7 @@ class SmoothedValue<T, SmootherType::Linear, Order> {
             rampStep[ch] = T(0);
         } else {
             target[ch] = value;
-            rampStep[ch] =
-                (target[ch] - current[ch]) / static_cast<T>(rampSamples > 0 ? rampSamples : 1);
+            rampStep[ch] = (target[ch] - current[ch]) / static_cast<T>(rampSamples > 0 ? rampSamples : 1);
         }
     }
 

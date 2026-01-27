@@ -80,6 +80,10 @@ class ModulatedDelayStage {
         if constexpr (UseInternalLFO)
             lfoPhaseOffset.prepare(numChannels, sampleRate);
 
+        // Preapre state buffer if cross-feedback is enabled
+        if constexpr (UseCrossFeedback)
+            delayedSamples.resize(numChannels, T(0));
+
         // Set bounds for parameters that are enabled
         T maxModSamples = newMaxDelay.toSamples(sampleRate);
         modDepthSamples.setBounds(T(0), maxModSamples);
@@ -98,8 +102,10 @@ class ModulatedDelayStage {
         feedback.reset();
         if constexpr (UseDamping)
             dampingFilter.reset();
-        if constexpr (UseCrossFeedback)
+        if constexpr (UseCrossFeedback) {
             crossFeedback.reset();
+            delayedSamples.clear();
+        }
         modDepthSamples.reset();
         if constexpr (UseInternalLFO)
             lfoPhaseOffset.reset();
@@ -273,31 +279,44 @@ class ModulatedDelayStage {
     DspParam<T> modDepthSamples; // modulation depth in samples
     DspParam<T> lfoPhaseOffset;  // lfo phase offset per channel
 
+    // State variables
+    std::vector<T> delayedSamples; // needed for cross-feedback processing
+
     // Process block with cross-feedback and internal LFO
     void processWithCrossFeedback(const T* const* input, T* const* output, size_t numSamples) {
         for (size_t n = 0; n < numSamples; ++n) {
+            // First pass: read delayed samples from all channels
             for (size_t ch = 0; ch < numChannels; ++ch) {
-                // Get LFO modulation value
                 T modValue = lfo.processSample(ch, lfoPhaseOffset.getNextValue(ch)) * modDepthSamples.getNextValue(ch);
-                // Read delayed sample with modulation
                 T sample = delayLine.readSample(ch, modValue);
-                // Apply damping filter if enabled
+
                 if constexpr (UseDamping)
                     sample = dampingFilter.processSample(ch, sample);
-                // Apply cross feedback: mix this channel with the next channel
+
+                delayedSamples[ch] = sample;
+            }
+
+            // Second pass: compute feedback and write back to delay lines
+            for (size_t ch = 0; ch < numChannels; ++ch) {
+                // Retrieve delayed sample for this channel and next channel
+                T sample = delayedSamples[ch];
                 size_t nextCh = (ch + 1) % numChannels;
-                T nextChSample = delayLine.readSample(nextCh, modValue);
+                T nextChSample = delayedSamples[nextCh];
+
+                // Compute mixed sample with cross-feedback
                 T crossFeedbackValue = crossFeedback.getNextValue(ch);
-                T mixedSample = (sample * (T(1) - crossFeedbackValue) + nextChSample * crossFeedbackValue);
-                // Apply normalized intra-channel feedback gain
-                T fbGain =
-                    feedback.getNextValue(ch) * ((T(1) - crossFeedbackValue) + utils::sqrtHalf<T> * crossFeedbackValue);
-                T feedbackSample = mixedSample * fbGain;
+                T mixedSample = sample * (T(1) - crossFeedbackValue) + nextChSample * crossFeedbackValue;
+
+                // Compute feedback sample
+                T feedbackSample = mixedSample * feedback.getNextValue(ch);
+
                 // Scale inputs to other than first channel based on cross-feedback amount.
                 T isFirstChannel = static_cast<T>(ch == 0);
                 T inputGain = (T(1) - crossFeedbackValue) * (T(1) - isFirstChannel) + isFirstChannel;
+
                 // Write input + feedback back into delay line
                 delayLine.writeSample(ch, input[ch][n] * inputGain + feedbackSample);
+
                 // Output the delayed sample + feedforward
                 output[ch][n] = sample + feedforward.getNextValue(ch) * input[ch][n];
             }
@@ -307,27 +326,30 @@ class ModulatedDelayStage {
     // Process block with cross-feedback and external modulation
     void processWithCrossFeedback(const T* const* input, T* const* output, const T* const* mod, size_t numSamples) {
         for (size_t n = 0; n < numSamples; ++n) {
+            // First pass: read delayed samples from all channels
             for (size_t ch = 0; ch < numChannels; ++ch) {
-                // Scale modulation signal by modulation depth
                 T modValue = mod[ch][n] * modDepthSamples.getNextValue(ch);
-
-                // Read delayed sample with modulation
                 T sample = delayLine.readSample(ch, modValue);
 
-                // Apply damping filter if enabled
                 if constexpr (UseDamping)
                     sample = dampingFilter.processSample(ch, sample);
 
-                // Apply cross feedback: mix this channel with the next channel
-                size_t nextCh = (ch + 1) % numChannels;
-                T nextChSample = delayLine.readSample(nextCh, modValue);
-                T crossFeedbackValue = crossFeedback.getNextValue(ch);
-                T mixedSample = (sample * (T(1) - crossFeedbackValue) + nextChSample * crossFeedbackValue);
+                delayedSamples[ch] = sample;
+            }
 
-                // Apply normalized intra-channel feedback gain
-                T fbGain =
-                    feedback.getNextValue(ch) * ((T(1) - crossFeedbackValue) + utils::sqrtHalf<T> * crossFeedbackValue);
-                T feedbackSample = mixedSample * fbGain;
+            // Second pass: compute feedback and write back to delay lines
+            for (size_t ch = 0; ch < numChannels; ++ch) {
+                // Retrieve delayed sample for this channel and next channel
+                T sample = delayedSamples[ch];
+                size_t nextCh = (ch + 1) % numChannels;
+                T nextChSample = delayedSamples[nextCh];
+
+                // Compute mixed sample with cross-feedback
+                T crossFeedbackValue = crossFeedback.getNextValue(ch);
+                T mixedSample = sample * (T(1) - crossFeedbackValue) + nextChSample * crossFeedbackValue;
+
+                // Compute feedback sample
+                T feedbackSample = mixedSample * feedback.getNextValue(ch);
 
                 // Scale inputs to other than first channel based on cross-feedback amount.
                 T isFirstChannel = static_cast<T>(ch == 0);

@@ -3,41 +3,50 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include <jonssonic/core/delays/delay_line.h>
-#include <jonssonic/core/filters/first_order_filter.h>
-#include <jonssonic/core/filters/utility_filters.h>
-#include <jonssonic/core/common/dsp_param.h>
+#include "jonssonic/utils/detail/config_utils.h"
+#include <jonssonic/core/common/audio_buffer.h>
 #include <jonssonic/core/generators/oscillator.h>
-#include <jonssonic/utils/math_utils.h>
-#include <jonssonic/core/nonlinear/wave_shaper.h>
-#include <cmath>
+#include <jonssonic/models/delays/modulated_delay_stage.h>
 
-namespace jonssonic::effects {
+namespace jnsc::effects {
 /**
- * @brief Delay Effect with Feedback, Damping, and ping-pong cross-talk
+ * @brief Delay Effect with Feedback, Damping, and ping-pong cross-talk between channels.
  * @param T Sample data type (e.g., float, double)
  */
-template<typename T>
+template <typename T>
 class Delay {
-/// Type aliases for convenience, readability and future-proofing
+    /**
+     * @brief Tunable constants for the delay effect.
+     * @param MAX_DELAY_MS Maximum delay in milliseconds.
+     * @param MAX_MODULATION_MS Maximum delay time modulation depth in milliseconds.
+     * @param WOW_PORTION_OF_MODULATION Portion of modulation depth for wow effect (rest for flutter).
+     * @param SMOOTHING_TIME_MS Smoothing time for parameter changes in milliseconds.
+     * @param DAMPING_MIN_HZ Minimum damping frequency in Hz.
+     */
+    static constexpr T MAX_DELAY_MS = T(2000);
+    static constexpr T MAX_MODULATION_MS = T(3.0);
+    static constexpr T WOW_PORTION_OF_MODULATION = T(0.8);
+    static constexpr int SMOOTHING_TIME_MS = 300;
+    static constexpr T DAMPING_MIN_HZ = T(2000);
 
-public:
-    // Tunable constants
-    static constexpr T MAX_MODULATION_MS = T(2.0);          // Maximum modulation depth in milliseconds 
-    static constexpr T WOW_PORTION_OF_MODULATION = T(0.9);  // Portion of modulation depth for wow effect
-    static constexpr int SMOOTHING_TIME_MS = 300;           // Smoothing time for parameter changes in milliseconds
-    static constexpr T DAMPING_MIN_HZ = T(2000);            // Minimum damping frequency in Hz
-
-
-
-    // Constructor and Destructor
+  public:
+    /// Default Constructor
     Delay() = default;
-    Delay(size_t newNumChannels, T newSampleRate, T maxDelayMs) {
-        prepare(newNumChannels, newSampleRate, maxDelayMs);
+
+    /**
+     * @brief Parameterized constructor that calls @ref prepare.
+     * @param newNumChannels Number of channels
+     * @param newSampleRate Sample rate in Hz
+     * @param maxDelayMs Maximum delay in milliseconds
+     */
+    Delay(size_t newNumChannels, size_t newMaxBlockSize, T newSampleRate) {
+        prepare(newNumChannels, newMaxBlockSize, newSampleRate);
     }
+
+    /// Default Destructor
     ~Delay() = default;
 
-    // No copy or move semantics
+    /// No copy nor move semantics
     Delay(const Delay&) = delete;
     Delay& operator=(const Delay&) = delete;
     Delay(Delay&&) = delete;
@@ -49,55 +58,43 @@ public:
      * @param newSampleRate Sample rate in Hz
      * @param maxDelayMs Maximum delay in milliseconds
      */
-    void prepare(size_t newNumChannels, T newSampleRate, T maxDelayMs) {
-
+    void prepare(size_t newNumChannels, size_t newMaxBlockSize, T newSampleRate) {
         // Store global parameters
-        numChannels = newNumChannels;
-        sampleRate = newSampleRate;
-        maxModsamples = msToSamples(MAX_MODULATION_MS, sampleRate);
+        numChannels = utils::detail::clampChannels(newNumChannels);
+        sampleRate = utils::detail::clampSampleRate(newSampleRate);
 
-        // Prepare DSP components
-        delayLine.prepare(newNumChannels, newSampleRate, maxDelayMs);
+        // Prepare Modulated Delay Stage
+        modulatedDelayStage.prepare(numChannels, Time<T>::Milliseconds(MAX_DELAY_MS), sampleRate);
+        modulatedDelayStage.setControlSmoothingTime(Time<T>::Milliseconds(T(SMOOTHING_TIME_MS)));
 
-        // Damping filter setup
-        dampingFilter.prepare(newNumChannels, newSampleRate);
-        dampingFilter.setType(FirstOrderType::Lowpass);
-        dampingFilter.setFreq(T(18000)); // Default: no damping
-        
-        // Prepare DC blocker
-        dcBlocker.prepare(newNumChannels, newSampleRate);
-        
-        // LFO setup
+        // Prepare Wow LFO
         wowLfo.prepare(newNumChannels, newSampleRate);
+        wowLfo.setControlSmoothingTime(Time<T>::Milliseconds(T(SMOOTHING_TIME_MS)));
         wowLfo.setWaveform(Waveform::Sine);
-        wowLfo.setFrequency(T(0.3)); // 0.3 Hz for wow
-        
+        wowLfo.setFrequency(Frequency<T>::Hertz(0.3)); // 0.3 Hz for wow
+
+        // Prepare Flutter LFO
         flutterLfo.prepare(newNumChannels, newSampleRate);
+        flutterLfo.setControlSmoothingTime(Time<T>::Milliseconds(T(SMOOTHING_TIME_MS)));
         flutterLfo.setWaveform(Waveform::Sine);
-        flutterLfo.setFrequency(T(6.0)); // 6 Hz for flutter
+        flutterLfo.setFrequency(Frequency<T>::Hertz(6.0)); // 6 Hz for flutter
 
-        // Set parameter bounds
-        feedback.setBounds(T(0), T(1));
-        pingPong.setBounds(T(0), T(1));
-        modDepth.setBounds(T(0), T(1));
-
-        // Prepare parameters
-        feedback.prepare(newNumChannels, newSampleRate, SMOOTHING_TIME_MS);
-        pingPong.prepare(newNumChannels, newSampleRate, SMOOTHING_TIME_MS);
-        modDepth.prepare(newNumChannels, newSampleRate, SMOOTHING_TIME_MS);
+        // Prepare modulation buffer
+        modulationBuffer.resize(numChannels, newMaxBlockSize);
 
         // Set default parameter values
         setFeedback(T(0), true);
         setPingPong(T(0), true);
         setModDepth(T(0), true);
-        setDelayMs(T(500), true); // 500 ms default delay
-        setDamping(T(0), true); // No damping by default
+        setDelayMs(T(500), true);
+        setDamping(T(0), true);
     }
 
     void reset() {
-        delayLine.reset();
-        dampingFilter.reset();
-        dcBlocker.reset();
+        modulatedDelayStage.reset();
+        flutterLfo.reset();
+        wowLfo.reset();
+        modulationBuffer.clear();
     }
 
     /**
@@ -106,105 +103,85 @@ public:
      * @param output Output buffer (numChannels x numSamples)
      * @param numSamples Number of samples to process
      */
-    void processBlock(const T* const* input, T* const* output, size_t numSamples)
-    {
-        for (size_t n = 0; n < numSamples; ++n)
-        {
-            for (size_t ch = 0; ch < numChannels; ++ch) 
-            {  
-                // Compute modulation value (wow + flutter)
-                T modAmount = modDepth.getNextValue(ch) * maxModsamples;
-                T wowValue = wowLfo.processSample(ch) * WOW_PORTION_OF_MODULATION * modAmount;
-                T flutterValue = flutterLfo.processSample(ch) * (T(1) - WOW_PORTION_OF_MODULATION) * modAmount;
-                T totalModulation = wowValue + flutterValue;
-
-                // Read delayed sample with modulation
-                T delayedSample = delayLine.readSample(ch, totalModulation);
-                
-                // Apply damping filter to delayed sample
-                T dampedSample = dampingFilter.processSample(ch, delayedSample);
-
-                // Compute feedback: mix this channel with opposite channel (ping-pong)
-                size_t oppositeCh = (ch + 1) % numChannels;
-                T oppositeDelayed = delayLine.readSample(oppositeCh, totalModulation);
-                T pingPongAmount = pingPong.getNextValue(ch);
-                T mixedSample = (dampedSample * (T(1) - pingPongAmount) + oppositeDelayed * pingPongAmount);
-                
-                // Apply normalized feedback gain
-                T fbGain = feedback.getNextValue(ch) * ((T(1) - pingPongAmount) + std::sqrt(T(0.5)) * pingPongAmount);// normalize for the cross-feedback
-                T feedbackSample = mixedSample * fbGain;
-
-                // Apply DC blocker to feedback path
-                feedbackSample = dcBlocker.processSample(ch, feedbackSample);
-
-                // For ping-pong: scale input by (1 - pingPong) so at max pingPong,
-                // only channel 0 receives input, creating true ping-pong effect
-                T inputGain = (ch == 0) ? T(1) : (T(1) - pingPongAmount);
-
-                // Write input + feedback back into delay line
-                delayLine.writeSample(ch, input[ch][n] * inputGain + feedbackSample);
-
-                // Output the damped delayed sample
-                output[ch][n] = dampedSample;
+    void processBlock(const T* const* input, T* const* output, size_t numSamples) {
+        // Process LFOs to modulation buffer (note: could implement oscillator bank to internalize additive oscillators)
+        for (size_t ch = 0; ch < numChannels; ++ch) {
+            for (size_t n = 0; n < numSamples; ++n) {
+                T wowValue = wowLfo.processSample(ch);
+                T flutterValue = flutterLfo.processSample(ch);
+                modulationBuffer[ch][n] =
+                    wowValue * WOW_PORTION_OF_MODULATION + flutterValue * (T(1) - WOW_PORTION_OF_MODULATION);
             }
         }
+
+        // Process delay stage with external modulation
+        modulatedDelayStage.processBlock(input, output, modulationBuffer.readPtrs(), numSamples);
     }
 
-    // SETTERS FOR PARAMETERS
+    /**
+     * @brief Set the delay time in milliseconds.
+     * @param newDelayMs New delay time in milliseconds.
+     * @param skipSmoothing If true, skip smoothing and set immediately.
+     */
     void setDelayMs(T newDelayMs, bool skipSmoothing = false) {
-        delayLine.setDelayMs(newDelayMs, skipSmoothing);
+        modulatedDelayStage.setDelay(Time<T>::Milliseconds(newDelayMs), skipSmoothing);
     }
 
-    void setDelaySamples(T newDelaySamples, bool skipSmoothing = false) {
-        delayLine.setDelaySamples(newDelaySamples, skipSmoothing);
-    }
-
+    /**
+     * @brief Set the feedback amount.
+     * @param newFeedback New feedback amount in [-1, 1].
+     * @param skipSmoothing If true, skip smoothing and set immediately.
+     */
     void setFeedback(T newFeedback, bool skipSmoothing = false) {
-        feedback.setTarget(newFeedback, skipSmoothing);
+        modulatedDelayStage.setFeedback(newFeedback, skipSmoothing);
     }
 
+    /**
+     * @brief Set the damping amount.
+     * @param newDamping New damping amount in [0, 1].
+     * @param skipSmoothing If true, skip smoothing and set immediately.
+     */
     void setDamping(T newDamping, bool skipSmoothing = false) {
-        T newDampingHz = DAMPING_MIN_HZ * std::pow(T(18000) / DAMPING_MIN_HZ, T(1) - newDamping);
-        dampingFilter.setFreq(newDampingHz);
+        T newDampingHz = DAMPING_MIN_HZ * std::pow(T(15000) / DAMPING_MIN_HZ, T(1) - newDamping);
+        modulatedDelayStage.setDampingCutoff(Frequency<T>::Hertz(newDampingHz));
     }
 
+    /**
+     * @brief Set the ping-pong amount.
+     * @param newPingPong New ping-pong amount in [0, 1].
+     * @param skipSmoothing If true, skip smoothing and set immediately.
+     */
     void setPingPong(T newPingPong, bool skipSmoothing = false) {
-        pingPong.setTarget(newPingPong, skipSmoothing);
+        modulatedDelayStage.setCrossFeedback(newPingPong, skipSmoothing);
     }
 
+    /**
+     * @brief Set the modulation depth.
+     * @param newModDepth New modulation depth in [0, 1].
+     * @param skipSmoothing If true, skip smoothing and set immediately.
+     */
     void setModDepth(T newModDepth, bool skipSmoothing = false) {
-        modDepth.setTarget(newModDepth, skipSmoothing);
+        modulatedDelayStage.setModulationDepth(Time<T>::Milliseconds(MAX_MODULATION_MS * newModDepth), skipSmoothing);
     }
 
-    // GETTERS FOR GLOBAL PARAMETERS
-    size_t getNumChannels() const {
-        return numChannels;
-    }
-    T getSampleRate() const {
-        return sampleRate;
-    }
+    /// Get number of channels
+    size_t getNumChannels() const { return numChannels; }
 
-private:
-    
-    // GLOBAL PARAMETERS
+    /// Get sample rate
+    T getSampleRate() const { return sampleRate; }
+
+  private:
+    // Config variables
     size_t numChannels = 0;
     T sampleRate = T(44100);
-    T maxModsamples;
 
-    // PROCESSORS
-    DelayLine<T, LagrangeInterpolator<T>, SmootherType::OnePole, 1, SMOOTHING_TIME_MS> delayLine;
-    FirstOrderFilter<T> dampingFilter; // damping lowpass filter
-    DCBlocker<T> dcBlocker; // DC blocker for feedback path
-    Oscillator<T> wowLfo; // Slower LFO for wow effect
-    Oscillator<T> flutterLfo; // Faster LFO for flutter effect
-    WaveShaper<T, WaveShaperType::Atan> softClipper; // Soft clipper for feedback
+    // Processing components
+    models::ModulatedDelayStage<T, LagrangeInterpolator<T>, false, true, true> modulatedDelayStage;
+    Oscillator<T> wowLfo;
+    Oscillator<T> flutterLfo;
 
-    // PARAMS
-    DspParam<T> feedback;       // Feedback amount
-    DspParam<T> pingPong;      // Ping-pong amount
-    DspParam<T> modDepth;        // Modulation depth (normalized)
-
-
+    // Buffer for modulation
+    AudioBuffer<T> modulationBuffer;
 };
 
-} // namespace Jonssonic
+} // namespace jnsc::effects
