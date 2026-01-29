@@ -25,11 +25,11 @@ class Reverb {
      * @param MAX_RELATIVE_MODULATION_DEPTH Maximum relative modulation depth for delay lines
      */
     static constexpr size_t FDN_SIZE = 16;
-    static constexpr int SMOOTHING_TIME_MS = 20;
+    static constexpr int SMOOTHING_TIME_MS = 50;
     static constexpr T MAX_PRE_DELAY_MS = T(200.0);
     static constexpr T MIN_DELAY_SCALE = T(0.9);
-    static constexpr T MAX_DELAY_SCALE = T(10.0);
-    static constexpr T MAX_RELATIVE_MODULATION_DEPTH = T(0.05);
+    static constexpr T MAX_DELAY_SCALE = T(3.0);
+    static constexpr T MAX_RELATIVE_MODULATION_DEPTH = T(0.1);
 
     /**
      * @brief Coprime base delay lengths in samples for the FDN.
