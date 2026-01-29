@@ -78,6 +78,8 @@ class AllpassFilter {
         gain.prepare(numChannels, sampleRate);
         gain.setBounds(T(-1), T(1));
         gain.setTarget(T(0), true);
+
+        togglePrepared = true;
     }
 
     /// Reset the allpass filter state
@@ -167,10 +169,7 @@ class AllpassFilter {
      * @param numSamples Number of samples to process
      * @note Input and output must have the same number of channels as prepared.
      */
-    void processBlock(const T* const* input,
-                      T* const* output,
-                      AllpassMod::Block<T>& modStruct,
-                      size_t numSamples) {
+    void processBlock(const T* const* input, T* const* output, AllpassMod::Block<T>& modStruct, size_t numSamples) {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t i = 0; i < numSamples; ++i) {
                 // Apply modulation to feedback and feedforward gains
@@ -204,6 +203,8 @@ class AllpassFilter {
      * @param skipSmoothing If true, skip smoothing and set immediately.
      */
     void setDelay(Time<T> newDelay, bool skipSmoothing = false) {
+        if (!togglePrepared)
+            return;
         delayLine.setDelay(newDelay, skipSmoothing);
     }
 
@@ -214,6 +215,8 @@ class AllpassFilter {
      * @param skipSmoothing If true, skip smoothing and set immediately.
      */
     void setDelay(size_t ch, Time<T> newDelay, bool skipSmoothing = false) {
+        if (!togglePrepared)
+            return;
         delayLine.setDelay(ch, newDelay, skipSmoothing);
     }
 
@@ -222,6 +225,8 @@ class AllpassFilter {
      * @param newGain Gain value
      */
     void setGain(Gain<T> newGain, bool skipSmoothing = false) {
+        if (!togglePrepared)
+            return;
         gain.setTarget(newGain.toLinear(), skipSmoothing);
     }
     /**
@@ -230,6 +235,8 @@ class AllpassFilter {
      * @param newGain Gain value
      */
     void setGain(size_t ch, Gain<T> newGain, bool skipSmoothing = false) {
+        if (!togglePrepared)
+            return;
         gain.setTarget(ch, newGain.toLinear(), skipSmoothing);
     }
 
@@ -237,9 +244,12 @@ class AllpassFilter {
     // Config variables
     size_t numChannels = 0;
     T sampleRate = T(44100);
+    bool togglePrepared = false;
 
     // DSP Components
     DelayLine<T, Interpolator> delayLine;
+
+    // Parameters
     DspParam<T> gain;
 };
 } // namespace jnsc

@@ -79,6 +79,8 @@ class CombFilter {
         feedforwardGain.setBounds(T(-1), T(1));
         feedbackGain.setTarget(T(0), true);
         feedforwardGain.setTarget(T(0), true);
+
+        togglePrepared = true;
     }
 
     /// Reset the comb filter state
@@ -173,17 +175,12 @@ class CombFilter {
      *
      * @note Input and output must have the same number of channels as prepared.
      */
-    void processBlock(const T* const* input,
-                      T* const* output,
-                      CombMod::Block<T>& modStruct,
-                      size_t numSamples) {
+    void processBlock(const T* const* input, T* const* output, CombMod::Block<T>& modStruct, size_t numSamples) {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t i = 0; i < numSamples; ++i) {
                 // Apply modulation to feedback and feedforward gains
-                T modulatedFbGain =
-                    feedbackGain.applyMultiplicativeMod(ch, modStruct.feedbackMod[ch][i]);
-                T modulatedFfGain =
-                    feedforwardGain.applyMultiplicativeMod(ch, modStruct.feedforwardMod[ch][i]);
+                T modulatedFbGain = feedbackGain.applyMultiplicativeMod(ch, modStruct.feedbackMod[ch][i]);
+                T modulatedFfGain = feedforwardGain.applyMultiplicativeMod(ch, modStruct.feedforwardMod[ch][i]);
 
                 // Read delayed signal with modulation
                 T delayed = delayLine.readSample(ch, modStruct.delayMod[ch][i]);
@@ -214,6 +211,8 @@ class CombFilter {
      * @param skipSmoothing If true, skip smoothing and set immediately.
      */
     void setDelay(Time<T> newDelay, bool skipSmoothing = false) {
+        if (!togglePrepared)
+            return;
         delayLine.setDelay(newDelay, skipSmoothing);
     }
 
@@ -224,6 +223,8 @@ class CombFilter {
      * @param skipSmoothing If true, skip smoothing and set immediately.
      */
     void setDelay(size_t ch, Time<T> newDelay, bool skipSmoothing = false) {
+        if (!togglePrepared)
+            return;
         delayLine.setDelay(ch, newDelay, skipSmoothing);
     }
 
@@ -233,6 +234,8 @@ class CombFilter {
      * @param skipSmoothing If true, skip smoothing and set immediately.
      */
     void setFeedbackGain(Gain<T> gain, bool skipSmoothing = false) {
+        if (!togglePrepared)
+            return;
         feedbackGain.setTarget(gain.toLinear(), skipSmoothing);
     }
     /**
@@ -242,6 +245,8 @@ class CombFilter {
      * @param skipSmoothing If true, skip smoothing and set immediately.
      */
     void setFeedbackGain(size_t ch, Gain<T> gain, bool skipSmoothing = false) {
+        if (!togglePrepared)
+            return;
         feedbackGain.setTarget(ch, gain.toLinear(), skipSmoothing);
     }
     /**
@@ -250,6 +255,8 @@ class CombFilter {
      * @param skipSmoothing If true, skip smoothing and set immediately.
      */
     void setFeedforwardGain(Gain<T> gain, bool skipSmoothing = false) {
+        if (!togglePrepared)
+            return;
         feedforwardGain.setTarget(gain.toLinear(), skipSmoothing);
     }
     /**
@@ -259,13 +266,21 @@ class CombFilter {
      * @param skipSmoothing If true, skip smoothing and set immediately.
      */
     void setFeedforwardGain(size_t ch, Gain<T> gain, bool skipSmoothing = false) {
+        if (!togglePrepared)
+            return;
         feedforwardGain.setTarget(ch, gain.toLinear(), skipSmoothing);
     }
 
   private:
+    // Config variables
     size_t numChannels = 0;
     T sampleRate = T(44100);
+    bool togglePrepared = false;
+
+    // DSP Components
     DelayLine<T, Interpolator> delayLine;
+
+    // Parameters
     DspParam<T> feedbackGain;
     DspParam<T> feedforwardGain;
 };

@@ -53,11 +53,11 @@ class DelayLine {
         sampleRate = utils::detail::clampSampleRate(newSampleRate);
         size_t maxDelaySamples = newMaxDelay.toSamples(sampleRate); // convert to samples
         circularBuffer.resize(numChannels, maxDelaySamples);        // resize circular buffer
-        bufferSize = circularBuffer.getBufferSize();   // get actual buffer size (power of two)
-        delaySamples.prepare(numChannels, sampleRate); // prepare smoother for delay time
-        delaySamples.setBounds(
-            T(0),
-            static_cast<T>(maxDelaySamples)); // set bounds to actual max delay requested
+        bufferSize = circularBuffer.getBufferSize();                // get actual buffer size (power of two)
+        delaySamples.prepare(numChannels, sampleRate);              // prepare smoother for delay time
+        delaySamples.setBounds(T(0),
+                               static_cast<T>(maxDelaySamples)); // set bounds to actual max delay requested
+        togglePrepared = true;
     }
 
     /// Reset the delay line state
@@ -85,10 +85,7 @@ class DelayLine {
         circularBuffer.write(ch, input);
 
         // Read output sample with interpolation
-        return Interpolator::interpolateBackward(circularBuffer.readChannelPtr(ch),
-                                                 readIndex,
-                                                 delayFrac,
-                                                 bufferSize);
+        return Interpolator::interpolateBackward(circularBuffer.readChannelPtr(ch), readIndex, delayFrac, bufferSize);
     }
 
     /**
@@ -106,19 +103,13 @@ class DelayLine {
         // Split into integer and fractional parts for interpolation
         size_t readIndex;
         T delayFrac;
-        computeReadIndexAndFrac(modulatedDelay,
-                                circularBuffer.getChannelWriteIndex(ch),
-                                readIndex,
-                                delayFrac);
+        computeReadIndexAndFrac(modulatedDelay, circularBuffer.getChannelWriteIndex(ch), readIndex, delayFrac);
 
         // Write input sample to buffer (increments and wraps internally)
         circularBuffer.write(ch, input);
 
         // Interpolate output sample
-        return Interpolator::interpolateBackward(circularBuffer.readChannelPtr(ch),
-                                                 readIndex,
-                                                 delayFrac,
-                                                 bufferSize);
+        return Interpolator::interpolateBackward(circularBuffer.readChannelPtr(ch), readIndex, delayFrac, bufferSize);
     }
 
     /**
@@ -147,10 +138,7 @@ class DelayLine {
      * bufferSize-1].
      * @note Input, output, and modulation must all have the same number of channels as prepared.
      */
-    void processBlock(const T* const* input,
-                      T* const* output,
-                      const T* const* modulation,
-                      size_t numSamples) {
+    void processBlock(const T* const* input, T* const* output, const T* const* modulation, size_t numSamples) {
         for (size_t ch = 0; ch < numChannels; ++ch)
             for (size_t n = 0; n < numSamples; ++n)
                 output[ch][n] = processSample(ch, input[ch][n], modulation[ch][n]);
@@ -168,6 +156,8 @@ class DelayLine {
      * @param skipSmoothing If true, skip smoothing and set immediately.
      */
     void setDelay(Time<T> newDelay, bool skipSmoothing = false) {
+        if (!togglePrepared)
+            return;
         delaySamples.setTarget(newDelay.toSamples(sampleRate), skipSmoothing);
     }
 
@@ -178,6 +168,8 @@ class DelayLine {
      * @param skipSmoothing If true, skip smoothing and set immediately.
      */
     void setDelay(size_t ch, Time<T> newDelay, bool skipSmoothing = false) {
+        if (!togglePrepared)
+            return;
         delaySamples.setTarget(ch, newDelay.toSamples(sampleRate), skipSmoothing);
     }
 
@@ -196,10 +188,7 @@ class DelayLine {
                                 delayFrac);
 
         // Read output sample with interpolation
-        return Interpolator::interpolateBackward(circularBuffer.readChannelPtr(ch),
-                                                 readIndex,
-                                                 delayFrac,
-                                                 bufferSize);
+        return Interpolator::interpolateBackward(circularBuffer.readChannelPtr(ch), readIndex, delayFrac, bufferSize);
     }
 
     /**
@@ -215,16 +204,10 @@ class DelayLine {
         // Calculate read index and fractional part for interpolation
         size_t readIndex;
         T delayFrac;
-        computeReadIndexAndFrac(modulatedDelay,
-                                circularBuffer.getChannelWriteIndex(ch),
-                                readIndex,
-                                delayFrac);
+        computeReadIndexAndFrac(modulatedDelay, circularBuffer.getChannelWriteIndex(ch), readIndex, delayFrac);
 
         // Read output sample with interpolation
-        return Interpolator::interpolateBackward(circularBuffer.readChannelPtr(ch),
-                                                 readIndex,
-                                                 delayFrac,
-                                                 bufferSize);
+        return Interpolator::interpolateBackward(circularBuffer.readChannelPtr(ch), readIndex, delayFrac, bufferSize);
     }
 
     /**
@@ -234,11 +217,18 @@ class DelayLine {
      */
     void writeSample(size_t ch, T input) { circularBuffer.write(ch, input); }
 
+    /// Get target delay time for specific channel
+    Time<T> getTargetDelay(size_t ch) const { return Time<T>::Samples(delaySamples.getTargetValue(ch)); }
+
+    /// Get current delay time for specific channel
+    Time<T> getCurrentDelay(size_t ch) const { return Time<T>::Samples(delaySamples.getCurrentValue(ch)); }
+
   private:
-    // Global parameters
+    // Config variables
     T sampleRate = T(44100); // Sample rate in Hz
     size_t numChannels;      // Number of audio channels
     size_t bufferSize;       // Maximum delay in samples (always power of two)
+    bool togglePrepared = false;
 
     // DSP Components
     CircularAudioBuffer<T> circularBuffer; // Multi-channel circular buffer

@@ -104,7 +104,7 @@ class Noise<T, NoiseType::Gaussian> {
 
   private:
     size_t numChannels = 0;
-    std::vector<Xorshift32> rngs;
+    std::vector<utils::Xorshift32> rngs;
     std::vector<bool> hasSpare;
     std::vector<float> spare;
 };
@@ -168,7 +168,7 @@ class Noise<T, NoiseType::Uniform> {
 
   private:
     size_t numChannels = 0;
-    std::vector<Xorshift32> rngs;
+    std::vector<utils::Xorshift32> rngs;
 };
 
 } // namespace jnsc
