@@ -1,4 +1,4 @@
- # Build folders
+# Build folders
 /build/
 /cmake-build-debug/
 /cmake-build-release/
@@ -31,3 +31,7 @@
 # MacOS specific files
 **/.DS_Store
 .DS_Store
+
+# Documentation build files
+docs/api/
+Doxyfile

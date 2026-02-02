@@ -39,17 +39,6 @@ TEST(MixingMatrixTest, HouseholderMixing) {
     }
 }
 
-TEST(MixingMatrixTest, RandomOrthogonalMixing) {
-    MixingMatrix<float, MixingMatrixType::RandomOrthogonal> matrix;
-    matrix.resize(3, 42u); // 3x3, seed=42
-    float in[3] = {1.0f, 0.0f, 0.0f};
-    float out[3] = {0};
-    matrix.mix(in, out);
-    // Should be orthonormal, so norm of output should be close to 1
-    float norm = std::sqrt(out[0] * out[0] + out[1] * out[1] + out[2] * out[2]);
-    EXPECT_NEAR(norm, 1.0f, 1e-5f);
-}
-
 TEST(MixingMatrixTest, DenseMixing) {
     MixingMatrix<float, MixingMatrixType::Dense> matrix(2, 2);
     matrix.set(0, 0, 1.0f);

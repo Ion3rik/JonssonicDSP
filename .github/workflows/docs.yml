@@ -1,0 +1,30 @@
+name: Documentation
+
+on:
+  push:
+    branches: [ main ]  # Triggers when you push to main
+  workflow_dispatch:     # Allows manual trigger from GitHub UI
+
+permissions:
+  contents: write       # Needed to push to gh-pages
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+    
+    - name: Install Doxygen
+      run: sudo apt-get update && sudo apt-get install -y doxygen graphviz
+    
+    - name: Generate documentation
+      run: doxygen Doxyfile
+    
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./docs/api/html
+        force_orphan: true  # Creates clean gh-pages branch

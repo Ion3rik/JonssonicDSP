@@ -10,17 +10,7 @@
 
 namespace jnsc {
 
-enum class WaveShaperType {
-    None,
-    HardClip,
-    Atan,
-    Tanh,
-    FullWaveRectifier,
-    HalfWaveRectifier,
-    Cubic,
-    Dynamic,
-    Custom
-};
+enum class WaveShaperType { None, HardClip, Atan, Tanh, FullWaveRectifier, HalfWaveRectifier, Cubic, Dynamic, Custom };
 
 /**
  * @brief A waveshaper class for nonlinear distortion effects
@@ -43,10 +33,7 @@ class WaveShaper<T, WaveShaperType::None> {
   public:
     T processSample(T x, T /*shape*/) const { return x; }
 
-    void processBlock(const T* const* input,
-                      T* const* output,
-                      size_t numChannels,
-                      size_t numSamples) const {
+    void processBlock(const T* const* input, T* const* output, size_t numChannels, size_t numSamples) const {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             std::memcpy(output[ch], input[ch], numSamples * sizeof(T));
         }
@@ -65,10 +52,7 @@ class WaveShaper<T, WaveShaperType::HardClip> {
   public:
     T processSample(T x, T shape = T(0)) const { return std::max<T>(-1, std::min<T>(1, x)); }
 
-    void processBlock(const T* const* input,
-                      T* const* output,
-                      size_t numChannels,
-                      size_t numSamples) const {
+    void processBlock(const T* const* input, T* const* output, size_t numChannels, size_t numSamples) const {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t n = 0; n < numSamples; ++n) {
                 output[ch][n] = processSample(input[ch][n]);
@@ -88,10 +72,7 @@ class WaveShaper<T, WaveShaperType::Atan> {
   public:
     T processSample(T x, T shape = T(0)) const { return std::atan(x) * utils::inv_atan_1<T>; }
 
-    void processBlock(const T* const* input,
-                      T* const* output,
-                      size_t numChannels,
-                      size_t numSamples) const {
+    void processBlock(const T* const* input, T* const* output, size_t numChannels, size_t numSamples) const {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t n = 0; n < numSamples; ++n) {
                 output[ch][n] = processSample(input[ch][n]);
@@ -112,10 +93,7 @@ class WaveShaper<T, WaveShaperType::Tanh> {
   public:
     T processSample(T x, T shape = T(0)) const { return std::tanh(x); }
 
-    void processBlock(const T* const* input,
-                      T* const* output,
-                      size_t numChannels,
-                      size_t numSamples) const {
+    void processBlock(const T* const* input, T* const* output, size_t numChannels, size_t numSamples) const {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t n = 0; n < numSamples; ++n) {
                 output[ch][n] = processSample(input[ch][n]);
@@ -136,10 +114,7 @@ class WaveShaper<T, WaveShaperType::FullWaveRectifier> {
   public:
     T processSample(T x, T shape = T(0)) const { return std::abs(x); }
 
-    void processBlock(const T* const* input,
-                      T* const* output,
-                      size_t numChannels,
-                      size_t numSamples) const {
+    void processBlock(const T* const* input, T* const* output, size_t numChannels, size_t numSamples) const {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t n = 0; n < numSamples; ++n) {
                 output[ch][n] = processSample(input[ch][n]);
@@ -160,10 +135,7 @@ class WaveShaper<T, WaveShaperType::HalfWaveRectifier> {
   public:
     T processSample(T x, T shape = T(0)) const { return x < 0 ? 0 : x; }
 
-    void processBlock(const T* const* input,
-                      T* const* output,
-                      size_t numChannels,
-                      size_t numSamples) const {
+    void processBlock(const T* const* input, T* const* output, size_t numChannels, size_t numSamples) const {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t n = 0; n < numSamples; ++n) {
                 output[ch][n] = processSample(input[ch][n]);
@@ -185,10 +157,7 @@ class WaveShaper<T, WaveShaperType::Cubic> {
   public:
     T processSample(T x, T shape = T(0)) const { return x - (T(1) / T(3)) * x * x * x; }
 
-    void processBlock(const T* const* input,
-                      T* const* output,
-                      size_t numChannels,
-                      size_t numSamples) const {
+    void processBlock(const T* const* input, T* const* output, size_t numChannels, size_t numSamples) const {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t n = 0; n < numSamples; ++n) {
                 output[ch][n] = processSample(input[ch][n]);
@@ -216,11 +185,8 @@ class WaveShaper<T, WaveShaperType::Dynamic> {
         return x * T(1) / std::pow(T(1) + std::pow(std::abs(x), shape), T(1) / shape);
     }
 
-    void processBlock(const T* const* input,
-                      T* const* output,
-                      const T* const* shape,
-                      size_t numChannels,
-                      size_t numSamples) const {
+    void processBlock(
+        const T* const* input, T* const* output, const T* const* shape, size_t numChannels, size_t numSamples) const {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t n = 0; n < numSamples; ++n) {
                 output[ch][n] = processSample(input[ch][n], shape[ch][n]);
@@ -245,10 +211,7 @@ class WaveShaper<T, WaveShaperType::Custom> {
     WaveShaper(FnType fn) : customFn(std::move(fn)) {}
     T processSample(T x, T shape = T(0)) const { return customFn ? customFn(x) : x; }
 
-    void processBlock(const T* const* input,
-                      T* const* output,
-                      size_t numChannels,
-                      size_t numSamples) const {
+    void processBlock(const T* const* input, T* const* output, size_t numChannels, size_t numSamples) const {
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t n = 0; n < numSamples; ++n) {
                 output[ch][n] = processSample(input[ch][n]);

@@ -27,6 +27,14 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Options
 option(JONSSONIC_BUILD_TESTS "Build the tests" ON)
 option(JONSSONIC_BUILD_EXAMPLES "Build example programs" ON)
+option(JONSSONIC_BUILD_DOCS "Build documentation" OFF)
+
+# Configure Doxyfile with project metadata
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in
+    ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile
+    @ONLY
+)
 
 # Create header-only library target
 add_library(JonssonicDSP INTERFACE)
@@ -118,4 +126,20 @@ message(STATUS "  C++ Standard: ${CMAKE_CXX_STANDARD}")
 message(STATUS "  Build Type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "  Build Tests: ${JONSSONIC_BUILD_TESTS}")
 message(STATUS "  Build Examples: ${JONSSONIC_BUILD_EXAMPLES}")
+message(STATUS "  Build Docs: ${JONSSONIC_BUILD_DOCS}")
 message(STATUS "  Library Type: INTERFACE (header-only)")
+
+# Documentation
+if(JONSSONIC_BUILD_DOCS)
+    find_package(Doxygen)
+    if(DOXYGEN_FOUND)
+        add_custom_target(docs
+            COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            COMMENT "Generating API documentation with Doxygen"
+            VERBATIM)
+        message(STATUS "Doxygen found - 'docs' target available")
+    else()
+        message(WARNING "Doxygen not found - cannot build documentation")
+    endif()
+endif()
