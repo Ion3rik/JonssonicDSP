@@ -83,7 +83,7 @@ class Distortion {
         // Setup pre-filters to remove low-frequency content
         distortion.setPreFilterType(BiquadType::Highpass);
         distortionOS.setPreFilterType(BiquadType::Highpass);
-        distortion.setPreFilterFrequency(Frequency<T>::Hertz(T(PRE_FILTER_CUTOFF_HZ));
+        distortion.setPreFilterFrequency(Frequency<T>::Hertz(T(PRE_FILTER_CUTOFF_HZ)));
         distortionOS.setPreFilterFrequency(Frequency<T>::Hertz(T(PRE_FILTER_CUTOFF_HZ)));
 
         // Prepare dry/wet mixer with latency compensation and output gain
@@ -174,8 +174,7 @@ class Distortion {
      * @param skipSmoothing If true, skip smoothing and set immediately.
      */
     void setShape(T shapeNormalized, bool skipSmoothing = false) {
-        T shape =
-            SHAPE_MIN + shapeNormalized * (SHAPE_MAX - SHAPE_MIN); // Map to [SHAPE_MIN, SHAPE_MAX]
+        T shape = SHAPE_MIN + shapeNormalized * (SHAPE_MAX - SHAPE_MIN); // Map to [SHAPE_MIN, SHAPE_MAX]
         distortion.setShape(shape, skipSmoothing);
         distortionOS.setShape(shape, skipSmoothing);
     }
@@ -193,9 +192,7 @@ class Distortion {
      * @brief Set mix between dry and wet signal.
      * @param mixNormalized Mix amount in normalized range [0, 1] (0 = full dry, 1 = full wet).
      */
-    void setMix(T mixNormalized, bool skipSmoothing) {
-        dryWetMixer.setMix(mixNormalized, skipSmoothing);
-    }
+    void setMix(T mixNormalized, bool skipSmoothing) { dryWetMixer.setMix(mixNormalized, skipSmoothing); }
 
     /**
      * @brief Set output gain.
@@ -220,8 +217,7 @@ class Distortion {
 
     /// Get latency in samples at base sample rate.
     size_t getLatencySamples() const {
-        return toggleOversampling ? distortionOS.getLatencySamples()
-                                  : distortion.getLatencySamples();
+        return toggleOversampling ? distortionOS.getLatencySamples() : distortion.getLatencySamples();
     }
 
   private:
@@ -231,8 +227,7 @@ class Distortion {
     bool toggleOversampling = false;
 
     // PROCESSORS
-    models::SaturationStage<T, WaveShaperType::Dynamic, true, true, OVERSAMPLING_FACTOR>
-        distortionOS;
+    models::SaturationStage<T, WaveShaperType::Dynamic, true, true, OVERSAMPLING_FACTOR> distortionOS;
     models::SaturationStage<T, WaveShaperType::Dynamic, true, true, 1> distortion;
     DCBlocker<T> dcBlocker;
     DryWetMixer<T> dryWetMixer;
