@@ -34,7 +34,56 @@ JonssonicDSP prioritizes clarity, modularity, and ease of use. Performance optim
 
 ## Getting Started
 
-Instructions for integration and usage will be added soon.
+### Installation
+
+JonssonicDSP is a header-only library. Simply copy the `include/jonssonic/` folder into your project and include the headers you need.
+
+**Using CMake (Recommended):**
+
+```cmake
+# Add as subdirectory
+add_subdirectory(external/JonssonicDSP)
+
+# Link to your target
+target_link_libraries(YourTarget PRIVATE jonssonic::dsp)
+```
+
+**Manual Integration:**
+
+```cpp
+#include <jonssonic/core/filters/biquad_filter.h>
+#include <jonssonic/effects/delay.h>
+// etc.
+```
+
+### Quick Example
+
+```cpp
+#include <jonssonic/core/filters/biquad_filter.h>
+
+int main() {
+    // Create a biquad filter object
+    jnsc::BiquadFilter<float> filter;
+    
+    // Prepare for processing
+    filter.prepare(44100.0, 1);                     // 44.1kHz, mono
+
+    // Set parameters
+    filter.setType(BiquadType::Lowpass); 
+    filter.setFreq(Frequency<T>::Hertz(1000.0));    // 1kHz cutoff
+    filter.setQ(0.707);                             // Butterworth
+    
+    // Process audio
+    float inputSample = 0.5f;
+    float outputSample = filter.processSample(0,inputSample); // process 0th channel
+    
+    return 0;
+}
+```
+
+### Documentation
+
+Full API documentation is available at: **[ion3rik.github.io/JonssonicDSP](https://ion3rik.github.io/JonssonicDSP)**
 
 ---
 

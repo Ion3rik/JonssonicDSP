@@ -40,7 +40,7 @@ configure_file(
 add_library(JonssonicDSP INTERFACE)
 
 # Add an alias for consistent namespacing
-add_library(Jonssonic::DSP ALIAS JonssonicDSP)
+add_library(jonssonic::dsp ALIAS JonssonicDSP)
 
 # Include directories
 target_include_directories(JonssonicDSP
@@ -94,7 +94,7 @@ install(DIRECTORY include/Jonssonic
 # Install the export set
 install(EXPORT JonssonicDSPTargets
     FILE JonssonicDSPTargets.cmake
-    NAMESPACE Jonssonic::
+    NAMESPACE jonssonic::
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/JonssonicDSP
 )
 
