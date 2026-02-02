@@ -17,18 +17,18 @@ These guidelines may evolve as the library grows.
 
 ## Features 
 
-- Core DSP including audio buffers, delay lines, digital filters, waveshapers, dynamic processors, oversampler, noise generators and LFOs
-- Reusable Models build from the core dsp classes, including reverb algortihms, virtual-analog models
-- Example audio effects: Delay, Flanger, Reverb, EQ, Compressor, and Distortion
-- Multi-channel audio processing support 
-- Modular architecture designed for easy extension and integration  
-- CMake-based build system for cross-platform development  
+- Core DSP classes including audio buffers, delay lines, digital filters, waveshapers, dynamic processors, oversampler, noise generators and oscillators.
+- Reusable Models built from the core dsp classes, including reverb algorithms, virtual-analog models.
+- Example audio effects: Delay, Flanger, Reverb, EQ, Compressor, and Distortion.
+- Multi-channel audio processing support.
+- Modular architecture designed for easy extension and integration.  
+- CMake-based build system for cross-platform development. 
 
 ---
 
 ## Performance
 
-JonssonicDSP prioritizes clarity, modularity, and ease of use. Performance optimizations may be limited as the project focuses on learning and flexibility rather than maximum efficiency.
+JonssonicDSP prioritizes clarity, modularity, and ease of use. Performance optimizations are limited for now, as the project focuses on learning and flexibility rather than maximum efficiency.
 
 ---
 
