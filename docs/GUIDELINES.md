@@ -15,14 +15,15 @@ This document outlines the general conventions, design patterns, and usage guide
   
  **Modular Structure:** The code is organized in a pyramid of main layers:
    - [core/](../include/Jonssonic/core/) — backbone DSP classes (filters, delays, dynamics, etc.)
-   - [models/](../include/Jonssonic/models/) — behavioral models built by combining core classes (e.g., virtual-analog models, reverb algorithms)
-   - [effects/](../include/Jonssonic/effects/) — complete audio effects built from models and core classes
-   - [utils/](../include/Jonssonic/utils/) — helper functions and utilities
+   - [models/](../include/Jonssonic/models/) — behavioral models built by combining core classes (e.g., virtual-analog models, reverb algorithms).
+   - [effects/](../include/Jonssonic/effects/) — complete audio effects built from models and core classes.
+   - [utils/](../include/Jonssonic/utils/) — helper functions and utilities.
 
  Each layer is further divided into modules by DSP domain or behavioural function e.g.,
- - **core**: `core::filters`, `core::delays`, `core::dynamics`, etc.
- - **models**: `models::filters`, `models::reverb`, etc.
- - **effects**: `effects::chorus`, `effects::flanger`, etc.
+ - **core**: Core DSP classes are directly in the `jnsc::` namespace (e.g., `jnsc::BiquadFilter`, `jnsc::DelayLine`, `jnsc::GainComputer`)
+ - **models**: `jnsc::models::` namespace (e.g., `jnsc::models::FeedbackDelayNetwork`)
+ - **effects**: `jnsc::effects::` namespace (e.g., `jnsc::effects::Reverb`, `jnsc::effects::Flanger`)
+ - **utils**: `jnsc::utils::` namespace for helper functions
 
  The structure is hierarchical:
    - **Effects** depend on models, core, and utils
@@ -32,7 +33,6 @@ This document outlines the general conventions, design patterns, and usage guide
 
  This ensures a clear separation of concerns and minimizes circular dependencies. 
   
-  The folder structure and C++ namespaces are designed to mirror each other for clarity and maintainability. For example, code in `core/filters/` uses the `jonssonic::core::filters` namespace.
 
 - **Public/Internal API:**
   - Public headers are exposed in the `include/` directory and are intended for library users.
@@ -52,18 +52,17 @@ This document outlines the general conventions, design patterns, and usage guide
     - All processor classes provide a `reset()` method to clear internal state.
     - All processor classes provide a `processSample()` and when appropriate `processBlock()`, for sample by sample and block processing, respectively.
 - **No Copy/Move:** Most processor classes delete copy and move constructors/assignment to avoid accidental state sharing.
-- **Type Aliases:** Type aliases for template-dependent types are defined inside each class for clarity and maintainability.
 
 ## Naming and Style
 - **Namespaces:**
-  - Public API uses clear, domain-based namespaces (e.g., `jonssonic::core::filters`, `jonssonic::models::filters`).
-  - Internal helpers and utilities are always in `detail` namespace 
+  - Public API uses the `jnsc::` namespace for core classes, with `jnsc::models::`, `jnsc::effects::`, and `jnsc::utils::` for higher-level components.
+  - Internal helpers and implementation details are always in `detail` namespace (e.g., `jnsc::detail`) 
+
 - **Type Names:**
-  - Use `snake_case` for function and variable names.
+  - Use `snake_case` for folder and file names.
+  - Use `camelCase` for variable and function names.
   - Use `PascalCase` for class and type names.
 
-- **Enums:**
-  - Common enums (e.g., `FilterType`, `EnvelopeType`) are centralized in `*_types.h` files for reuse.
 
 ## Documentation
 - **Doxygen:** All public classes, methods, and parameters are documented with Doxygen comments.
@@ -75,7 +74,6 @@ This document outlines the general conventions, design patterns, and usage guide
 
 ## Extensibility
 - **Template Specialization:** Use template specializations for algorithmic variations (e.g., different smoothing types).
-- **Future-Proofing:** Use type aliases and clear namespaces to make future refactoring and expansion easy.
 
 ## Testing
 - **Test Files:**
