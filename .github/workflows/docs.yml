@@ -16,8 +16,11 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
     
-    - name: Install Doxygen
-      run: sudo apt-get update && sudo apt-get install -y doxygen graphviz
+    - name: Install Doxygen and CMake
+      run: sudo apt-get update && sudo apt-get install -y doxygen graphviz cmake
+    
+    - name: Configure CMake to generate Doxyfile
+      run: cmake -S . -B build
     
     - name: Generate documentation
       run: doxygen Doxyfile
