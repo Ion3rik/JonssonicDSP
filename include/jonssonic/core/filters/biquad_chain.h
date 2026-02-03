@@ -136,9 +136,11 @@ class BiquadChain {
      * @note Coeffs are only updated if @ref prepare has been called before.
      */
     void setQ(size_t section, T newQ) {
+        // Early exit if not prepared
+        if (!(togglePrepared))
+            return;
         // clamp Q to avoid instability
-        Q[section] =
-            std::clamp(newQ, detail::BiquadLimits<T>::MIN_Q, detail::BiquadLimits<T>::MAX_Q);
+        Q[section] = std::clamp(newQ, detail::BiquadLimits<T>::MIN_Q, detail::BiquadLimits<T>::MAX_Q);
 
         updateCoeffs(section);
     }
@@ -177,43 +179,19 @@ class BiquadChain {
         T b0 = T(0), b1 = T(0), b2 = T(0), a1 = T(0), a2 = T(0);
         switch (type[section]) {
         case BiquadType::Lowpass:
-            detail::computeLowpassCoeffs<T>(freqNormalized[section],
-                                            Q[section],
-                                            b0,
-                                            b1,
-                                            b2,
-                                            a1,
-                                            a2);
+            detail::computeLowpassCoeffs<T>(freqNormalized[section], Q[section], b0, b1, b2, a1, a2);
             biquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
             break;
         case BiquadType::Highpass:
-            detail::computeHighpassCoeffs<T>(freqNormalized[section],
-                                             Q[section],
-                                             b0,
-                                             b1,
-                                             b2,
-                                             a1,
-                                             a2);
+            detail::computeHighpassCoeffs<T>(freqNormalized[section], Q[section], b0, b1, b2, a1, a2);
             biquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
             break;
         case BiquadType::Bandpass:
-            detail::computeBandpassCoeffs<T>(freqNormalized[section],
-                                             Q[section],
-                                             b0,
-                                             b1,
-                                             b2,
-                                             a1,
-                                             a2);
+            detail::computeBandpassCoeffs<T>(freqNormalized[section], Q[section], b0, b1, b2, a1, a2);
             biquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
             break;
         case BiquadType::Allpass:
-            detail::computeAllpassCoeffs<T>(freqNormalized[section],
-                                            Q[section],
-                                            b0,
-                                            b1,
-                                            b2,
-                                            a1,
-                                            a2);
+            detail::computeAllpassCoeffs<T>(freqNormalized[section], Q[section], b0, b1, b2, a1, a2);
             biquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
             break;
         case BiquadType::Notch:
@@ -221,36 +199,15 @@ class BiquadChain {
             biquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
             break;
         case BiquadType::Peak:
-            detail::computePeakCoeffs<T>(freqNormalized[section],
-                                         Q[section],
-                                         gain[section],
-                                         b0,
-                                         b1,
-                                         b2,
-                                         a1,
-                                         a2);
+            detail::computePeakCoeffs<T>(freqNormalized[section], Q[section], gain[section], b0, b1, b2, a1, a2);
             biquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
             break;
         case BiquadType::Lowshelf:
-            detail::computeLowshelfCoeffs<T>(freqNormalized[section],
-                                             Q[section],
-                                             gain[section],
-                                             b0,
-                                             b1,
-                                             b2,
-                                             a1,
-                                             a2);
+            detail::computeLowshelfCoeffs<T>(freqNormalized[section], Q[section], gain[section], b0, b1, b2, a1, a2);
             biquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
             break;
         case BiquadType::Highshelf:
-            detail::computeHighshelfCoeffs<T>(freqNormalized[section],
-                                              Q[section],
-                                              gain[section],
-                                              b0,
-                                              b1,
-                                              b2,
-                                              a1,
-                                              a2);
+            detail::computeHighshelfCoeffs<T>(freqNormalized[section], Q[section], gain[section], b0, b1, b2, a1, a2);
             biquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
             break;
         default:
