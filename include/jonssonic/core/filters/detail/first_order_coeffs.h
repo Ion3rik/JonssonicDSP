@@ -57,10 +57,14 @@ inline void computeFirstOrderHighpassCoeffs(T normFreq, T& b0, T& b1, T& a1) {
  */
 template <typename T>
 inline void computeFirstOrderAllpassCoeffs(T normFreq, T& b0, T& b1, T& a1) {
-    T x = std::exp(-utils::two_pi<T> * normFreq);
-    b0 = x;
+    // Pre-warp the normalized frequency for bilinear transform
+    T k = std::tan(utils::pi<T> * normFreq);
+
+    // Compute coefficients (b0 = a1 for allpass)
+    T coeff = (T(1) - k) / (T(1) + k);
+    b0 = coeff;
     b1 = T(1);
-    a1 = x;
+    a1 = coeff;
 }
 
 /**
