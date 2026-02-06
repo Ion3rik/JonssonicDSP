@@ -18,13 +18,15 @@ namespace jnsc::detail {
  */
 template <typename T>
 inline void computeFirstOrderLowpassCoeffs(T normFreq, T& b0, T& b1, T& a1) {
-    // Standard first-order lowpass (bilinear transform)
-    // normFreq: normalized cutoff (0..0.5, where 0.5 = Nyquist)
-    T theta = utils::two_pi<T> * normFreq;
-    T gamma = std::cos(theta) / (1.0 + std::sin(theta));
-    a1 = -gamma;
-    b0 = (1.0 - gamma) / 2.0;
-    b1 = (1.0 - gamma) / 2.0;
+
+    // Pre-warp the normalized frequency for bilinear transform
+    T k = std::tan(utils::pi<T> * normFreq);
+
+    // Compute a0 normalized coefficients
+    T a0 = T(1) / (T(1) + k);
+    b0 = k * a0;
+    b1 = k * a0;
+    a1 = (T(1) - k) * a0;
 }
 
 /**
@@ -36,10 +38,14 @@ inline void computeFirstOrderLowpassCoeffs(T normFreq, T& b0, T& b1, T& a1) {
  */
 template <typename T>
 inline void computeFirstOrderHighpassCoeffs(T normFreq, T& b0, T& b1, T& a1) {
-    T x = std::exp(-utils::two_pi<T> * normFreq);
-    b0 = (T(1) + x) / 2;
-    b1 = -(T(1) + x) / 2;
-    a1 = x;
+    // Pre-warp the normalized frequency for bilinear transform
+    T k = std::tan(utils::pi<T> * normFreq);
+
+    // Compute a0 normalized coefficients
+    T a0 = T(1) / (T(1) + k);
+    b0 = a0;
+    b1 = -a0;
+    a1 = (T(1) - k) * a0;
 }
 
 /**
@@ -67,18 +73,17 @@ inline void computeFirstOrderAllpassCoeffs(T normFreq, T& b0, T& b1, T& a1) {
  */
 template <typename T>
 inline void computeFirstOrderLowshelfCoeffs(T normFreq, T gainLinear, T& b0, T& b1, T& a1) {
-    // Prewarp frequency
+    // Precompute constants
+    T G = gainLinear;
     T omega_c = utils::two_pi<T> * normFreq;
-    T tan_wc_2 = std::tan(omega_c / T(2));
-
+    T tan_wc_over_2 = std::tan(omega_c / T(2));
     T sqrt_g = std::sqrt(gainLinear);
 
-    // Denominator normalization factor
-    T denom = tan_wc_2 + sqrt_g;
-
-    b0 = (gainLinear * tan_wc_2 + sqrt_g) / denom;
-    b1 = (gainLinear * tan_wc_2 - sqrt_g) / denom;
-    a1 = (tan_wc_2 - sqrt_g) / denom;
+    // Compute a0 normalized coefficients
+    T a0 = tan_wc_over_2 + sqrt_g;
+    b0 = (G * tan_wc_over_2 + sqrt_g) / a0;
+    b1 = (G * tan_wc_over_2 - sqrt_g) / a0;
+    a1 = (tan_wc_over_2 - sqrt_g) / a0;
 }
 
 /**
@@ -91,18 +96,17 @@ inline void computeFirstOrderLowshelfCoeffs(T normFreq, T gainLinear, T& b0, T& 
  */
 template <typename T>
 inline void computeFirstOrderHighshelfCoeffs(T normFreq, T gainLinear, T& b0, T& b1, T& a1) {
-    // Prewarp frequency
+    // Precompute constants
+    T G = gainLinear;
     T omega_c = utils::two_pi<T> * normFreq;
-    T tan_wc_2 = std::tan(omega_c / T(2));
-
+    T tan_wc_over_2 = std::tan(omega_c / T(2));
     T sqrt_g = std::sqrt(gainLinear);
 
-    // Denominator normalization factor
-    T denom = tan_wc_2 + sqrt_g;
-
-    b0 = (gainLinear * tan_wc_2 + sqrt_g) / denom;
-    b1 = -(gainLinear * tan_wc_2 - sqrt_g) / denom;
-    a1 = (tan_wc_2 - sqrt_g) / denom;
+    // Compute a0 normalized coefficients
+    T a0 = sqrt_g * tan_wc_over_2 + T(1);
+    b0 = (sqrt_g * tan_wc_over_2 + G) / a0;
+    b1 = (sqrt_g * tan_wc_over_2 - G) / a0;
+    a1 = (sqrt_g * tan_wc_over_2 - T(1)) / a0;
 }
 
 } // namespace jnsc::detail
