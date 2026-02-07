@@ -10,6 +10,7 @@
 #include "jonssonic/utils/detail/config_utils.h"
 
 #include <algorithm>
+#include <jonssonic/core/common/dsp_param.h>
 #include <jonssonic/core/common/quantities.h>
 #include <jonssonic/core/filters/filter_types.h>
 
@@ -83,6 +84,16 @@ class FirstOrderFilter {
     }
 
     /**
+     * @brief Process a single sample for a given channel with frequency modulation.
+     * @param ch Channel index.
+     * @param input Input sample.
+     * @param mod Modulation value in normalized frequency (-0.5 < mod < 0.5).
+     * @return Output sample.
+     * @note Must call @ref prepare before processing.
+     */
+    T processSample(size_t ch, T input, T mod) { return FirstOrderCore.processSample(ch, 0, input, b0, b1, a1); }
+
+    /**
      * @brief Set the cutoff frequency in various units.
      * @param newFreq Cutoff frequency (clampped within filter_limits.h)
      * @note Coeffs are only updated if @ref prepare has been called before.
@@ -129,7 +140,7 @@ class FirstOrderFilter {
     bool togglePrepared = false;
     size_t numChannels = 0;
     T sampleRate = T(44100);
-    T freqNormalized = T(0.25);
+    DspParam<T> freqNormalized;
     T gain = T(1);
 
     FirstOrderType type;

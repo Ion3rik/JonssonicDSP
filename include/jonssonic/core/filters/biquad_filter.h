@@ -1,4 +1,4 @@
-// Jonssonic - A C++ audio DSP library
+// JonssonicDSP - A Modular Realtime C++ Audio DSP Library
 // Biqaud filter class header file
 // SPDX-License-Identifier: MIT
 
@@ -10,16 +10,22 @@
 #include "jonssonic/utils/detail/config_utils.h"
 
 #include <algorithm>
+#include <jonssonic/core/common/dsp_param.h>
 #include <jonssonic/core/common/quantities.h>
 #include <jonssonic/core/filters/filter_types.h>
 #include <jonssonic/utils/math_utils.h>
 
 namespace jnsc {
 
+// =====================================================================================================================
+// RUNTIME TYPE SELECTION BIQUAD FILTER
+// =====================================================================================================================
 /**
- * @brief Biquad filter wrapper for single section with integrated coeff computation for common
- * types.
- * @param T Sample data type (e.g., float, double)
+ * @brief Multi-section biquad filter class with runtime @ref BiquadType selection.
+ * @param T Sample data type (e.g., float, double).
+ * @note This specialization is intended for quasi time-invariant filtering.
+ *       -> Accurate, potentially expensive, infrequent coefficient updates.
+ *       -> Efficient @ref processSample() and @ref processBlock() calls with fixed coefficients.
  */
 template <typename T>
 class BiquadFilter {
@@ -29,18 +35,17 @@ class BiquadFilter {
 
     /**
      * @brief Parameterized constructor that calls @ref prepare.
-     * @param newNumChannels Number of channels.
-     * @param newSampleRate Sample rate in Hz.
-     * @param newType Filter type (Default: Lowpass).
+     * @param newNumChannels Number of channels
+     * @param newNumSections Number of second-order sections
+     * @param newSampleRate Sample rate
      */
-    BiquadFilter(size_t newNumChannels, T newSampleRate, BiquadType newType = BiquadType::Lowpass) {
-        prepare(newNumChannels, newSampleRate, newType);
+    BiquadFilter(size_t newNumChannels, size_t newNumSections, T newSampleRate) {
+        prepare(newNumChannels, newNumSections, newSampleRate);
     }
-
-    /// Default destructor.
+    /// Default destructor
     ~BiquadFilter() = default;
 
-    /// No copy nor move semantics.
+    /// No copy or move semantics
     BiquadFilter(const BiquadFilter&) = delete;
     BiquadFilter& operator=(const BiquadFilter&) = delete;
     BiquadFilter(BiquadFilter&&) = delete;
@@ -48,25 +53,32 @@ class BiquadFilter {
 
     /**
      * @brief Prepare the biquad filter for processing.
-     * @param newNumChannels Number of channels.
-     * @param newSampleRate Sample rate in Hz.
-     * @param newType Filter type (Default: Lowpass).
+     * @param newNumChannels Number of channels
+     * @param newNumSections Number of second-order sections
+     * @param newSampleRate Sample rate
+     * @note Must be called before processing.
      */
-    void prepare(size_t newNumChannels, T newSampleRate, BiquadType newType = BiquadType::Lowpass) {
+    void prepare(size_t newNumChannels, size_t newNumSections, T newSampleRate) {
+        // Initialize parameters
         numChannels = utils::detail::clampChannels(newNumChannels);
         sampleRate = utils::detail::clampSampleRate(newSampleRate);
-        biquadCore.prepare(numChannels, 1);
-        type = newType;
+        numSections = std::clamp(newNumSections, size_t(1), detail::FilterLimits<T>::MAX_SECTIONS);
 
-        freqNormalized = T(0.25);
-        Q = T(0.707);
-        gain = T(1);
+        // Initialize per-section parameter vectors
+        freqNormalized.assign(numSections, T(0.25));   // default to quarter Nyquist
+        Q.assign(numSections, T(0.707));               // default to Butterworth
+        gain.assign(numSections, T(1));                // default to unity gain
+        type.assign(numSections, BiquadType::Lowpass); // default to lowpass
 
-        updateCoeffs();
+        // Prepare the underlying biquad core processor
+        biquadCore.prepare(numChannels, numSections);
         togglePrepared = true;
+
+        // Update coefficients for all sections
+        updateCoeffs();
     }
 
-    /// Reset the filter state.
+    /// Reset the filter state
     void reset() { biquadCore.reset(); }
 
     /**
@@ -82,7 +94,7 @@ class BiquadFilter {
      * @brief Process a block of samples for all channels.
      * @param input Input sample pointers (one per channel).
      * @param output Output sample pointers (one per channel).
-     * @param numSamples Number of samples to process.
+     * @param numSamples Number of samples to process
      * @note Must call @ref prepare before processing.
      */
     void processBlock(const T* const* input, T* const* output, size_t numSamples) {
@@ -90,114 +102,264 @@ class BiquadFilter {
     }
 
     /**
-     * @brief Set the filter gain. (Applicable for shelf and peak filters)
-     * @param newGain Gain struct. (Clamped to avoid instability)
+     * @brief Set gain for a specific section.
+     * @param section Section index.
+     * @param newGain Gain struct. (Value clamped to limits defined in filter_limits.h).
      * @note Coeffs are only updated if @ref prepare has been called before.
      */
-    void setGain(Gain<T> newGain) {
+    void setGain(size_t section, Gain<T> newGain) {
         // Early exit if not prepared
         if (!(togglePrepared))
             return;
-
         // clamp gain to avoid instability
-        gain = std::clamp(newGain.toLinear(),
-                          detail::FilterLimits<T>::MIN_GAIN_LIN,
-                          detail::FilterLimits<T>::MAX_GAIN_LIN);
-        updateCoeffs();
+        gain[section] = std::clamp(newGain.toLinear(),
+                                   detail::FilterLimits<T>::MIN_GAIN_LIN,
+                                   detail::FilterLimits<T>::MAX_GAIN_LIN);
+        updateCoeffs(section);
     }
 
     /**
-     * @brief Set the cutoff/center frequency in Hz.
-     * @param newFreq Cutoff/center frequency struct. (Clamped to avoid instability)
+     * @brief Set frequency in various units for a specific section.
+     * @param section Section index.
+     * @param newFreq Frequency struct.
      * @note Coeffs are only updated if @ref prepare has been called before.
      */
-    void setFreq(Frequency<T> newFreq) {
+    void setFreq(size_t section, Frequency<T> newFreq) {
         // Early exit if not prepared
         if (!(togglePrepared))
             return;
         // clamp normalized frequency to avoid instability
-        freqNormalized = std::clamp(newFreq.toNormalized(sampleRate),
-                                    detail::FilterLimits<T>::MIN_FREQ_NORM,
-                                    detail::FilterLimits<T>::MAX_FREQ_NORM);
-        updateCoeffs();
+        freqNormalized[section] = std::clamp(newFreq.toNormalized(sampleRate),
+                                             detail::FilterLimits<T>::MIN_FREQ_NORM,
+                                             detail::FilterLimits<T>::MAX_FREQ_NORM);
+        updateCoeffs(section);
+    }
+    /**
+     * @brief Set Q factor for a specific section.
+     * @param section Section index
+     * @param newQ Q factor
+     * @note Coeffs are only updated if @ref prepare has been called before.
+     */
+    void setQ(size_t section, T newQ) {
+        // Early exit if not prepared
+        if (!(togglePrepared))
+            return;
+        // clamp Q to avoid instability
+        Q[section] = std::clamp(newQ, detail::BiquadLimits<T>::MIN_Q, detail::BiquadLimits<T>::MAX_Q);
+
+        updateCoeffs(section);
     }
 
     /**
-     * @brief Set the quality factor Q.
-     * @param newQ Quality factor Q (Clamped to avoid instability)
+     * @brief Set filter type for a specific section.
+     * @param section Section index.
+     * @param newType Filter type @ref BiquadType.
      * @note Coeffs are only updated if @ref prepare has been called before.
      */
-    void setQ(T newQ) {
-        Q = std::clamp(newQ, detail::BiquadLimits<T>::MIN_Q, detail::BiquadLimits<T>::MAX_Q);
-        updateCoeffs();
-    }
-
-    /**
-     * @brief Set the filter type.
-     * @param newType Filter type.
-     * @note Coeffs are only updated if @ref prepare has been called before.
-     */
-    void setType(BiquadType newType) {
-        type = newType;
-        updateCoeffs();
+    void setType(size_t section, BiquadType newType) {
+        type[section] = newType;
+        updateCoeffs(section);
     }
 
   private:
     bool togglePrepared = false;
-    T sampleRate = T(44100);
     size_t numChannels = 0;
-    T freqNormalized = T(0.25);
-    T Q;
-    T gain;
-    BiquadType type;
+    size_t numSections = 0;
+    T sampleRate = T(44100);
+    std::vector<T> freqNormalized;
+    std::vector<T> Q;
+    std::vector<T> gain;
+    std::vector<BiquadType> type;
     detail::BiquadCore<T> biquadCore;
 
-    void updateCoeffs() {
+    /**
+     * @brief Update filter coefficients of single section.
+     * @param section Section index
+     */
+    void updateCoeffs(size_t section) {
         // Early exit if not prepared
         if (!(togglePrepared))
             return;
-
         // Initialize coefficients variables
         T b0 = T(0), b1 = T(0), b2 = T(0), a1 = T(0), a2 = T(0);
-
-        // Compute coefficients based on filter type
-        switch (type) {
+        switch (type[section]) {
         case BiquadType::Lowpass:
-            detail::computeLowpassCoeffs<T>(freqNormalized, Q, b0, b1, b2, a1, a2);
-            biquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
+            detail::computeLowpassCoeffs<T>(freqNormalized[section], Q[section], b0, b1, b2, a1, a2);
+            biquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
             break;
         case BiquadType::Highpass:
-            detail::computeHighpassCoeffs<T>(freqNormalized, Q, b0, b1, b2, a1, a2);
-            biquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
+            detail::computeHighpassCoeffs<T>(freqNormalized[section], Q[section], b0, b1, b2, a1, a2);
+            biquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
             break;
         case BiquadType::Bandpass:
-            detail::computeBandpassCoeffs<T>(freqNormalized, Q, b0, b1, b2, a1, a2);
-            biquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
+            detail::computeBandpassCoeffs<T>(freqNormalized[section], Q[section], b0, b1, b2, a1, a2);
+            biquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
             break;
         case BiquadType::Allpass:
-            detail::computeAllpassCoeffs<T>(freqNormalized, Q, b0, b1, b2, a1, a2);
-            biquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
+            detail::computeAllpassCoeffs<T>(freqNormalized[section], Q[section], b0, b1, b2, a1, a2);
+            biquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
             break;
         case BiquadType::Notch:
-            detail::computeNotchCoeffs<T>(freqNormalized, Q, b0, b1, b2, a1, a2);
-            biquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
+            detail::computeNotchCoeffs<T>(freqNormalized[section], Q[section], b0, b1, b2, a1, a2);
+            biquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
             break;
         case BiquadType::Peak:
-            detail::computePeakCoeffs<T>(freqNormalized, Q, gain, b0, b1, b2, a1, a2);
-            biquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
+            detail::computePeakCoeffs<T>(freqNormalized[section], Q[section], gain[section], b0, b1, b2, a1, a2);
+            biquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
             break;
         case BiquadType::Lowshelf:
-            detail::computeLowshelfCoeffs<T>(freqNormalized, Q, gain, b0, b1, b2, a1, a2);
-            biquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
+            detail::computeLowshelfCoeffs<T>(freqNormalized[section], Q[section], gain[section], b0, b1, b2, a1, a2);
+            biquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
             break;
         case BiquadType::Highshelf:
-            detail::computeHighshelfCoeffs<T>(freqNormalized, Q, gain, b0, b1, b2, a1, a2);
-            biquadCore.setSectionCoeffs(0, b0, b1, b2, a1, a2);
+            detail::computeHighshelfCoeffs<T>(freqNormalized[section], Q[section], gain[section], b0, b1, b2, a1, a2);
+            biquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
             break;
         default:
             // Handle unsupported types or add implementations
             break;
         }
     }
+
+    /**
+     * @brief Update filter coefficients for all sections.
+     */
+    void updateCoeffs() {
+        for (size_t s = 0; s < biquadCore.getNumSections(); ++s) {
+            updateCoeffs(s);
+        }
+    }
 };
+
+// =====================================================================================================================
+// COMPILE-TIME TYPE SELECTION BIQUAD FILTER
+// =====================================================================================================================
+/**
+ * @brief Multi-section biquad filter class with compile-time @ref BiquadType selection.
+ * @param T Sample data type (e.g., float, double).
+ * @param FilterType A single @BiquadType selected at compile time for each section.
+ * @note This specilication is intended for time-variant filtering.
+ *      -> Approximated efficient audio rate coefficient updates.
+ *      -> Less efficient @ref processSample() and @ref processBlock() calls with time-varying coefficients.
+ */
+template <typename T, BiquadType Type>
+class BiquadFilter {
+  public:
+    /// Default constructor
+    BiquadFilter() = default;
+
+    /**
+     * @brief Parameterized constructor that calls @ref prepare.
+     * @param newNumChannels Number of channels
+     * @param newNumSections Number of second-order sections
+     * @param newSampleRate Sample rate
+     */
+    BiquadFilter(size_t newNumChannels, size_t newNumSections, T newSampleRate) {
+        prepare(newNumChannels, newNumSections, newSampleRate);
+    }
+
+    /// Default destructor
+    ~BiquadFilter() = default;
+
+    /// No copy or move semantics
+    BiquadFilter(const BiquadFilter&) = delete;
+    BiquadFilter& operator=(const BiquadFilter&) = delete;
+    BiquadFilter(BiquadFilter&&) = delete;
+    BiquadFilter& operator=(BiquadFilter&&) = delete;
+
+    /**
+     * @brief Prepare the biquad filter for processing.
+     * @param newNumChannels Number of channels
+     * @param newNumSections Number of second-order sections
+     * @param newSampleRate Sample rate
+     * @note Must be called before processing.
+     */
+    void prepare(size_t newNumChannels, size_t newNumSections, T newSampleRate) {
+
+        // Clamp and store config variables
+        numChannels = utils::detail::clampChannels(newNumChannels);
+        sampleRate = utils::detail::clampSampleRate(newSampleRate);
+        numSections = std::clamp(newNumSections, size_t(1), detail::FilterLimits<T>::MAX_SECTIONS);
+
+        // Prepare core processor
+        biquadCore.prepare(numChannels, numSections);
+
+        // Prepare parameters
+        freqNormalized.prepare(numChannels, sampleRate);
+        Q.prepare(numChannels, sampleRate);
+        gain.prepare(numChannels, sampleRate);
+
+        // Clamp parameter ranges
+        freqNormalized.setBounds(detail::FilterLimits<T>::MIN_FREQ_NORM, detail::FilterLimits<T>::MAX_FREQ_NORM);
+        Q.setBounds(detail::BiquadLimits<T>::MIN_Q, detail::BiquadLimits<T>::MAX_Q);
+        gain.setBounds(detail::FilterLimits<T>::MIN_GAIN_LIN, detail::FilterLimits<T>::MAX_GAIN_LIN);
+    }
+
+    /// Reset the filter state
+    void reset() { biquadCore.reset(); }
+
+    /**
+     * @brief Process a single sample for a given channel.
+     * @param ch Channel index.
+     * @param input Input sample.
+     * @param mod Frequency modulation input.
+     * @return Output sample.
+     * @note Must call @ref prepare before processing.
+     */
+    T processSample(size_t ch, T input, T mod) {}
+
+    /**
+     * @brief Process a block of samples for all channels.
+     * @param input Input sample pointers (one per channel).
+     * @param output Output sample pointers (one per channel).
+     * @param mod Frequency modulation input pointers (one per channel).
+     * @param numSamples Number of samples to process
+     * @note Must call @ref prepare before processing.
+     */
+    void processBlock(const T* const* input, T* const* output, const T* const* mod, size_t numSamples) {}
+
+    /**
+     * @brief Set gain for a specific section.
+     * @param section Section index.
+     * @param newGain Gain struct. (Value clamped to limits defined in filter_limits.h).
+     * @param skipSmoothing If true, skip smoothing and set immediately.
+     */
+    void setGain(size_t section, Gain<T> newGain, bool skipSmoothing = false) {
+        gain.setTarget(section, newGain.toLinear(), skipSmoothing);
+    }
+
+    /**
+     * @brief Set frequency for a specific section.
+     * @param section Section index.
+     * @param newFreq Frequency struct.
+     * @param skipSmoothing If true, skip smoothing and set immediately.
+     */
+    void setFreq(size_t section, Frequency<T> newFreq, bool skipSmoothing = false) {
+        freqNormalized.setTarget(section, newFreq.toNormalized(sampleRate), skipSmoothing);
+    }
+
+    /**
+     * @brief Set Q factor for a specific section.
+     * @param section Section index
+     * @param newQ Q factor
+     * @param skipSmoothing If true, skip smoothing and set immediately.
+     */
+    void setQ(size_t section, T newQ, bool skipSmoothing = false) { Q.setTarget(section, newQ, skipSmoothing); }
+
+  private:
+    size_t numChannels = 0;
+    size_t numSections = 0;
+    T sampleRate = T(44100);
+    DspParam<T> freqNormalized;
+    DspParam<T> Q;
+    DspParam<T> gain;
+    detail::BiquadCore<T> biquadCore;
+
+    /**
+     * @brief Update filter coefficients of single section.
+     * @param section Section index
+     */
+    void updateCoeffs(size_t section) {}
+};
+
 } // namespace jnsc

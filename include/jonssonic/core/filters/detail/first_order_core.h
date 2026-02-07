@@ -28,9 +28,7 @@ class FirstOrderCore {
      * @param newNumChannels Number of channels
      * @param newNumSections Number of first-order sections
      */
-    FirstOrderCore(size_t newNumChannels, size_t newNumSections) {
-        prepare(newNumChannels, newNumSections);
-    }
+    FirstOrderCore(size_t newNumChannels, size_t newNumSections) { prepare(newNumChannels, newNumSections); }
 
     /// Default destructor
     ~FirstOrderCore() = default;
@@ -57,7 +55,7 @@ class FirstOrderCore {
     void reset() { state.clear(); }
 
     /**
-     * @brief Process a single sample for a given channel.
+     * @brief Process a single sample for a given channel with the current coefficients and state.
      * @param ch Channel index
      * @param input Input sample
      * @return Output sample
@@ -102,6 +100,35 @@ class FirstOrderCore {
         for (size_t ch = 0; ch < numChannels; ++ch)
             for (size_t n = 0; n < numSamples; ++n)
                 output[ch][n] = processSample(ch, input[ch][n]);
+    }
+
+    /**
+     * @brief Process a single sample with provided coefficients (b0, b1, a1) for a specific section and channel.
+     * @param ch Channel index
+     * @param section Section index
+     * @param input Input sample
+     * @param b0 Feedforward coefficient 0
+     * @param b1 Feedforward coefficient 1
+     * @param a1 Feedback coefficient 1
+     * @return Output sample
+     * @note Must call @ref prepare before processing.
+     */
+    T processSample(size_t ch, size_t section, T input, T b0, T b1, T a1) {
+
+        size_t stateBase = section * STATE_VARS_PER_SECTION;
+
+        // Fetch state variables
+        T x1 = state[ch][stateBase + 0];
+        T y1 = state[ch][stateBase + 1];
+
+        // Direct Form I
+        T output = b0 * input + b1 * x1 - a1 * y1;
+
+        // Update state variables
+        state[ch][stateBase + 0] = input;  // x1 = input
+        state[ch][stateBase + 1] = output; // y1 = output
+
+        return output;
     }
 
     /**
