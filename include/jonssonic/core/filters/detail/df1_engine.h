@@ -1,5 +1,5 @@
 // JonssonicDSP - A Modular Realtime C++ Audio DSP Library
-// BiquadCore header file
+// DF1Engine header file
 // SPDX-License-Identifier: MIT
 
 #pragma once
@@ -8,49 +8,50 @@
 
 namespace jnsc::detail {
 /**
- * @brief BiquadCore filter class implementing a multi-channel, multi-section biquad filter.
+ * @brief DF1Engine filter class implementing a multi-channel, multi-section biquad filter in Direct Form I.
  * @param T Sample data type (e.g., float, double)
  */
 template <typename T>
-class BiquadCore {
+class DF1Engine {
   public:
     /// Constexprs for coefficient and state variable counts
     static constexpr size_t COEFFS_PER_SECTION = 5;     // b0, b1, b2, a1, a2
     static constexpr size_t STATE_VARS_PER_SECTION = 4; // x1, x2, y1, y2
 
     /// Default constructor
-    BiquadCore() = default;
+    DF1Engine() = default;
 
     /**
      * @brief Parameterized constructor that calls @ref prepare.
      * @param newNumChannels Number of channels
      * @param newNumSections Number of second-order sections
      */
-    BiquadCore(size_t newNumChannels, size_t newNumSections) {
-        prepare(newNumChannels, newNumSections);
-    }
+    DF1Engine(size_t newNumChannels, size_t newNumSections) { prepare(newNumChannels, newNumSections); }
 
     /// Default destructor
-    ~BiquadCore() = default;
+    ~DF1Engine() = default;
 
     /// No copy nor move semantics
-    BiquadCore(const BiquadCore&) = delete;
-    BiquadCore& operator=(const BiquadCore&) = delete;
-    BiquadCore(BiquadCore&&) = delete;
-    BiquadCore& operator=(BiquadCore&&) = delete;
+    DF1Engine(const DF1Engine&) = delete;
+    DF1Engine& operator=(const DF1Engine&) = delete;
+    DF1Engine(DF1Engine&&) = delete;
+    DF1Engine& operator=(DF1Engine&&) = delete;
 
     /**
-     * @brief Prepare the SOS filter for processing.
+     * @brief Prepare the filter for processing.
      * @param newNumChannels Number of channels
      * @param newNumSections Number of second-order sections
      */
     void prepare(size_t newNumChannels, size_t newNumSections) {
-        numChannels = newNumChannels;
-        numSections = newNumSections;
-        coeffs.resize(numSections * COEFFS_PER_SECTION, T(0)); // 5 coefficients per section
-        state.resize(numChannels,
-                     numSections * STATE_VARS_PER_SECTION); // 4 state variables per section
+        // Clamp channels and sections to allowed limits
+        numChannels = utils::detail::clampChannels(newNumChannels);
+        numSections = detail::clampSections(newNumSections);
 
+        // Allocate coefficient and state buffers
+        coeffs.resize(numChannels, numSections * COEFFS_PER_SECTION);
+        state.resize(numChannels, numSections * STATE_VARS_PER_SECTION);
+
+        // Mark as prepared
         togglePrepared = true;
     }
 
@@ -70,12 +71,11 @@ class BiquadCore {
             size_t stateBase = s * STATE_VARS_PER_SECTION;
 
             // Fetch coefficients
-            T b0 = coeffs[coeffBase + 0];
-            T b1 = coeffs[coeffBase + 1];
-            T b2 = coeffs[coeffBase + 2];
-            T a1 = coeffs[coeffBase + 3];
-            T a2 = coeffs[coeffBase + 4];
-
+            T b0 = coeffs[ch][coeffBase + 0];
+            T b1 = coeffs[ch][coeffBase + 1];
+            T b2 = coeffs[ch][coeffBase + 2];
+            T a1 = coeffs[ch][coeffBase + 3];
+            T a2 = coeffs[ch][coeffBase + 4];
             // Fetch state variables
             T x1 = state[ch][stateBase + 0];
             T x2 = state[ch][stateBase + 1];
@@ -114,7 +114,7 @@ class BiquadCore {
     }
 
     /**
-     * @brief Set the coefficients for a specific section.
+     * @brief Set the same coefficients for all channels for a specific section.
      * @param section Section index
      * @param b0 Feedforward coefficient 0
      * @param b1 Feedforward coefficient 1
@@ -128,12 +128,42 @@ class BiquadCore {
         if (!togglePrepared)
             return;
         assert(section < numSections && "Section index out of bounds");
+
+        // Update coefficients for all channels for this section
         size_t baseIdx = section * COEFFS_PER_SECTION;
-        coeffs[baseIdx + 0] = b0;
-        coeffs[baseIdx + 1] = b1;
-        coeffs[baseIdx + 2] = b2;
-        coeffs[baseIdx + 3] = a1;
-        coeffs[baseIdx + 4] = a2;
+        for (size_t ch = 0; ch < numChannels; ++ch) {
+            coeffs[ch][baseIdx + 0] = b0;
+            coeffs[ch][baseIdx + 1] = b1;
+            coeffs[ch][baseIdx + 2] = b2;
+            coeffs[ch][baseIdx + 3] = a1;
+            coeffs[ch][baseIdx + 4] = a2;
+        }
+    }
+
+    /**
+     * @brief Set coefficients for a specific channel and section.
+     * @param ch Channel index
+     * @param section Section index
+     * @param b0 Feedforward coefficient 0
+     * @param b1 Feedforward coefficient 1
+     * @param b2 Feedforward coefficient 2
+     * @param a1 Feedback coefficient 1
+     * @param a2 Feedback coefficient 2
+     * @note Must call @ref prepare before setting coefficients.
+     */
+    void setChannelSectionCoeffs(size_t ch, size_t section, T b0, T b1, T b2, T a1, T a2) {
+        // Early exit if not prepared
+        if (!togglePrepared)
+            return;
+        assert(section < numSections && "Section index out of bounds");
+        assert(ch < numChannels && "Channel index out of bounds");
+
+        size_t baseIdx = section * COEFFS_PER_SECTION;
+        coeffs[ch][baseIdx + 0] = b0;
+        coeffs[ch][baseIdx + 1] = b1;
+        coeffs[ch][baseIdx + 2] = b2;
+        coeffs[ch][baseIdx + 3] = a1;
+        coeffs[ch][baseIdx + 4] = a2;
     }
 
     /// Get number of prepared channels
@@ -149,15 +179,16 @@ class BiquadCore {
     bool togglePrepared = false;
 
     // Coefficient layout:
+    // Channels: audio channels
     // Sections: second-order sections
     // Coefficients per section: [b0, b1, b2, a1, a2]
-    // Accessing coeffs for section s:
-    //   b0 = coeffs[s*5 + 0];
-    //   b1 = coeffs[s*5 + 1];
-    //   b2 = coeffs[s*5 + 2];
-    //   a1 = coeffs[s*5 + 3];
-    //   a2 = coeffs[s*5 + 4];
-    std::vector<T> coeffs;
+    // Accessing coeffs for channel ch, section s:
+    //   b0 = coeffs[ch][s*5 + 0];
+    //   b1 = coeffs[ch][s*5 + 1];
+    //   b2 = coeffs[ch][s*5 + 2];
+    //   a1 = coeffs[ch][s*5 + 3];
+    //   a2 = coeffs[ch][s*5 + 4];
+    AudioBuffer<T> coeffs;
 
     // State buffer layout:
     // Channels: audio channels

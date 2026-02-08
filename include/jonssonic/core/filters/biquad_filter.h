@@ -285,9 +285,9 @@ class BiquadFilter {
         biquadCore.prepare(numChannels, numSections);
 
         // Prepare parameters
-        freqNormalized.prepare(numChannels, sampleRate);
-        Q.prepare(numChannels, sampleRate);
-        gain.prepare(numChannels, sampleRate);
+        freqNormalized.prepare(numSections, sampleRate);
+        Q.prepare(numSections, sampleRate);
+        gain.prepare(numSections, sampleRate);
 
         // Clamp parameter ranges
         freqNormalized.setBounds(detail::FilterLimits<T>::MIN_FREQ_NORM, detail::FilterLimits<T>::MAX_FREQ_NORM);
@@ -299,14 +299,21 @@ class BiquadFilter {
     void reset() { biquadCore.reset(); }
 
     /**
-     * @brief Process a single sample for a given channel.
+     * @brief Process a single sample for a given channel with frequency modulation.
      * @param ch Channel index.
      * @param input Input sample.
      * @param mod Frequency modulation input.
      * @return Output sample.
      * @note Must call @ref prepare before processing.
      */
-    T processSample(size_t ch, T input, T mod) {}
+    T processSample(size_t ch, T input, T mod) {
+        // Apply frequency modulation
+        T modulatedFreq = freqNormalized.applyAdditiveMod(ch, mod);
+        // Update coefficients for this section based on modulated frequency
+        updateCoeffs(ch);
+        // Process sample with updated coefficients
+        return biquadCore.processSample(ch, input);
+    }
 
     /**
      * @brief Process a block of samples for all channels.
@@ -356,10 +363,38 @@ class BiquadFilter {
     detail::BiquadCore<T> biquadCore;
 
     /**
-     * @brief Update filter coefficients of single section.
-     * @param section Section index
+     * @brief Update section coefficients with optional frequency modulation.
+     * @param section Section index.
+     * @param mod Frequency modulation input.
      */
-    void updateCoeffs(size_t section) {}
-};
+    void updateCoeffs(size_t section, T mod = T(0)) {
+        // Initialize coefficients variables
+        T b0 = T(0), b1 = T(0), b2 = T(0), a1 = T(0), a2 = T(0);
+
+        // Apply modulation to frequency parameter
+        T modulatedFreq = freqNormalized.applyAdditiveMod(section, mod);
+
+        // Compute coefficients based on compile-time filter type
+        if constexpr (Type == BiquadType::Lowpass)
+            detail::computeLowpassCoeffs<T>(modulatedFreq, Q, b0, b1, b2, a1, a2);
+        if constexpr (Type == BiquadType::Highpass)
+            detail::computeHighpassCoeffs<T>(modulatedFreq, Q, b0, b1, b2, a1, a2);
+        if constexpr (Type == BiquadType::Bandpass)
+            detail::computeBandpassCoeffs<T>(modulatedFreq, Q, b0, b1, b2, a1, a2);
+        if constexpr (Type == BiquadType::Allpass)
+            detail::computeAllpassCoeffs<T>(modulatedFreq, Q, b0, b1, b2, a1, a2);
+        if constexpr (Type == BiquadType::Notch)
+            detail::computeNotchCoeffs<T>(modulatedFreq, Q, b0, b1, b2, a1, a2);
+        if constexpr (Type == BiquadType::Peak)
+            detail::computePeakCoeffs<T>(modulatedFreq, Q, gain, b0, b1, b2, a1, a2);
+        if constexpr (Type == BiquadType::Lowshelf)
+            detail::computeLowshelfCoeffs<T>(modulatedFreq, Q, gain, b0, b1, b2, a1, a2);
+        if constexpr (Type == BiquadType::Highshelf)
+            detail::computeHighshelfCoeffs<T>(modulatedFreq, Q, gain, b0, b1, b2, a1, a2);
+
+        // Set coefficients for all sections.
+        for (size_t section = 0; section < numSections; ++section)
+            biquadCore.setSectionCoeffs(section, b0, b1, b2, a1, a2);
+    };
 
 } // namespace jnsc
