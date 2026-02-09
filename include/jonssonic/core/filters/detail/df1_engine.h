@@ -5,6 +5,7 @@
 #pragma once
 #include "jonssonic/utils/detail/config_utils.h"
 #include <jonssonic/core/common/audio_buffer.h>
+#include <jonssonic/core/filters/detail/filter_limits.h>
 
 namespace jnsc::detail {
 /**
@@ -45,7 +46,7 @@ class DF1Engine {
     void prepare(size_t newNumChannels, size_t newNumSections) {
         // Clamp channels and sections to allowed limits
         numChannels = utils::detail::clampChannels(newNumChannels);
-        numSections = detail::clampSections(newNumSections);
+        numSections = FilterLimits<T>::clampSections(newNumSections);
 
         // Allocate coefficient and state buffers
         coeffs.resize(numChannels, numSections * COEFFS_PER_SECTION);
@@ -145,6 +146,10 @@ class DF1Engine {
     size_t getNumSections() const { return numSections; }
     /// Check if the filter is prepared
     bool isPrepared() const { return togglePrepared; }
+    /// Get state buffer (for testing purposes)
+    const AudioBuffer<T>& getState() const { return state; }
+    /// Get coefficient buffer (for testing purposes)
+    const AudioBuffer<T>& getCoeffs() const { return coeffs; }
 
   private:
     size_t numChannels = 0;

@@ -65,7 +65,7 @@ class ChannelProxy {
      */
     void setGain(Gain<T> newGain) {
         // Compute new design coefficients based on the new gain
-        filter.topology.design.setGain(newGain.toLinear());
+        filter.topology.design.setGain(newGain);
 
         // Set the new coefficients for all sections of this channel
         for (size_t s = 0; s < filter.getNumSections(); ++s)
@@ -78,7 +78,7 @@ class ChannelProxy {
      */
     void setFrequency(Frequency<T> newFreq) {
         // Compute new design coefficients based on the new frequency
-        filter.topology.design.setFrequency(newFreq.toNormalized());
+        filter.topology.design.setFrequency(newFreq);
 
         // Set the new coefficients for all sections of this channel
         for (size_t s = 0; s < filter.getNumSections(); ++s)
@@ -149,7 +149,7 @@ class SectionProxy {
      * @param newGain Desired gain value.
      */
     void setGain(Gain<T> newGain) {
-        filter.topology.design.setGain(newGain.toLinear());
+        filter.topology.design.setGain(newGain);
         for (size_t ch = 0; ch < filter.getNumChannels(); ++ch)
             filter.topology.applyDesignToEngine(ch, sectionIdx);
     }
@@ -159,7 +159,7 @@ class SectionProxy {
      * @param newFreq Desired frequency value.
      */
     void setFrequency(Frequency<T> newFreq) {
-        filter.topology.design.setFrequency(newFreq.toNormalized());
+        filter.topology.design.setFrequency(newFreq);
         for (size_t ch = 0; ch < filter.getNumChannels(); ++ch)
             filter.topology.applyDesignToEngine(ch, sectionIdx);
     }
@@ -222,7 +222,7 @@ class ChannelSectionProxy {
      * @param newGain Desired gain value.
      */
     void setGain(Gain<T> newGain) {
-        filter.topology.design.setGain(newGain.toLinear());
+        filter.topology.design.setGain(newGain);
         filter.topology.applyDesignToEngine(channelIdx, sectionIdx);
     }
 
@@ -231,7 +231,7 @@ class ChannelSectionProxy {
      * @param newFreq Desired frequency value.
      */
     void setFrequency(Frequency<T> newFreq) {
-        filter.topology.design.setFrequency(newFreq.toNormalized());
+        filter.topology.design.setFrequency(newFreq);
         filter.topology.applyDesignToEngine(channelIdx, sectionIdx);
     }
     /**
@@ -242,9 +242,6 @@ class ChannelSectionProxy {
         filter.topology.design.setQ(newQ);
         filter.topology.applyDesignToEngine(channelIdx, sectionIdx);
     }
-    size_t channelIndex() const { return channelIdx; }
-    size_t sectionIndex() const { return sectionIdx; }
-    FilterType& filter() { return filter; }
 
   private:
     FilterType& filter;

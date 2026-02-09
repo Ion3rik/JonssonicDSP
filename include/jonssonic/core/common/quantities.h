@@ -82,7 +82,7 @@ struct Time {
 };
 
 /// Frequency unit enumeration
-enum class FrequencyUnit { Hertz, Kilohertz, Normalized };
+enum class FrequencyUnit { Hertz, Kilohertz, Normalized, Radians };
 
 /// Frequency quantity structure
 template <typename T>
@@ -96,13 +96,9 @@ struct Frequency {
 
     /// Factory methods for creating Frequency instances with specific units
     static Frequency Hertz(T v) { return Frequency(std::max(v, T(0)), FrequencyUnit::Hertz); }
-    static Frequency Kilohertz(T v) {
-        return Frequency(std::max(v, T(0)), FrequencyUnit::Kilohertz);
-    }
-    static Frequency Normalized(T v) {
-        return Frequency(std::max(v, T(0)), FrequencyUnit::Normalized);
-    }
-
+    static Frequency Kilohertz(T v) { return Frequency(std::max(v, T(0)), FrequencyUnit::Kilohertz); }
+    static Frequency Normalized(T v) { return Frequency(std::max(v, T(0)), FrequencyUnit::Normalized); }
+    static Frequency Radians(T v) { return Frequency(std::max(v, T(0)), FrequencyUnit::Radians); }
     /// Convert frequency to Hertz given a sample rate
     T toHertz(T sampleRate) const {
         switch (unit) {
@@ -112,6 +108,8 @@ struct Frequency {
             return value * T(1000);
         case FrequencyUnit::Normalized:
             return value * sampleRate;
+        case FrequencyUnit::Radians:
+            return value * sampleRate / utils::two_pi<T>;
         default:
             assert(false && "Unknown FrequencyUnit");
             return T(0);
@@ -127,6 +125,8 @@ struct Frequency {
             return value * T(1000) * T(1) / sampleRate;
         case FrequencyUnit::Normalized:
             return value;
+        case FrequencyUnit::Radians:
+            return value * sampleRate / utils::two_pi<T>;
         default:
             assert(false && "Unknown FrequencyUnit");
             return T(0);
@@ -141,6 +141,23 @@ struct Frequency {
             return value;
         case FrequencyUnit::Normalized:
             return value * sampleRate * T(0.001);
+        case FrequencyUnit::Radians:
+            return value * sampleRate / utils::two_pi<T> * T(0.001);
+        default:
+            assert(false && "Unknown FrequencyUnit");
+            return T(0);
+        }
+    }
+    T toRadians(T sampleRate) const {
+        switch (unit) {
+        case FrequencyUnit::Hertz:
+            return value * utils::two_pi<T> / sampleRate;
+        case FrequencyUnit::Kilohertz:
+            return value * T(1000) * utils::two_pi<T> / sampleRate;
+        case FrequencyUnit::Normalized:
+            return value * utils::two_pi<T>;
+        case FrequencyUnit::Radians:
+            return value;
         default:
             assert(false && "Unknown FrequencyUnit");
             return T(0);
@@ -228,6 +245,9 @@ inline Frequency<float> operator""_khz(long double v) {
 }
 inline Frequency<float> operator""_norm(long double v) {
     return Frequency<float>::Normalized(static_cast<float>(v));
+}
+inline Frequency<float> operator""_rad(long double v) {
+    return Frequency<float>::Radians(static_cast<float>(v));
 }
 
 // Gain literals

@@ -5,6 +5,9 @@
 
 #pragma once
 
+#include "jonssonic/core/common/quantities.h"
+#include "jonssonic/core/filters/detail/filter_limits.h"
+#include "jonssonic/utils/detail/config_utils.h"
 #include <cmath>
 #include <jonssonic/utils/math_utils.h>
 
@@ -23,6 +26,23 @@ class BiquadDesign {
     ~BiquadDesign() = default;
 
     /**
+     * @brief Prepare the design for a specific sample rate.
+     * @param newSampleRate Sample rate in Hz
+     * @note Must be called before calling @ref setFrequency.
+     * @note Clamps the sample rate to a valid range to avoid unstable behavior.
+     */
+    void prepare(T newSampleRate) {
+        // Store clamped sample rate.
+        fs = utils::detail::clampSampleRate(newSampleRate);
+
+        // Reset parameters to defaults
+        setResponse(Response::Lowpass);
+        setFrequency(Frequency<T>::Hertz(T(1000)));
+        setGain(Gain<T>::Linear(T(1)));
+        setQ(T(0.707)); // Butterworth Q for a maximally flat response
+    }
+
+    /**
      * @brief Set the filter response type.
      * @param newResponse Desired filter magnitude response type.
      * @note Updates coefficients based on the current parameters and the new response type.
@@ -33,23 +53,27 @@ class BiquadDesign {
     }
 
     /**
-     * @brief Set normalized frequency (0..0.5, where 0.5 = Nyquist).
-     * @param newFreq Normalized frequency.
+     * @brief Set the filter frequency.
+     * @param newFreq Frequency struct.
      * @note Updates coefficients based on the current parameters and response type.
      */
-    void setFrequency(T newFreq) {
-        w0 = utils::two_pi<T> * newFreq;
+    void setFrequency(Frequency<T> newFreq) {
+        assert(fs > T(0) && "Sample rate must be set and positive before setting frequency");
+        // Early exit if sample rate is not valid
+        if (fs <= T(0))
+            return;
+        w0 = newFreq.toRadians(fs);
         updateCoeffs();
     }
 
     /**
      * @brief Set the gain for the filter.
-     * @param newGain Linear gain.
+     * @param newGain Gain struct.
      * @note Updates coefficients based on the current parameters and response type.
      * @note Only applicable for peaking and shelving response types.
      */
-    void setGain(T newGain) {
-        g = newGain;
+    void setGain(Gain<T> newGain) {
+        g = newGain.toLinear();
         updateCoeffs();
     }
 
@@ -73,12 +97,23 @@ class BiquadDesign {
     T getA1() const { return a1; }
     /// Get A2 feedback coefficient
     T getA2() const { return a2; }
+    /// Get current sample rate
+    T getSampleRate() const { return fs; }
+    /// Get current filter response type (for testing purposes)
+    const Response& getResponse() const { return response; }
+    /// Get current gain (for testing purposes)
+    Gain<T> getGain() const { return Gain<T>::Linear(g); }
+    /// Get current normalized frequency (for testing purposes)
+    Frequency<T> getFrequency() const { return Frequency<T>::Radians(w0); }
+    /// Get current Q factor (for testing purposes)
+    T getQ() const { return Q; }
 
   private:
-    // Filter response type
-    Response response;
     // Parameters
+    T fs = 0;
+    Response response;
     T w0, g, Q;
+
     // Coefficients
     T b0, b1, b2, a1, a2;
 

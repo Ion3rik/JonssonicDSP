@@ -20,17 +20,17 @@ namespace jnsc {
  */
 template <typename T>
 struct BiquadDF1 {
+    /// Type alias for the engine and design components of this topology
+    using Engine = detail::DF1Engine<T>;
+    using Design = detail::BiquadDesign<T>;
+
+    // Engine and design instances
     detail::DF1Engine<T> engine;
     detail::BiquadDesign<T> design;
 
+    // Function to apply design coefficients to the engine for a specific channel and section
     void applyDesignToEngine(size_t ch, size_t section) {
-        engine.setChannelSectionCoeffs(ch,
-                                       section,
-                                       design.getB0(),
-                                       design.getB1(),
-                                       design.getB2(),
-                                       design.getA1(),
-                                       design.getA2());
+        engine.setCoeffs(ch, section, design.getB0(), design.getB1(), design.getB2(), design.getA1(), design.getA2());
     }
 };
 
