@@ -13,13 +13,18 @@ struct FilterLimits {
     // Maximum number of biquad sections
     static constexpr size_t MAX_SECTIONS = 64;
 
-    // Gain limits in dB
+    // Gain limits
     static constexpr T MAX_GAIN_LIN = T(10.0);  // +20 dB
     static constexpr T MIN_GAIN_LIN = T(0.001); // -60 dB
 
     // Frequency limits
     static constexpr T MAX_FREQ_NORM = T(0.5);  // Nyquist
     static constexpr T MIN_FREQ_NORM = T(1e-6); // Small positive value to avoid zero frequency
+
+    // Clamping functions for parameters
+    static T clampGain(T gain) { return std::clamp(gain, MIN_GAIN_LIN, MAX_GAIN_LIN); }
+    static T clampFrequency(T freqNorm) { return std::clamp(freqNorm, MIN_FREQ_NORM, MAX_FREQ_NORM); }
+    static size_t clampSections(size_t sections) { return std::clamp(sections, size_t(1), MAX_SECTIONS); }
 };
 
 /// Biquad filter parameter limits

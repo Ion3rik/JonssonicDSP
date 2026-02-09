@@ -34,11 +34,11 @@ class BiquadDesign {
 
     /**
      * @brief Set normalized frequency (0..0.5, where 0.5 = Nyquist).
-     * @param newNormFreq Normalized frequency.
+     * @param newFreq Normalized frequency.
      * @note Updates coefficients based on the current parameters and response type.
      */
-    void setNormalizedFrequency(T newNormFreq) {
-        w0 = utils::two_pi<T> * newNormFreq;
+    void setFrequency(T newFreq) {
+        w0 = utils::two_pi<T> * newFreq;
         updateCoeffs();
     }
 

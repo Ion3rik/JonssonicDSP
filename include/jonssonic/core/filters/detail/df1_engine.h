@@ -114,33 +114,6 @@ class DF1Engine {
     }
 
     /**
-     * @brief Set the same coefficients for all channels for a specific section.
-     * @param section Section index
-     * @param b0 Feedforward coefficient 0
-     * @param b1 Feedforward coefficient 1
-     * @param b2 Feedforward coefficient 2
-     * @param a1 Feedback coefficient 1
-     * @param a2 Feedback coefficient 2
-     * @note Must call @ref prepare before setting coefficients.
-     */
-    void setSectionCoeffs(size_t section, T b0, T b1, T b2, T a1, T a2) {
-        // Early exit if not prepared
-        if (!togglePrepared)
-            return;
-        assert(section < numSections && "Section index out of bounds");
-
-        // Update coefficients for all channels for this section
-        size_t baseIdx = section * COEFFS_PER_SECTION;
-        for (size_t ch = 0; ch < numChannels; ++ch) {
-            coeffs[ch][baseIdx + 0] = b0;
-            coeffs[ch][baseIdx + 1] = b1;
-            coeffs[ch][baseIdx + 2] = b2;
-            coeffs[ch][baseIdx + 3] = a1;
-            coeffs[ch][baseIdx + 4] = a2;
-        }
-    }
-
-    /**
      * @brief Set coefficients for a specific channel and section.
      * @param ch Channel index
      * @param section Section index
@@ -151,7 +124,7 @@ class DF1Engine {
      * @param a2 Feedback coefficient 2
      * @note Must call @ref prepare before setting coefficients.
      */
-    void setChannelSectionCoeffs(size_t ch, size_t section, T b0, T b1, T b2, T a1, T a2) {
+    void setCoeffs(size_t ch, size_t section, T b0, T b1, T b2, T a1, T a2) {
         // Early exit if not prepared
         if (!togglePrepared)
             return;
