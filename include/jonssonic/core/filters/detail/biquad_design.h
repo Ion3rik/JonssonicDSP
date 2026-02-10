@@ -62,7 +62,11 @@ class BiquadDesign {
         // Early exit if sample rate is not valid
         if (fs <= T(0))
             return;
-        w0 = newFreq.toRadians(fs);
+
+        // Clamp frequency to valid range and convert to radians
+        w0 = FilterLimits<T>::clampFrequency(newFreq).toRadians(fs);
+
+        // Call coefficient update to reflect the new frequency in the filter design
         updateCoeffs();
     }
 
@@ -73,7 +77,7 @@ class BiquadDesign {
      * @note Only applicable for peaking and shelving response types.
      */
     void setGain(Gain<T> newGain) {
-        g = newGain.toLinear();
+        g = FilterLimits<T>::clampGain(newGain).toLinear();
         updateCoeffs();
     }
 
@@ -83,7 +87,7 @@ class BiquadDesign {
      * @note Updates coefficients based on the current parameters and response type.
      */
     void setQ(T newQ) {
-        Q = newQ;
+        Q = FilterLimits<T>::clampQ(newQ);
         updateCoeffs();
     }
 
