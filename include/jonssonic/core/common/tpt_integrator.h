@@ -53,6 +53,14 @@ class TPTIntegrator {
         return y;
     }
 
+    /**
+     * @brief Get the state variable for a specific channel and section.
+     * @param ch Channel index.
+     * @param section Section index.
+     * @return State variable value.
+     */
+    T getState(size_t ch, size_t section) const { return z(ch, section); }
+
     /// Get number of prepared channels
     size_t getNumChannels() const { return numChannels; }
     /// Get number of prepared sections

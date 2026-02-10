@@ -13,23 +13,23 @@
 
 namespace jnsc {
 /// Forward declarations for proxy classes
-template <typename T, typename Topology>
+template <typename T, typename Engine>
 class ChannelProxy;
-template <typename T, typename Topology>
+template <typename T, typename Engine>
 class SectionProxy;
-template <typename T, typename Topology>
+template <typename T, typename Engine>
 class ChannelSectionProxy;
 
-template <typename T, typename Topology>
+template <typename T, typename Engine>
 class Filter {
   public:
     /// Grant proxy classes access to private members
-    friend class ChannelProxy<T, Topology>;
-    friend class SectionProxy<T, Topology>;
-    friend class ChannelSectionProxy<T, Topology>;
+    friend class ChannelProxy<T, Engine>;
+    friend class SectionProxy<T, Engine>;
+    friend class ChannelSectionProxy<T, Engine>;
 
     /// Filter response type alias for easier access
-    using Response = typename Topology::Design::Response;
+    using Response = typename Engine::Design::Response;
 
     /// Default constructor
     Filter() = default;
@@ -61,43 +61,23 @@ class Filter {
      */
     void prepare(size_t newNumChannels, size_t newNumSections, T newSampleRate) {
         // Prepare the filter engine
-        topology.engine.prepare(newNumChannels, newNumSections);
+        engine.topology.prepare(newNumChannels, newNumSections);
         // Prepare the filter design
-        topology.design.prepare(newSampleRate);
+        engine.design.prepare(newSampleRate);
     }
 
     /// Reset the filter state
-    void reset() { topology.engine.reset(); }
-
-    /**
-     * @brief Process a single sample for a given channel.
-     * @param ch Channel index.
-     * @param input Input sample.
-     * @return Output sample.
-     * @note Must call @ref prepare before processing.
-     */
-    T processSample(size_t ch, T input) { return topology.engine.processSample(ch, input); }
-
-    /**
-     * @brief Process a block of samples for all channels.
-     * @param input Input sample pointers (one per channel).
-     * @param output Output sample pointers (one per channel).
-     * @param numSamples Number of samples to process
-     * @note Must call @ref prepare before processing.
-     */
-    void processBlock(const T* const* input, T* const* output, size_t numSamples) {
-        topology.engine.processBlock(input, output, numSamples);
-    }
+    void reset() { engine.topology.reset(); }
 
     /**
      * @brief Set the filter response type for all channels and sections.
      * @param newResponse Desired filter magnitude response type
      */
     void setResponse(Response newResponse) {
-        topology.design.setResponse(newResponse);
-        for (size_t ch = 0; ch < topology.engine.getNumChannels(); ++ch)
-            for (size_t section = 0; section < topology.engine.getNumSections(); ++section)
-                topology.applyDesignToEngine(ch, section);
+        engine.design.setResponse(newResponse);
+        for (size_t ch = 0; ch < engine.topology.getNumChannels(); ++ch)
+            for (size_t section = 0; section < engine.topology.getNumSections(); ++section)
+                engine.applyDesignToTopology(ch, section);
     }
 
     /**
@@ -105,10 +85,10 @@ class Filter {
      * @param newFreq Frequency struct.
      */
     void setFrequency(Frequency<T> newFreq) {
-        topology.design.setFrequency(newFreq);
-        for (size_t ch = 0; ch < topology.engine.getNumChannels(); ++ch)
-            for (size_t section = 0; section < topology.engine.getNumSections(); ++section)
-                topology.applyDesignToEngine(ch, section);
+        engine.design.setFrequency(newFreq);
+        for (size_t ch = 0; ch < engine.topology.getNumChannels(); ++ch)
+            for (size_t section = 0; section < engine.topology.getNumSections(); ++section)
+                engine.applyDesignToTopology(ch, section);
     }
 
     /**
@@ -116,10 +96,10 @@ class Filter {
      * @param newQ Q factor value.
      */
     void setQ(T newQ) {
-        topology.design.setQ(newQ);
-        for (size_t ch = 0; ch < topology.engine.getNumChannels(); ++ch)
-            for (size_t section = 0; section < topology.engine.getNumSections(); ++section)
-                topology.applyDesignToEngine(ch, section);
+        engine.design.setQ(newQ);
+        for (size_t ch = 0; ch < engine.topology.getNumChannels(); ++ch)
+            for (size_t section = 0; section < engine.topology.getNumSections(); ++section)
+                engine.applyDesignToTopology(ch, section);
     }
 
     /**
@@ -127,40 +107,40 @@ class Filter {
      * @param newGain Gain struct.
      */
     void setGain(Gain<T> newGain) {
-        topology.design.setGain(newGain);
-        for (size_t ch = 0; ch < topology.engine.getNumChannels(); ++ch)
-            for (size_t section = 0; section < topology.engine.getNumSections(); ++section)
-                topology.applyDesignToEngine(ch, section);
+        engine.design.setGain(newGain);
+        for (size_t ch = 0; ch < engine.topology.getNumChannels(); ++ch)
+            for (size_t section = 0; section < engine.topology.getNumSections(); ++section)
+                engine.applyDesignToTopology(ch, section);
     }
 
     /// Get number of prepared channels
-    size_t getNumChannels() const { return topology.engine.getNumChannels(); }
+    size_t getNumChannels() const { return engine.topology.getNumChannels(); }
     /// Get number of prepared sections
-    size_t getNumSections() const { return topology.engine.getNumSections(); }
+    size_t getNumSections() const { return engine.topology.getNumSections(); }
     /// Get sample rate
-    T getSampleRate() const { return topology.design.getSampleRate(); }
+    T getSampleRate() const { return engine.design.getSampleRate(); }
     /// Check if the filter is prepared
-    bool isPrepared() const { return topology.engine.isPrepared(); }
-    /// Get reference to the filter engine (for testing purposes)
-    const typename Topology::Engine& getEngine() const { return topology.engine; }
+    bool isPrepared() const { return engine.topology.isPrepared(); }
+    /// Get reference to the filter topology (for testing purposes)
+    const typename Engine::Topology& getTopology() const { return engine.topology; }
     /// Get reference to the filter design (for testing purposes)
-    const typename Topology::Design& getDesign() const { return topology.design; }
+    const typename Engine::Design& getDesign() const { return engine.design; }
 
     /**
      * @brief Access a specific channel across all sections.
      * @param ch Channel index to access
      * @return A ChannelProxy for the specified channel index
      */
-    ChannelProxy<T, Topology> channel(size_t ch) { return ChannelProxy<T, Topology>(*this, ch); }
+    ChannelProxy<T, Engine> channel(size_t ch) { return ChannelProxy<T, Engine>(*this, ch); }
 
     /**
      * @brief Access a specific section across all channels.
      * @param sec Section index to access
      * @return A SectionProxy for the specified section index
      */
-    SectionProxy<T, Topology> section(size_t sec) { return SectionProxy<T, Topology>(*this, sec); }
+    SectionProxy<T, Engine> section(size_t sec) { return SectionProxy<T, Engine>(*this, sec); }
 
   private:
-    Topology topology;
+    Engine engine;
 };
 } // namespace jnsc
