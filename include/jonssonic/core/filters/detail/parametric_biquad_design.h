@@ -14,16 +14,16 @@
 namespace jnsc::detail {
 
 template <typename T>
-class BiquadDesign {
+class ParametricBiquadDesign {
   public:
     /// Enumeration of the supported filter responses
     enum class Response { Lowpass, Highpass, Bandpass, Allpass, Notch, Peak, Lowshelf, Highshelf };
 
     /// Default constructor
-    BiquadDesign() = default;
+    ParametricBiquadDesign() = default;
 
     /// Default destructor
-    ~BiquadDesign() = default;
+    ~ParametricBiquadDesign() = default;
 
     /**
      * @brief Prepare the design for a specific sample rate.
@@ -64,7 +64,7 @@ class BiquadDesign {
             return;
 
         // Clamp frequency to valid range and convert to radians
-        w0 = FilterLimits<T>::clampFrequency(newFreq).toRadians(fs);
+        w0 = FilterLimits<T>::clampFrequency(newFreq, fs).toRadians(fs);
 
         // Call coefficient update to reflect the new frequency in the filter design
         updateCoeffs();

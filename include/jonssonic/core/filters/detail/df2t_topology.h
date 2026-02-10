@@ -1,5 +1,5 @@
 // JonssonicDSP - A Modular Realtime C++ Audio DSP Library
-// DF1Topology header file
+// DF2TTopology header file
 // SPDX-License-Identifier: MIT
 
 #pragma once
@@ -9,34 +9,35 @@
 
 namespace jnsc::detail {
 /**
- * @brief DF1Topology filter class implementing a multi-channel, multi-section biquad filter in Direct Form I.
+ * @brief DF2TTopology filter class implementing a multi-channel, multi-section biquad filter in Direct Form II
+ * Transposed.
  * @param T Sample data type (e.g., float, double)
  */
 template <typename T>
-class DF1Topology {
+class DF2TTopology {
   public:
     /// Constexprs for coefficient and state variable counts
     static constexpr size_t COEFFS_PER_SECTION = 5;     // b0, b1, b2, a1, a2
-    static constexpr size_t STATE_VARS_PER_SECTION = 4; // x1, x2, y1, y2
+    static constexpr size_t STATE_VARS_PER_SECTION = 2; // s1, s2
 
     /// Default constructor
-    DF1Topology() = default;
+    DF2TTopology() = default;
 
     /**
      * @brief Parameterized constructor that calls @ref prepare.
      * @param newNumChannels Number of channels
      * @param newNumSections Number of second-order sections
      */
-    DF1Topology(size_t newNumChannels, size_t newNumSections) { prepare(newNumChannels, newNumSections); }
+    DF2TTopology(size_t newNumChannels, size_t newNumSections) { prepare(newNumChannels, newNumSections); }
 
     /// Default destructor
-    ~DF1Topology() = default;
+    ~DF2TTopology() = default;
 
     /// No copy nor move semantics
-    DF1Topology(const DF1Topology&) = delete;
-    DF1Topology& operator=(const DF1Topology&) = delete;
-    DF1Topology(DF1Topology&&) = delete;
-    DF1Topology& operator=(DF1Topology&&) = delete;
+    DF2TTopology(const DF2TTopology&) = delete;
+    DF2TTopology& operator=(const DF2TTopology&) = delete;
+    DF2TTopology(DF2TTopology&&) = delete;
+    DF2TTopology& operator=(DF2TTopology&&) = delete;
 
     /**
      * @brief Prepare the filter for processing.
@@ -80,19 +81,15 @@ class DF1Topology {
         T a2 = coeffs[ch][coeffBase + 4];
 
         // Fetch state variables
-        T x1 = state[ch][stateBase + 0];
-        T x2 = state[ch][stateBase + 1];
-        T y1 = state[ch][stateBase + 2];
-        T y2 = state[ch][stateBase + 3];
+        T s1 = state[ch][stateBase + 0];
+        T s2 = state[ch][stateBase + 1];
 
-        // Compute output sample (Direct Form I)
-        T output = b0 * input + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
+        // Compute output sample (Direct Form II Transposed)
+        T output = b0 * input + s1;
 
         // Update state variables
-        state[ch][stateBase + 1] = x1;     // x2 = x1
-        state[ch][stateBase + 0] = input;  // x1 = input
-        state[ch][stateBase + 3] = y1;     // y2 = y1
-        state[ch][stateBase + 2] = output; // y1 = output
+        state[ch][stateBase + 0] = b1 * input - a1 * output + s2;
+        state[ch][stateBase + 1] = b2 * input - a2 * output;
 
         return output;
     }
@@ -153,17 +150,13 @@ class DF1Topology {
 
     // State buffer layout:
     // Channels: audio channels
-    // Samples per channel: numSections * 4 (for x1, x2, y1, y2 per section)
+    // Samples per channel: numSections * 2 (for s1, s2 per section)
     // Writing to channel ch, section s:
-    //   state[ch][s*4 + 0] = x1;
-    //   state[ch][s*4 + 1] = x2;
-    //   state[ch][s*4 + 2] = y1;
-    //   state[ch][s*4 + 3] = y2;
+    //   state[ch][s*2 + 0] = s1;
+    //   state[ch][s*2 + 1] = s2;
     // Reading from channel ch, section s:
-    //   x1 = state[ch][s*4 + 0];
-    //   x2 = state[ch][s*4 + 1];
-    //   y1 = state[ch][s*4 + 2];
-    //   y2 = state[ch][s*4 + 3];
+    //   s1 = state[ch][s*2 + 0];
+    //   s2 = state[ch][s*2 + 1];
     AudioBuffer<T> state;
 };
 } // namespace jnsc::detail

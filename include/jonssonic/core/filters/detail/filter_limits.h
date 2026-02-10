@@ -35,8 +35,8 @@ struct FilterLimits {
         T clampedDbGain = std::clamp(gain.toDecibels(), MIN_GAIN_DB, MAX_GAIN_DB);
         return Gain<T>::Decibels(clampedDbGain);
     }
-    static Frequency<T> clampFrequency(Frequency<T> freq) {
-        T clampedFreq = std::clamp(freq.toNormalized(), MIN_FREQ_NORM, MAX_FREQ_NORM);
+    static Frequency<T> clampFrequency(Frequency<T> freq, T sampleRate) {
+        T clampedFreq = std::clamp(freq.toNormalized(sampleRate), MIN_FREQ_NORM, MAX_FREQ_NORM);
         return Frequency<T>::Normalized(clampedFreq);
     }
     static T clampQ(T q) { return std::clamp(q, MIN_Q, MAX_Q); }

@@ -1,5 +1,5 @@
 // JonssonicDSP - A Modular Realtime C++ Audio DSP Library
-// Unit tests for filter class
+// Unit tests for the filter class
 // SPDX-License-Identifier: MIT
 
 #include <gtest/gtest.h>
@@ -7,15 +7,15 @@
 
 using namespace jnsc;
 
-// List of filter topologies to test
-typedef ::testing::Types<BiquadDF1<float>> FilterTopologies;
+// List of filter variants to test
+typedef ::testing::Types<SeriesBiquadDF2T<float>, SeriesBiquadDF1<float>> FilterVariants;
 
 // Typed test fixture for Filter class
-template <typename Topology>
+template <typename Variant>
 class FilterTest : public ::testing::Test {
   protected:
     static constexpr float sampleRate = 48000.0f;
-    Filter<float, Topology> filter;
+    Filter<float, Variant> filter;
 
     void SetUp() override {}
     void TearDown() override {}
@@ -26,7 +26,7 @@ class FilterTest : public ::testing::Test {
         bool anyChanged = false;
         for (size_t ch = 0; ch < filter.getNumChannels(); ++ch) {
             for (size_t s = 0; s < filter.getNumSections(); ++s) {
-                const auto& coeffs = filter.getEngine().getCoeffs();
+                const auto& coeffs = filter.getEngine().getTopology().getCoeffs();
                 for (size_t i = 0; i < 5; ++i) {
                     if (coeffs[ch][s * 5 + i] != oldCoeffs[ch][s * 5 + i])
                         anyChanged = true;
@@ -37,8 +37,8 @@ class FilterTest : public ::testing::Test {
     }
 };
 
-// Register the test suite with the list of filter topologies
-TYPED_TEST_SUITE(FilterTest, FilterTopologies);
+// Register the test suite with the list of filter variants
+TYPED_TEST_SUITE(FilterTest, FilterVariants);
 
 // =======================================================================
 // Test Preparation
@@ -57,18 +57,19 @@ TYPED_TEST(FilterTest, SetResponse) {
     // Prepare the filter
     this->filter.prepare(1, 1, this->sampleRate);
 
-    // Get references to design and engine for testing
-    auto& design = this->filter.getDesign();
+    // Get reference to the engine, design, and topology for testing
     auto& engine = this->filter.getEngine();
+    auto& design = engine.getDesign();
+    auto& topology = engine.getTopology();
 
     // Set a lowpass response and get intial design and coefficients
-    this->filter.setResponse(Response::Lowpass);
-    auto oldCoeffs = AudioBuffer<float>(engine.getCoeffs());
+    engine.setResponse(Response::Lowpass);
+    auto oldCoeffs = AudioBuffer<float>(topology.getCoeffs());
     auto response = design.getResponse();
     EXPECT_EQ(response, Response::Lowpass);
 
     // Set a highpass response and get updated design and coefficients
-    this->filter.setResponse(Response::Highpass);
+    engine.setResponse(Response::Highpass);
     response = design.getResponse();
     EXPECT_EQ(response, Response::Highpass);
 
@@ -81,19 +82,21 @@ TYPED_TEST(FilterTest, SetFrequency) {
     // Prepare the filter
     float fs = this->sampleRate;
     this->filter.prepare(1, 1, fs);
-    this->filter.setResponse(Response::Lowpass);
 
-    // Get references to design and engine for testing
-    auto& design = this->filter.getDesign();
+    // Get reference to the engine, design, and topology for testing
     auto& engine = this->filter.getEngine();
+    auto& design = engine.getDesign();
+    auto& topology = engine.getTopology();
+
+    engine.setResponse(Response::Lowpass);
 
     // Set a 1000 Hz frequency and get initial design and coefficients
-    this->filter.setFrequency(1000.0_hz);
-    auto oldCoeffs = AudioBuffer<float>(engine.getCoeffs());
+    engine.setFrequency(1000.0_hz);
+    auto oldCoeffs = AudioBuffer<float>(topology.getCoeffs());
     EXPECT_NEAR(1000.0, design.getFrequency().toHertz(fs), 1e-6f);
 
     // Set a 2000 Hz frequency and get updated design and coefficients
-    this->filter.setFrequency(2000.0_hz);
+    engine.setFrequency(2000.0_hz);
     EXPECT_NEAR(2000.0, design.getFrequency().toHertz(fs), 1e-6f);
 
     // Verify that the engines coefficients changed
@@ -105,19 +108,20 @@ TYPED_TEST(FilterTest, SetGain) {
     // Prepare the filter
     float fs = this->sampleRate;
     this->filter.prepare(1, 1, fs);
-    this->filter.setResponse(Response::Peak);
 
-    // Get references to design and engine for testing
-    auto& design = this->filter.getDesign();
+    // Get references to engine, design, and topology for testing
     auto& engine = this->filter.getEngine();
+    auto& design = engine.getDesign();
+    auto& topology = engine.getTopology();
 
     // Set a 6 dB gain and get initial design and coefficients
-    this->filter.setGain(6.0_db);
-    auto oldCoeffs = AudioBuffer<float>(engine.getCoeffs());
+    engine.setResponse(Response::Peak);
+    engine.setGain(6.0_db);
+    auto oldCoeffs = AudioBuffer<float>(topology.getCoeffs());
     EXPECT_NEAR(6.0, design.getGain().toDecibels(), 1e-6f);
 
     // Set a -3 dB gain and get updated design and coefficients
-    this->filter.setGain(-3.0_db);
+    engine.setGain(-3.0_db);
     EXPECT_NEAR(-3.0, design.getGain().toDecibels(), 1e-6f);
 
     // Verify that the engines coefficients changed
@@ -129,19 +133,20 @@ TYPED_TEST(FilterTest, SetQ) {
     // Prepare the filter
     float fs = this->sampleRate;
     this->filter.prepare(1, 1, fs);
-    this->filter.setResponse(Response::Lowpass);
 
-    // Get references to design and engine for testing
-    auto& design = this->filter.getDesign();
+    // Get references to engine, design, and topology for testing
     auto& engine = this->filter.getEngine();
+    auto& design = engine.getDesign();
+    auto& topology = engine.getTopology();
 
     // Set a Q of 0.5 and get initial design and coefficients
-    this->filter.setQ(0.5f);
-    auto oldCoeffs = AudioBuffer<float>(engine.getCoeffs());
+    engine.setResponse(Response::Lowpass);
+    engine.setQ(0.5f);
+    auto oldCoeffs = AudioBuffer<float>(topology.getCoeffs());
     EXPECT_NEAR(0.5f, design.getQ(), 1e-6f);
 
     // Set a Q of 2.0 and get updated design and coefficients
-    this->filter.setQ(2.0f);
+    engine.setQ(2.0f);
     EXPECT_NEAR(2.0f, design.getQ(), 1e-6f);
 
     // Verify that the engines coefficients changed
@@ -152,11 +157,12 @@ TYPED_TEST(FilterTest, ProcessSample) {
     using Response = typename Filter<float, TypeParam>::Response;
     // Prepare the filter
     this->filter.prepare(1, 1, this->sampleRate);
-    this->filter.setResponse(Response::Lowpass);
+    auto& engine = this->filter.getEngine();
+    engine.setResponse(Response::Lowpass);
 
     // Process a sample and verify that the output is not NaN or Inf
     float inputSample = 0.5f;
-    float outputSample = this->filter.processSample(0, inputSample);
+    float outputSample = engine.processSample(0, inputSample);
     EXPECT_FALSE(std::isnan(outputSample));
     EXPECT_FALSE(std::isinf(outputSample));
 }
@@ -167,7 +173,8 @@ TYPED_TEST(FilterTest, ProcessBlock) {
     size_t numChannels = 2;
     size_t numSections = 3;
     this->filter.prepare(numChannels, numSections, this->sampleRate);
-    this->filter.setResponse(Response::Lowpass);
+    auto& engine = this->filter.getEngine();
+    engine.setResponse(Response::Lowpass);
 
     // Create input and output buffers
     size_t numSamples = 4;
@@ -175,10 +182,7 @@ TYPED_TEST(FilterTest, ProcessBlock) {
     AudioBuffer<float> output(numChannels, numSamples);
 
     // Process the block and verify that outputs are not NaN or Inf
-    std::vector<const float*> inputPtrs(numChannels);
-    std::vector<float*> outputPtrs(numChannels);
-
-    this->filter.processBlock(input.readPtrs(), output.writePtrs(), numSamples);
+    engine.processBlock(input.readPtrs(), output.writePtrs(), numSamples);
 
     for (size_t ch = 0; ch < numChannels; ++ch) {
         for (size_t n = 0; n < numSamples; ++n) {
@@ -195,17 +199,17 @@ TYPED_TEST(FilterTest, Reset) {
     // Process some samples to change the state (using dummy input)
     AudioBuffer<float> input(2, 4);
     AudioBuffer<float> output(2, 4);
-    this->filter.processBlock(input.readPtrs(), output.writePtrs(), 4);
+    auto& engine = this->filter.getEngine();
+    engine.processBlock(input.readPtrs(), output.writePtrs(), 4);
 
     // Reset the filter and verify that the state buffers are cleared
     this->filter.reset();
-    const auto& state = this->filter.getEngine().getState();
+    const auto& state = engine.getTopology().getState();
+    size_t numStates = engine.getTopology().STATE_VARS_PER_SECTION;
     for (size_t ch = 0; ch < this->filter.getNumChannels(); ++ch) {
         for (size_t s = 0; s < this->filter.getNumSections(); ++s) {
-            EXPECT_EQ(state[ch][s * 4 + 0], 0.0f); // x1
-            EXPECT_EQ(state[ch][s * 4 + 1], 0.0f); // x2
-            EXPECT_EQ(state[ch][s * 4 + 2], 0.0f); // y1
-            EXPECT_EQ(state[ch][s * 4 + 3], 0.0f); // y2
+            for (size_t i = 0; i < numStates; ++i)
+                EXPECT_EQ(state[ch][s * numStates + i], 0.0f); // x1
         }
     }
 }
@@ -215,13 +219,14 @@ TYPED_TEST(FilterTest, ChannelSectionProxy) {
     float fs = this->sampleRate;
     this->filter.prepare(2, 3, fs);
 
-    // Get references to design and engine for testing
-    auto& design = this->filter.getDesign();
+    // Get references to engine, design, and topology for testing
     auto& engine = this->filter.getEngine();
+    auto& design = engine.getDesign();
+    auto& topology = engine.getTopology();
 
     // Set frequency with channel-section proxy.
-    auto oldCoeffs = AudioBuffer<float>(engine.getCoeffs());
-    this->filter.channel(0).section(1).setFrequency(2000.0_hz);
+    auto oldCoeffs = AudioBuffer<float>(topology.getCoeffs());
+    engine.channel(0).section(1).setFrequency(2000.0_hz);
 
     // Verify the design parameters updated correctly.
     EXPECT_NEAR(2000.0, design.getFrequency().toHertz(fs), 1e-6f);
@@ -231,10 +236,10 @@ TYPED_TEST(FilterTest, ChannelSectionProxy) {
         for (size_t s = 0; s < this->filter.getNumSections(); ++s) {
             if (ch == 0 && s == 1) {
                 // This section should have updated coefficients
-                EXPECT_NE(engine.getCoeffs()[ch][s * 5 + 0], oldCoeffs[ch][s * 5 + 0]);
+                EXPECT_NE(topology.getCoeffs()[ch][s * 5 + 0], oldCoeffs[ch][s * 5 + 0]);
             } else {
                 // Other sections should not have changed
-                EXPECT_EQ(engine.getCoeffs()[ch][s * 5 + 0], oldCoeffs[ch][s * 5 + 0]);
+                EXPECT_EQ(topology.getCoeffs()[ch][s * 5 + 0], oldCoeffs[ch][s * 5 + 0]);
             }
         }
     }
@@ -245,13 +250,14 @@ TYPED_TEST(FilterTest, SectionProxy) {
     float fs = this->sampleRate;
     this->filter.prepare(2, 3, fs);
 
-    // Get references to design and engine for testing
-    auto& design = this->filter.getDesign();
+    // Get references to engine, design, and topology for testing
     auto& engine = this->filter.getEngine();
+    auto& design = engine.getDesign();
+    auto& topology = engine.getTopology();
 
     // Set frequency with section proxy.
-    auto oldCoeffs = AudioBuffer<float>(engine.getCoeffs());
-    this->filter.section(2).setFrequency(2000.0_hz);
+    auto oldCoeffs = AudioBuffer<float>(topology.getCoeffs());
+    engine.section(2).setFrequency(2000.0_hz);
 
     // Verify the design parameters updated correctly.
     EXPECT_NEAR(2000.0, design.getFrequency().toHertz(fs), 1e-6f);
@@ -261,10 +267,10 @@ TYPED_TEST(FilterTest, SectionProxy) {
         for (size_t s = 0; s < this->filter.getNumSections(); ++s) {
             if (s == 2) {
                 // This section should have updated coefficients
-                EXPECT_NE(engine.getCoeffs()[ch][s * 5 + 0], oldCoeffs[ch][s * 5 + 0]);
+                EXPECT_NE(topology.getCoeffs()[ch][s * 5 + 0], oldCoeffs[ch][s * 5 + 0]);
             } else {
                 // Other sections should not have changed
-                EXPECT_EQ(engine.getCoeffs()[ch][s * 5 + 0], oldCoeffs[ch][s * 5 + 0]);
+                EXPECT_EQ(topology.getCoeffs()[ch][s * 5 + 0], oldCoeffs[ch][s * 5 + 0]);
             }
         }
     }
@@ -275,13 +281,14 @@ TYPED_TEST(FilterTest, ChannelProxy) {
     float fs = this->sampleRate;
     this->filter.prepare(2, 3, fs);
 
-    // Get references to design and engine for testing
-    auto& design = this->filter.getDesign();
+    // Get references to engine, design, and topology for testing
     auto& engine = this->filter.getEngine();
+    auto& design = engine.getDesign();
+    auto& topology = engine.getTopology();
 
     // Set frequency with channel proxy.
-    auto oldCoeffs = AudioBuffer<float>(engine.getCoeffs());
-    this->filter.channel(1).setFrequency(2000.0_hz);
+    auto oldCoeffs = AudioBuffer<float>(topology.getCoeffs());
+    engine.channel(1).setFrequency(2000.0_hz);
 
     // Verify the design parameters updated correctly.
     EXPECT_NEAR(2000.0, design.getFrequency().toHertz(fs), 1e-6f);
@@ -291,10 +298,10 @@ TYPED_TEST(FilterTest, ChannelProxy) {
         for (size_t s = 0; s < this->filter.getNumSections(); ++s) {
             if (ch == 1) {
                 // This channel should have updated coefficients
-                EXPECT_NE(engine.getCoeffs()[ch][s * 5 + 0], oldCoeffs[ch][s * 5 + 0]);
+                EXPECT_NE(topology.getCoeffs()[ch][s * 5 + 0], oldCoeffs[ch][s * 5 + 0]);
             } else {
                 // Other channels should not have changed
-                EXPECT_EQ(engine.getCoeffs()[ch][s * 5 + 0], oldCoeffs[ch][s * 5 + 0]);
+                EXPECT_EQ(topology.getCoeffs()[ch][s * 5 + 0], oldCoeffs[ch][s * 5 + 0]);
             }
         }
     }
