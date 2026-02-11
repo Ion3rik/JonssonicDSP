@@ -15,7 +15,11 @@ namespace jnsc::detail {
 template <typename T>
 class DF1BiquadTopology {
   public:
-    /// Constexprs for coefficient and state variable counts
+    /**
+     * @brief Constexprs for coefficient and state variable counts per section.
+     * @param COEFFS_PER_SECTION Number of coefficients per second-order section (b0, b1, b2, a1, a2)
+     * @param STATE_VARS_PER_SECTION Number of state variables per second-order section (x1, x2, y1, y2)
+     */
     static constexpr size_t COEFFS_PER_SECTION = 5;     // b0, b1, b2, a1, a2
     static constexpr size_t STATE_VARS_PER_SECTION = 4; // x1, x2, y1, y2
 

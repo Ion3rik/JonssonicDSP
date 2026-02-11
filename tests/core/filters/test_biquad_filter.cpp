@@ -1,5 +1,5 @@
 // JonssonicDSP - A Modular Realtime C++ Audio DSP Library
-// Unit tests for the biquadFilter class
+// Unit tests for the BiquadFilter class
 // SPDX-License-Identifier: MIT
 
 #include <gtest/gtest.h>
@@ -41,6 +41,12 @@ class BiquadFilterTest : public ::testing::Test {
 
 // Register the test suite with the list of biquadFilter variants
 TYPED_TEST_SUITE(BiquadFilterTest, FilterVariants);
+
+TYPED_TEST(BiquadFilterTest, Routing) {
+    // Test that we can instantiate both series and parallel variants of the onePoleFilter with the Routing wrapper.
+    Series<BiquadFilter<float>> seriesFilter;
+    Parallel<BiquadFilter<float>> parallelFilter;
+}
 
 TYPED_TEST(BiquadFilterTest, PrepareFilter) {
     this->biquadFilter.prepare(2, this->sampleRate, 3);

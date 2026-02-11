@@ -3,31 +3,30 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include "jonssonic/core/filters/detail/bilinear_biquad_design.h"
-#include "jonssonic/core/filters/detail/df1_biquad_topology.h"
-#include "jonssonic/core/filters/detail/df2t_biquad_topology.h"
+#include "jonssonic/core/filters/detail/bilinear_one_pole_design.h"
+#include "jonssonic/core/filters/detail/df1_one_pole_topology.h"
 #include "jonssonic/core/filters/routing.h"
 
 namespace jnsc {
 /**
- * @brief BiquadFilter class that combines filter design and topology to implement a multi-channel,
- * multi-section biquad filter.
+ * @brief OnePoleFilter class that combines filter design and topology to implement a multi-channel,
+ * multi-section one-pole filter.
  * @tparam T Sample data type (e.g., float, double)
- * @tparam Topology Filter topology type (e.g., DF2TBiquadTopology<T>)
- * @tparam Design Filter design type (e.g., BilinearBiquadDesign<T>)
+ * @tparam Topology Filter topology type (e.g., DF1OnePoleTopology<T>)
+ * @tparam Design Filter design type (e.g., BilinearOnePoleDesign<T>)
  * @tparam RoutingType Filter routing type (Series or Parallel)
  */
 template <typename T,
-          typename Topology = detail::DF2TBiquadTopology<T>,
-          typename Design = detail::BilinearBiquadDesign<T>,
+          typename Topology = detail::DF1OnePoleTopology<T>,
+          typename Design = detail::BilinearOnePoleDesign<T>,
           Routing RoutingType = Routing::Series>
-class BiquadFilter {
+class OnePoleFilter {
   public:
     /// Type alias for response types from the design
     using Response = typename Design::Response;
 
     /// Default constructor
-    BiquadFilter() = default;
+    OnePoleFilter() = default;
 
     /**
      * @brief Parameterized constructor that calls @ref prepare.
@@ -35,18 +34,18 @@ class BiquadFilter {
      * @param newSampleRate Sample rate in Hz
      * @param newNumSections Number of second-order sections (default is 1)
      */
-    BiquadFilter(size_t newNumChannels, T newSampleRate, size_t newNumSections = 1) {
+    OnePoleFilter(size_t newNumChannels, T newSampleRate, size_t newNumSections = 1) {
         prepare(newNumChannels, newSampleRate, newNumSections);
     }
 
     /// Default destructor
-    ~BiquadFilter() = default;
+    ~OnePoleFilter() = default;
 
     /// No copy semantics nor move semantics
-    BiquadFilter(const BiquadFilter&) = delete;
-    const BiquadFilter& operator=(const BiquadFilter&) = delete;
-    BiquadFilter(BiquadFilter&&) = delete;
-    const BiquadFilter& operator=(BiquadFilter&&) = delete;
+    OnePoleFilter(const OnePoleFilter&) = delete;
+    const OnePoleFilter& operator=(const OnePoleFilter&) = delete;
+    OnePoleFilter(OnePoleFilter&&) = delete;
+    const OnePoleFilter& operator=(OnePoleFilter&&) = delete;
 
     /// Reset the filter state
     void reset() { topology.reset(); }
@@ -125,17 +124,6 @@ class BiquadFilter {
     }
 
     /**
-     * @brief Set the quality factor (Q) for all channels and sections.
-     * @param newQ Quality factor.
-     */
-    void setQ(T newQ) {
-        design.setQ(newQ);
-        for (size_t ch = 0; ch < topology.getNumChannels(); ++ch)
-            for (size_t section = 0; section < topology.getNumSections(); ++section)
-                applyDesignToTopology(ch, section);
-    }
-
-    /**
      * @brief Set the gain for all channels and sections.
      * @param newGain Gain struct.
      */
@@ -165,92 +153,81 @@ class BiquadFilter {
     ///  Proxy class for setting parameters on a specific channel across all sections.
     class ChannelProxy {
       public:
-        ChannelProxy(BiquadFilter& bqf, size_t ch) : bqf(bqf), ch(ch) {
-            assert(ch < bqf.topology.getNumChannels() && "Channel index out of bounds");
+        ChannelProxy(OnePoleFilter& opf, size_t ch) : opf(opf), ch(ch) {
+            assert(ch < opf.topology.getNumChannels() && "Channel index out of bounds");
         }
 
         // Access specific section of this channel
-        ChannelSectionProxy section(size_t sectionIdx) { return ChannelSectionProxy(bqf, ch, sectionIdx); }
+        ChannelSectionProxy section(size_t sectionIdx) { return ChannelSectionProxy(opf, ch, sectionIdx); }
 
+        /// Set frequency for this channel across all sections.
         void setFrequency(Frequency<T> newFreq) {
-            bqf.design.setFrequency(newFreq);
-            for (size_t s = 0; s < bqf.topology.getNumSections(); ++s)
-                bqf.applyDesignToTopology(ch, s);
+            opf.design.setFrequency(newFreq);
+            for (size_t s = 0; s < opf.topology.getNumSections(); ++s)
+                opf.applyDesignToTopology(ch, s);
         }
 
-        void setQ(T newQ) {
-            bqf.design.setQ(newQ);
-            for (size_t s = 0; s < bqf.topology.getNumSections(); ++s)
-                bqf.applyDesignToTopology(ch, s);
-        }
-
+        /// Set gain for this channel across all sections.
         void setGain(Gain<T> newGain) {
-            bqf.design.setGain(newGain);
-            for (size_t s = 0; s < bqf.topology.getNumSections(); ++s)
-                bqf.applyDesignToTopology(ch, s);
+            opf.design.setGain(newGain);
+            for (size_t s = 0; s < opf.topology.getNumSections(); ++s)
+                opf.applyDesignToTopology(ch, s);
         }
 
       private:
-        BiquadFilter& bqf;
+        OnePoleFilter& opf;
         size_t ch;
     };
 
     /// Proxy class for setting parameters on a specific section across all channels.
     class SectionProxy {
       public:
-        SectionProxy(BiquadFilter& bqf, size_t section) : bqf(bqf), section(section) {}
+        SectionProxy(OnePoleFilter& opf, size_t section) : opf(opf), section(section) {}
 
+        // Access specific channel of this section.
+        ChannelSectionProxy channel(size_t channelIdx) { return ChannelSectionProxy(opf, channelIdx, section); }
+
+        // Set frequency for this section across all channels.
         void setFrequency(Frequency<T> newFreq) {
-            bqf.design.setFrequency(newFreq);
-            for (size_t ch = 0; ch < bqf.topology.getNumChannels(); ++ch)
-                bqf.applyDesignToTopology(ch, section);
+            opf.design.setFrequency(newFreq);
+            for (size_t ch = 0; ch < opf.topology.getNumChannels(); ++ch)
+                opf.applyDesignToTopology(ch, section);
         }
 
-        // Access specific channel of this section
-        ChannelSectionProxy channel(size_t channelIdx) { return ChannelSectionProxy(bqf, channelIdx, section); }
-
-        void setQ(T newQ) {
-            bqf.design.setQ(newQ);
-            for (size_t ch = 0; ch < bqf.topology.getNumChannels(); ++ch)
-                bqf.applyDesignToTopology(ch, section);
-        }
-
+        // Set gain for this section across all channels.
         void setGain(Gain<T> newGain) {
-            bqf.design.setGain(newGain);
-            for (size_t ch = 0; ch < bqf.topology.getNumChannels(); ++ch)
-                bqf.applyDesignToTopology(ch, section);
+            opf.design.setGain(newGain);
+            for (size_t ch = 0; ch < opf.topology.getNumChannels(); ++ch)
+                opf.applyDesignToTopology(ch, section);
         }
 
       private:
-        BiquadFilter& bqf;
+        OnePoleFilter& opf;
         size_t section;
     };
 
     /// Proxy class for setting parameters on a specific channel and section.
     class ChannelSectionProxy {
       public:
-        ChannelSectionProxy(BiquadFilter& bqf, size_t ch, size_t section) : bqf(bqf), ch(ch), section(section) {
-            assert(ch < bqf.topology.getNumChannels() && "Channel index out of bounds");
-            assert(section < bqf.topology.getNumSections() && "Section index out of bounds");
+        ChannelSectionProxy(OnePoleFilter& opf, size_t ch, size_t section) : opf(opf), ch(ch), section(section) {
+            assert(ch < opf.topology.getNumChannels() && "Channel index out of bounds");
+            assert(section < opf.topology.getNumSections() && "Section index out of bounds");
         }
 
+        /// Set frequency for this specific channel and section.
         void setFrequency(Frequency<T> newFreq) {
-            bqf.design.setFrequency(newFreq);
-            bqf.applyDesignToTopology(ch, section);
+            opf.design.setFrequency(newFreq);
+            opf.applyDesignToTopology(ch, section);
         }
 
-        void setQ(T newQ) {
-            bqf.design.setQ(newQ);
-            bqf.applyDesignToTopology(ch, section);
-        }
-
+        /// Set gain for this specific channel and section.
         void setGain(Gain<T> newGain) {
-            bqf.design.setGain(newGain);
-            bqf.applyDesignToTopology(ch, section);
+            opf.design.setGain(newGain);
+            opf.applyDesignToTopology(ch, section);
         }
 
       private:
-        BiquadFilter& bqf;
+        OnePoleFilter& opf;
         size_t ch;
         size_t section;
     };
@@ -276,7 +253,7 @@ class BiquadFilter {
 
     // Function to apply design coefficients to the topology for a specific channel and section
     void applyDesignToTopology(size_t ch, size_t section) {
-        topology.setCoeffs(ch, section, design.getB0(), design.getB1(), design.getB2(), design.getA1(), design.getA2());
+        topology.setCoeffs(ch, section, design.getB0(), design.getB1(), design.getA1());
     }
 };
 

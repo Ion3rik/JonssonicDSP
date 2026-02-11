@@ -21,6 +21,12 @@ class BilinearBiquadDesign {
     /// Default constructor
     BilinearBiquadDesign() = default;
 
+    /**
+     * @brief Parameterized constructor that calls @ref prepare.
+     * @param newSampleRate Sample rate in Hz
+     */
+    BilinearBiquadDesign(T newSampleRate) { prepare(newSampleRate); }
+
     /// Default destructor
     ~BilinearBiquadDesign() = default;
 

@@ -25,8 +25,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Options
-option(JONSSONIC_BUILD_TESTS "Build the tests" ON)
-option(JONSSONIC_BUILD_EXAMPLES "Build example programs" ON)
+option(JONSSONIC_BUILD_TESTS "Build the tests" OFF)
 option(JONSSONIC_BUILD_DOCS "Build documentation" OFF)
 
 # Configure Doxyfile with project metadata

@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include "jonssonic/core/filters/biquad_filter.h" // Include the filter definitions
-
 namespace jnsc {
 
 /// Routing enum for filter output selection
