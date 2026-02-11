@@ -42,6 +42,15 @@ class BiquadFilter {
     /// Default destructor
     ~BiquadFilter() = default;
 
+    /// No copy semantics nor move semantics
+    BiquadFilter(const BiquadFilter&) = delete;
+    const BiquadFilter& operator=(const BiquadFilter&) = delete;
+    BiquadFilter(BiquadFilter&&) = delete;
+    const BiquadFilter& operator=(BiquadFilter&&) = delete;
+
+    /// Reset the filter state
+    void reset() { topology.reset(); }
+
     /**
      * Prepare the filter engine for processing.
      * @param newNumChannels Number of channels
@@ -53,9 +62,6 @@ class BiquadFilter {
         topology.prepare(newNumChannels, newNumSections);
         design.prepare(newSampleRate);
     }
-
-    /// Reset the filter state
-    void reset() { topology.reset(); }
 
     /**
      * @brief Process a single sample for a specific channel through all sections of the filter.
@@ -144,6 +150,14 @@ class BiquadFilter {
     const Topology& getTopology() const { return topology; }
     /// Get reference to the design for direct access (e.g., for testing)
     const Design& getDesign() const { return design; }
+    /// Check if the filter is prepared
+    bool isPrepared() const { return topology.isPrepared(); }
+    /// Get the number of channels
+    size_t getNumChannels() const { return topology.getNumChannels(); }
+    /// Get the sample rate from the design
+    T getSampleRate() const { return design.getSampleRate(); }
+    /// Get the number of sections
+    size_t getNumSections() const { return topology.getNumSections(); }
 
     /// Forward declaration of proxy classes for channel and section parameter setting.
     class ChannelSectionProxy;
