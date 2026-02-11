@@ -4,8 +4,8 @@
 
 #pragma once
 #include "jonssonic/core/filters/detail/bilinear_biquad_design.h"
-#include "jonssonic/core/filters/detail/df1_topology.h"
-#include "jonssonic/core/filters/detail/df2t_topology.h"
+#include "jonssonic/core/filters/detail/df1_biquad_topology.h"
+#include "jonssonic/core/filters/detail/df2t_biquad_topology.h"
 #include "jonssonic/core/filters/routing.h"
 
 namespace jnsc {
@@ -18,7 +18,7 @@ namespace jnsc {
  * @tparam RoutingType Filter routing type (Series or Parallel)
  */
 template <typename T,
-          typename Topology = detail::DF2TTopology<T>,
+          typename Topology = detail::DF2TBiquadTopology<T>,
           typename Design = detail::BilinearBiquadDesign<T>,
           Routing RoutingType = Routing::Series>
 class BiquadFilter {

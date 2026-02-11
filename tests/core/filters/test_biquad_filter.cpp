@@ -8,8 +8,8 @@
 using namespace jnsc;
 
 // List of biquadFilter variants to test
-typedef ::testing::Types<BiquadFilter<float, detail::DF2TTopology<float>>,
-                         BiquadFilter<float, detail::DF1Topology<float>>>
+typedef ::testing::Types<BiquadFilter<float, detail::DF2TBiquadTopology<float>>,
+                         BiquadFilter<float, detail::DF1BiquadTopology<float>>>
     FilterVariants;
 
 // Typed test fixture for Filter class

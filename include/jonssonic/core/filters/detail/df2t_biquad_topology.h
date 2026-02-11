@@ -1,5 +1,5 @@
 // JonssonicDSP - A Modular Realtime C++ Audio DSP Library
-// DF2TTopology header file
+// DF2TBiquadTopology header file
 // SPDX-License-Identifier: MIT
 
 #pragma once
@@ -9,35 +9,35 @@
 
 namespace jnsc::detail {
 /**
- * @brief DF2TTopology filter class implementing a multi-channel, multi-section biquad filter in Direct Form II
+ * @brief DF2TBiquadTopology filter class implementing a multi-channel, multi-section biquad filter in Direct Form II
  * Transposed.
  * @param T Sample data type (e.g., float, double)
  */
 template <typename T>
-class DF2TTopology {
+class DF2TBiquadTopology {
   public:
     /// Constexprs for coefficient and state variable counts
     static constexpr size_t COEFFS_PER_SECTION = 5;     // b0, b1, b2, a1, a2
     static constexpr size_t STATE_VARS_PER_SECTION = 2; // s1, s2
 
     /// Default constructor
-    DF2TTopology() = default;
+    DF2TBiquadTopology() = default;
 
     /**
      * @brief Parameterized constructor that calls @ref prepare.
      * @param newNumChannels Number of channels
      * @param newNumSections Number of second-order sections
      */
-    DF2TTopology(size_t newNumChannels, size_t newNumSections) { prepare(newNumChannels, newNumSections); }
+    DF2TBiquadTopology(size_t newNumChannels, size_t newNumSections) { prepare(newNumChannels, newNumSections); }
 
     /// Default destructor
-    ~DF2TTopology() = default;
+    ~DF2TBiquadTopology() = default;
 
     /// No copy nor move semantics
-    DF2TTopology(const DF2TTopology&) = delete;
-    DF2TTopology& operator=(const DF2TTopology&) = delete;
-    DF2TTopology(DF2TTopology&&) = delete;
-    DF2TTopology& operator=(DF2TTopology&&) = delete;
+    DF2TBiquadTopology(const DF2TBiquadTopology&) = delete;
+    DF2TBiquadTopology& operator=(const DF2TBiquadTopology&) = delete;
+    DF2TBiquadTopology(DF2TBiquadTopology&&) = delete;
+    DF2TBiquadTopology& operator=(DF2TBiquadTopology&&) = delete;
 
     /**
      * @brief Prepare the filter for processing.
