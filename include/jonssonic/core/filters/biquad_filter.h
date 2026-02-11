@@ -1,40 +1,55 @@
 // JonssonicDSP - A Modular Realtime C++ Audio DSP Library
-// Direct Form I biquad filter engine header file
+// Biquad filter class combining design and topology for multi-channel, multi-section filtering
 // SPDX-License-Identifier: MIT
 
 #pragma once
+#include "jonssonic/core/filters/detail/bilinear_biquad_design.h"
 #include "jonssonic/core/filters/detail/df1_topology.h"
 #include "jonssonic/core/filters/detail/df2t_topology.h"
-#include "jonssonic/core/filters/detail/parametric_biquad_design.h"
+#include "jonssonic/core/filters/routing.h"
 
-namespace jnsc::detail {
-/// Routing enum for filter output selection
-enum class Routing { Series, Parallel };
-
+namespace jnsc {
 /**
- * @brief ParametricBiquadEngine class that combines filter design and topology to implement a multi-channel,
+ * @brief BiquadFilter class that combines filter design and topology to implement a multi-channel,
  * multi-section biquad filter.
  * @tparam T Sample data type (e.g., float, double)
  * @tparam Topology Filter topology type (e.g., DF1Topology, DF2TTopology)
+ * @tparam Design Filter design type (e.g., BilinearBiquadDesign)
  * @tparam RoutingType Filter routing type (Series or Parallel)
  */
-template <typename T, typename Topology = DF2TTopology<T>, Routing RoutingType = Routing::Series>
-class ParametricBiquadEngine {
+template <typename T,
+          typename Topology = detail::DF2TTopology<T>,
+          typename Design = detail::BilinearBiquadDesign<T>,
+          Routing RoutingType = Routing::Series>
+class BiquadFilter {
   public:
-    /// Type alias for the design component
-    using Design = detail::ParametricBiquadDesign<T>;
-
     /// Type alias for response types from the design
     using Response = typename Design::Response;
+
+    /// Default constructor
+    BiquadFilter() = default;
+
+    /**
+     * @brief Parameterized constructor that calls @ref prepare.
+     * @param newNumChannels Number of channels
+     * @param newSampleRate Sample rate in Hz
+     * @param newNumSections Number of second-order sections (default is 1)
+     */
+    BiquadFilter(size_t newNumChannels, T newSampleRate, size_t newNumSections = 1) {
+        prepare(newNumChannels, newSampleRate, newNumSections);
+    }
+
+    /// Default destructor
+    ~BiquadFilter() = default;
 
     /**
      * Prepare the filter engine for processing.
      * @param newNumChannels Number of channels
-     * @param newNumSections Number of second-order sections
      * @param newSampleRate Sample rate in Hz
+     * @param newNumSections Number of second-order sections (default is 1)
      * @note Prepares both the topology and design components of the engine.
      */
-    void prepare(size_t newNumChannels, size_t newNumSections, T newSampleRate) {
+    void prepare(size_t newNumChannels, T newSampleRate, size_t newNumSections = 1) {
         topology.prepare(newNumChannels, newNumSections);
         design.prepare(newSampleRate);
     }
@@ -130,12 +145,13 @@ class ParametricBiquadEngine {
     /// Get reference to the design for direct access (e.g., for testing)
     const Design& getDesign() const { return design; }
 
+    /// Forward declaration of proxy classes for channel and section parameter setting.
     class ChannelSectionProxy;
 
-    /// @brief Proxy class for setting parameters on a specific channel across all sections.
+    ///  Proxy class for setting parameters on a specific channel across all sections.
     class ChannelProxy {
       public:
-        ChannelProxy(ParametricBiquadEngine& eng, size_t ch) : eng(eng), ch(ch) {
+        ChannelProxy(BiquadFilter& eng, size_t ch) : eng(eng), ch(ch) {
             assert(ch < eng.topology.getNumChannels() && "Channel index out of bounds");
         }
 
@@ -161,14 +177,14 @@ class ParametricBiquadEngine {
         }
 
       private:
-        ParametricBiquadEngine& eng;
+        BiquadFilter& eng;
         size_t ch;
     };
 
     /// Proxy class for setting parameters on a specific section across all channels.
     class SectionProxy {
       public:
-        SectionProxy(ParametricBiquadEngine& eng, size_t section) : eng(eng), section(section) {}
+        SectionProxy(BiquadFilter& eng, size_t section) : eng(eng), section(section) {}
 
         void setFrequency(Frequency<T> newFreq) {
             eng.design.setFrequency(newFreq);
@@ -192,15 +208,14 @@ class ParametricBiquadEngine {
         }
 
       private:
-        ParametricBiquadEngine& eng;
+        BiquadFilter& eng;
         size_t section;
     };
 
     /// Proxy class for setting parameters on a specific channel and section.
     class ChannelSectionProxy {
       public:
-        ChannelSectionProxy(ParametricBiquadEngine& eng, size_t ch, size_t section)
-            : eng(eng), ch(ch), section(section) {
+        ChannelSectionProxy(BiquadFilter& eng, size_t ch, size_t section) : eng(eng), ch(ch), section(section) {
             assert(ch < eng.topology.getNumChannels() && "Channel index out of bounds");
             assert(section < eng.topology.getNumSections() && "Section index out of bounds");
         }
@@ -221,14 +236,23 @@ class ParametricBiquadEngine {
         }
 
       private:
-        ParametricBiquadEngine& eng;
+        BiquadFilter& eng;
         size_t ch;
         size_t section;
     };
 
-    /// Access a specific channel proxy
+    /**
+     * @brief Access a specific channel proxy for setting parameters across all sections of that channel.
+     * @param ch Channel index.
+     * @return ChannelProxy instance for the specified channel.
+     */
     ChannelProxy channel(size_t ch) { return ChannelProxy(*this, ch); }
-    /// Access a specific section proxy
+
+    /**
+     * @brief Access a specific section proxy for setting parameters across all channels of that section.
+     * @param section Section index.
+     * @return SectionProxy instance for the specified section.
+     */
     SectionProxy section(size_t section) { return SectionProxy(*this, section); }
 
   private:
@@ -242,4 +266,4 @@ class ParametricBiquadEngine {
     }
 };
 
-} // namespace jnsc::detail
+} // namespace jnsc

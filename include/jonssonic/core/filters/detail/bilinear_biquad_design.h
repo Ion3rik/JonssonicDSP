@@ -1,6 +1,5 @@
 // Jonssonic - A Modular Realtime C++ Audio DSP Library
-// Biquad filter coefficient computation functions
-// Based on Robert Bristow-Johnson's Audio EQ Cookbook
+// Bilinear transform-based biquad filter design class for calculating filter coefficients from parameters.
 // SPDX-License-Identifier: MIT
 
 #pragma once
@@ -14,16 +13,16 @@
 namespace jnsc::detail {
 
 template <typename T>
-class ParametricBiquadDesign {
+class BilinearBiquadDesign {
   public:
     /// Enumeration of the supported filter responses
     enum class Response { Lowpass, Highpass, Bandpass, Allpass, Notch, Peak, Lowshelf, Highshelf };
 
     /// Default constructor
-    ParametricBiquadDesign() = default;
+    BilinearBiquadDesign() = default;
 
     /// Default destructor
-    ~ParametricBiquadDesign() = default;
+    ~BilinearBiquadDesign() = default;
 
     /**
      * @brief Prepare the design for a specific sample rate.

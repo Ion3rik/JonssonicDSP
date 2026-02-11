@@ -1,21 +1,23 @@
 // JonssonicDSP - A Modular Realtime C++ Audio DSP Library
-// Unit tests for the filter class
+// Unit tests for the biquadFilter class
 // SPDX-License-Identifier: MIT
 
 #include <gtest/gtest.h>
-#include <jonssonic/core/filters/filter.h>
+#include <jonssonic/core/filters/biquad_filter.h>
 
 using namespace jnsc;
 
-// List of filter variants to test
-typedef ::testing::Types<SeriesBiquadDF2T<float>, SeriesBiquadDF1<float>> FilterVariants;
+// List of biquadFilter variants to test
+typedef ::testing::Types<BiquadFilter<float, detail::DF2TTopology<float>>,
+                         BiquadFilter<float, detail::DF1Topology<float>>>
+    FilterVariants;
 
 // Typed test fixture for Filter class
 template <typename Variant>
-class FilterTest : public ::testing::Test {
+class BiquadFilterTest : public ::testing::Test {
   protected:
     static constexpr float sampleRate = 48000.0f;
-    Filter<float, Variant> filter;
+    Variant biquadFilter;
 
     void SetUp() override {}
     void TearDown() override {}
@@ -24,41 +26,38 @@ class FilterTest : public ::testing::Test {
         // This function checks that at least one coefficient is different after a parameter change, which indicates
         // that the design is correctly updating the engine coefficients.
         bool anyChanged = false;
-        for (size_t ch = 0; ch < filter.getNumChannels(); ++ch) {
-            for (size_t s = 0; s < filter.getNumSections(); ++s) {
-                const auto& coeffs = filter.getEngine().getTopology().getCoeffs();
+        for (size_t ch = 0; ch < biquadFilter.getNumChannels(); ++ch) {
+            for (size_t s = 0; s < biquadFilter.getNumSections(); ++s) {
+                const auto& coeffs = biquadFilter.getEngine().getTopology().getCoeffs();
                 for (size_t i = 0; i < 5; ++i) {
                     if (coeffs[ch][s * 5 + i] != oldCoeffs[ch][s * 5 + i])
                         anyChanged = true;
                 }
             }
         }
-        EXPECT_TRUE(anyChanged) << "No filter coefficients changed after parameter update!";
+        EXPECT_TRUE(anyChanged) << "No biquadFilter coefficients changed after parameter update!";
     }
 };
 
-// Register the test suite with the list of filter variants
-TYPED_TEST_SUITE(FilterTest, FilterVariants);
+// Register the test suite with the list of biquadFilter variants
+TYPED_TEST_SUITE(BiquadFilterTest, FilterVariants);
 
-// =======================================================================
-// Test Preparation
-// =======================================================================
-TYPED_TEST(FilterTest, PrepareFilter) {
-    this->filter.prepare(2, 3, this->sampleRate);
+TYPED_TEST(BiquadFilterTest, PrepareFilter) {
+    this->biquadFilter.prepare(2, 3, this->sampleRate);
 
-    EXPECT_TRUE(this->filter.isPrepared());
-    EXPECT_EQ(this->filter.getNumChannels(), 2);
-    EXPECT_EQ(this->filter.getNumSections(), 3);
-    EXPECT_EQ(this->filter.getSampleRate(), this->sampleRate);
+    EXPECT_TRUE(this->biquadFilter.isPrepared());
+    EXPECT_EQ(this->biquadFilter.getNumChannels(), 2);
+    EXPECT_EQ(this->biquadFilter.getNumSections(), 3);
+    EXPECT_EQ(this->biquadFilter.getSampleRate(), this->sampleRate);
 }
 
-TYPED_TEST(FilterTest, SetResponse) {
-    using Response = typename Filter<float, TypeParam>::Response;
-    // Prepare the filter
-    this->filter.prepare(1, 1, this->sampleRate);
+TYPED_TEST(BiquadFilterTest, SetResponse) {
+    using Response = typename TypeParam::Response;
+    // Prepare the biquadFilter
+    this->biquadFilter.prepare(1, 1, this->sampleRate);
 
     // Get reference to the engine, design, and topology for testing
-    auto& engine = this->filter.getEngine();
+    auto& engine = this->biquadFilter.getEngine();
     auto& design = engine.getDesign();
     auto& topology = engine.getTopology();
 
@@ -77,14 +76,14 @@ TYPED_TEST(FilterTest, SetResponse) {
     this->coeffcientsChanged(oldCoeffs);
 }
 
-TYPED_TEST(FilterTest, SetFrequency) {
+TYPED_TEST(BiquadFilterTest, SetFrequency) {
     using Response = typename Filter<float, TypeParam>::Response;
-    // Prepare the filter
+    // Prepare the biquadFilter
     float fs = this->sampleRate;
-    this->filter.prepare(1, 1, fs);
+    this->biquadFilter.prepare(1, 1, fs);
 
     // Get reference to the engine, design, and topology for testing
-    auto& engine = this->filter.getEngine();
+    auto& engine = this->biquadFilter.getEngine();
     auto& design = engine.getDesign();
     auto& topology = engine.getTopology();
 
@@ -103,14 +102,14 @@ TYPED_TEST(FilterTest, SetFrequency) {
     this->coeffcientsChanged(oldCoeffs);
 }
 
-TYPED_TEST(FilterTest, SetGain) {
+TYPED_TEST(BiquadFilterTest, SetGain) {
     using Response = typename Filter<float, TypeParam>::Response;
-    // Prepare the filter
+    // Prepare the biquadFilter
     float fs = this->sampleRate;
-    this->filter.prepare(1, 1, fs);
+    this->biquadFilter.prepare(1, 1, fs);
 
     // Get references to engine, design, and topology for testing
-    auto& engine = this->filter.getEngine();
+    auto& engine = this->biquadFilter.getEngine();
     auto& design = engine.getDesign();
     auto& topology = engine.getTopology();
 
@@ -128,14 +127,14 @@ TYPED_TEST(FilterTest, SetGain) {
     this->coeffcientsChanged(oldCoeffs);
 }
 
-TYPED_TEST(FilterTest, SetQ) {
+TYPED_TEST(BiquadFilterTest, SetQ) {
     using Response = typename Filter<float, TypeParam>::Response;
-    // Prepare the filter
+    // Prepare the biquadFilter
     float fs = this->sampleRate;
-    this->filter.prepare(1, 1, fs);
+    this->biquadFilter.prepare(1, 1, fs);
 
     // Get references to engine, design, and topology for testing
-    auto& engine = this->filter.getEngine();
+    auto& engine = this->biquadFilter.getEngine();
     auto& design = engine.getDesign();
     auto& topology = engine.getTopology();
 
@@ -153,11 +152,11 @@ TYPED_TEST(FilterTest, SetQ) {
     this->coeffcientsChanged(oldCoeffs);
 }
 
-TYPED_TEST(FilterTest, ProcessSample) {
+TYPED_TEST(BiquadFilterTest, ProcessSample) {
     using Response = typename Filter<float, TypeParam>::Response;
-    // Prepare the filter
-    this->filter.prepare(1, 1, this->sampleRate);
-    auto& engine = this->filter.getEngine();
+    // Prepare the biquadFilter
+    this->biquadFilter.prepare(1, 1, this->sampleRate);
+    auto& engine = this->biquadFilter.getEngine();
     engine.setResponse(Response::Lowpass);
 
     // Process a sample and verify that the output is not NaN or Inf
@@ -167,13 +166,13 @@ TYPED_TEST(FilterTest, ProcessSample) {
     EXPECT_FALSE(std::isinf(outputSample));
 }
 
-TYPED_TEST(FilterTest, ProcessBlock) {
+TYPED_TEST(BiquadFilterTest, ProcessBlock) {
     using Response = typename Filter<float, TypeParam>::Response;
-    // Prepare the filter
+    // Prepare the biquadFilter
     size_t numChannels = 2;
     size_t numSections = 3;
-    this->filter.prepare(numChannels, numSections, this->sampleRate);
-    auto& engine = this->filter.getEngine();
+    this->biquadFilter.prepare(numChannels, numSections, this->sampleRate);
+    auto& engine = this->biquadFilter.getEngine();
     engine.setResponse(Response::Lowpass);
 
     // Create input and output buffers
@@ -192,35 +191,35 @@ TYPED_TEST(FilterTest, ProcessBlock) {
     }
 }
 
-TYPED_TEST(FilterTest, Reset) {
-    // Prepare the filter and set some state
-    this->filter.prepare(2, 3, this->sampleRate);
+TYPED_TEST(BiquadFilterTest, Reset) {
+    // Prepare the biquadFilter and set some state
+    this->biquadFilter.prepare(2, 3, this->sampleRate);
 
     // Process some samples to change the state (using dummy input)
     AudioBuffer<float> input(2, 4);
     AudioBuffer<float> output(2, 4);
-    auto& engine = this->filter.getEngine();
+    auto& engine = this->biquadFilter.getEngine();
     engine.processBlock(input.readPtrs(), output.writePtrs(), 4);
 
-    // Reset the filter and verify that the state buffers are cleared
-    this->filter.reset();
+    // Reset the biquadFilter and verify that the state buffers are cleared
+    this->biquadFilter.reset();
     const auto& state = engine.getTopology().getState();
     size_t numStates = engine.getTopology().STATE_VARS_PER_SECTION;
-    for (size_t ch = 0; ch < this->filter.getNumChannels(); ++ch) {
-        for (size_t s = 0; s < this->filter.getNumSections(); ++s) {
+    for (size_t ch = 0; ch < this->biquadFilter.getNumChannels(); ++ch) {
+        for (size_t s = 0; s < this->biquadFilter.getNumSections(); ++s) {
             for (size_t i = 0; i < numStates; ++i)
                 EXPECT_EQ(state[ch][s * numStates + i], 0.0f); // x1
         }
     }
 }
 
-TYPED_TEST(FilterTest, ChannelSectionProxy) {
-    // Prepare the filter
+TYPED_TEST(BiquadFilterTest, ChannelSectionProxy) {
+    // Prepare the biquadFilter
     float fs = this->sampleRate;
-    this->filter.prepare(2, 3, fs);
+    this->biquadFilter.prepare(2, 3, fs);
 
     // Get references to engine, design, and topology for testing
-    auto& engine = this->filter.getEngine();
+    auto& engine = this->biquadFilter.getEngine();
     auto& design = engine.getDesign();
     auto& topology = engine.getTopology();
 
@@ -232,8 +231,8 @@ TYPED_TEST(FilterTest, ChannelSectionProxy) {
     EXPECT_NEAR(2000.0, design.getFrequency().toHertz(fs), 1e-6f);
 
     // Verify that only the coefficients for channel 0, section 1 were updated.
-    for (size_t ch = 0; ch < this->filter.getNumChannels(); ++ch) {
-        for (size_t s = 0; s < this->filter.getNumSections(); ++s) {
+    for (size_t ch = 0; ch < this->biquadFilter.getNumChannels(); ++ch) {
+        for (size_t s = 0; s < this->biquadFilter.getNumSections(); ++s) {
             if (ch == 0 && s == 1) {
                 // This section should have updated coefficients
                 EXPECT_NE(topology.getCoeffs()[ch][s * 5 + 0], oldCoeffs[ch][s * 5 + 0]);
@@ -245,13 +244,13 @@ TYPED_TEST(FilterTest, ChannelSectionProxy) {
     }
 }
 
-TYPED_TEST(FilterTest, SectionProxy) {
-    // Prepare the filter
+TYPED_TEST(BiquadFilterTest, SectionProxy) {
+    // Prepare the biquadFilter
     float fs = this->sampleRate;
-    this->filter.prepare(2, 3, fs);
+    this->biquadFilter.prepare(2, 3, fs);
 
     // Get references to engine, design, and topology for testing
-    auto& engine = this->filter.getEngine();
+    auto& engine = this->biquadFilter.getEngine();
     auto& design = engine.getDesign();
     auto& topology = engine.getTopology();
 
@@ -263,8 +262,8 @@ TYPED_TEST(FilterTest, SectionProxy) {
     EXPECT_NEAR(2000.0, design.getFrequency().toHertz(fs), 1e-6f);
 
     // Verify that only the coefficients for section 2 were updated across all channels.
-    for (size_t ch = 0; ch < this->filter.getNumChannels(); ++ch) {
-        for (size_t s = 0; s < this->filter.getNumSections(); ++s) {
+    for (size_t ch = 0; ch < this->biquadFilter.getNumChannels(); ++ch) {
+        for (size_t s = 0; s < this->biquadFilter.getNumSections(); ++s) {
             if (s == 2) {
                 // This section should have updated coefficients
                 EXPECT_NE(topology.getCoeffs()[ch][s * 5 + 0], oldCoeffs[ch][s * 5 + 0]);
@@ -276,13 +275,13 @@ TYPED_TEST(FilterTest, SectionProxy) {
     }
 }
 
-TYPED_TEST(FilterTest, ChannelProxy) {
-    // Prepare the filter
+TYPED_TEST(BiquadFilterTest, ChannelProxy) {
+    // Prepare the biquadFilter
     float fs = this->sampleRate;
-    this->filter.prepare(2, 3, fs);
+    this->biquadFilter.prepare(2, 3, fs);
 
     // Get references to engine, design, and topology for testing
-    auto& engine = this->filter.getEngine();
+    auto& engine = this->biquadFilter.getEngine();
     auto& design = engine.getDesign();
     auto& topology = engine.getTopology();
 
@@ -294,8 +293,8 @@ TYPED_TEST(FilterTest, ChannelProxy) {
     EXPECT_NEAR(2000.0, design.getFrequency().toHertz(fs), 1e-6f);
 
     // Verify that only the coefficients for channel 1 were updated across all sections.
-    for (size_t ch = 0; ch < this->filter.getNumChannels(); ++ch) {
-        for (size_t s = 0; s < this->filter.getNumSections(); ++s) {
+    for (size_t ch = 0; ch < this->biquadFilter.getNumChannels(); ++ch) {
+        for (size_t s = 0; s < this->biquadFilter.getNumSections(); ++s) {
             if (ch == 1) {
                 // This channel should have updated coefficients
                 EXPECT_NE(topology.getCoeffs()[ch][s * 5 + 0], oldCoeffs[ch][s * 5 + 0]);
