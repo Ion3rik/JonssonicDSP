@@ -145,6 +145,11 @@ class Flanger {
         }
     }
 
+    /// Get number of channels
+    size_t getNumChannels() const { return numChannels; }
+    /// Get sample rate
+    T getSampleRate() const { return sampleRate; }
+
   private:
     // Config variables
     size_t numChannels = 0;

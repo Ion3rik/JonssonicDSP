@@ -6,7 +6,7 @@
 #include <jonssonic/core/common/dsp_param.h>
 #include <jonssonic/core/common/quantities.h>
 #include <jonssonic/core/delays/delay_line.h>
-#include <jonssonic/core/filters/first_order_filter.h>
+#include <jonssonic/core/filters/one_pole_filter.h>
 #include <jonssonic/core/generators/oscillator.h>
 #include <jonssonic/utils/math_utils.h>
 
@@ -63,8 +63,10 @@ class ModulatedDelayStage {
         delayLine.prepare(numChannels, sampleRate, newMaxDelay);
 
         // Prepare damping filter if enabled
-        if constexpr (UseDamping)
-            dampingFilter.prepare(numChannels, sampleRate, FirstOrderType::Lowpass);
+        if constexpr (UseDamping) {
+            dampingFilter.prepare(numChannels, sampleRate);
+            dampingFilter.setResponse(OnePoleFilter<T>::Response::Lowpass);
+        }
 
         // Prepare internal LFO if enabled
         if constexpr (UseInternalLFO)
@@ -184,7 +186,7 @@ class ModulatedDelayStage {
      */
     void setDampingCutoff(Frequency<T> newCutoff) {
         if constexpr (UseDamping) {
-            dampingFilter.setFreq(newCutoff);
+            dampingFilter.setFrequency(newCutoff);
         }
     }
 
@@ -269,7 +271,7 @@ class ModulatedDelayStage {
 
     // Processing components
     DelayLine<T, Interpolator> delayLine;
-    FirstOrderFilter<T> dampingFilter;
+    OnePoleFilter<T> dampingFilter;
     Oscillator<T> lfo;
 
     // Parameters

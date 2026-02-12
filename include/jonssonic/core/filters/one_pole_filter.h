@@ -174,6 +174,14 @@ class OnePoleFilter {
         // Access specific section of this channel
         ChannelSectionProxy section(size_t sectionIdx) { return ChannelSectionProxy(opf, ch, sectionIdx); }
 
+        /// Set the response for this channel across all sections.
+        void setResponse(Response newResponse) {
+            for (size_t s = 0; s < opf.topology.getNumSections(); ++s) {
+                opf.design.setResponse(ch, s, newResponse);
+                opf.applyDesignToTopology(ch, s);
+            }
+        }
+
         /// Set frequency for this channel across all sections.
         void setFrequency(Frequency<T> newFreq) {
             for (size_t s = 0; s < opf.topology.getNumSections(); ++s) {
@@ -203,6 +211,14 @@ class OnePoleFilter {
         // Access specific channel of this section.
         ChannelSectionProxy channel(size_t channelIdx) { return ChannelSectionProxy(opf, channelIdx, section); }
 
+        /// Set the response for this section across all channels.
+        void setResponse(Response newResponse) {
+            for (size_t ch = 0; ch < opf.topology.getNumChannels(); ++ch) {
+                opf.design.setResponse(ch, section, newResponse);
+                opf.applyDesignToTopology(ch, section);
+            }
+        }
+
         // Set frequency for this section across all channels.
         void setFrequency(Frequency<T> newFreq) {
             for (size_t ch = 0; ch < opf.topology.getNumChannels(); ++ch) {
@@ -230,6 +246,12 @@ class OnePoleFilter {
         ChannelSectionProxy(OnePoleFilter& opf, size_t ch, size_t section) : opf(opf), ch(ch), section(section) {
             assert(ch < opf.getNumChannels() && "Channel index out of bounds");
             assert(section < opf.getNumSections() && "Section index out of bounds");
+        }
+
+        /// Set response for this specific channel and section.
+        void setResponse(Response newResponse) {
+            opf.design.setResponse(ch, section, newResponse);
+            opf.applyDesignToTopology(ch, section);
         }
 
         /// Set frequency for this specific channel and section.

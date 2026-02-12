@@ -40,9 +40,7 @@ class SaturationStage {
      * @param newNumChannels Number of channels
      * @param newSampleRate Sample rate in Hz
      */
-    SaturationStage(size_t newNumChannels, T newSampleRate) {
-        prepare(newNumChannels, newSampleRate);
-    }
+    SaturationStage(size_t newNumChannels, T newSampleRate) { prepare(newNumChannels, newSampleRate); }
 
     /// Default destructor.
     ~SaturationStage() = default;
@@ -108,13 +106,12 @@ class SaturationStage {
 
             // Oversampled waveshaping
             if constexpr (OversamplingFactor > 1) {
-                oversampledProcessor.processBlock(
-                    output,
-                    output,
-                    numSamples,
-                    [this](const T* const* in, T* const* out, size_t oversampledSamples) {
-                        waveShaper.processBlock(in, out, oversampledSamples);
-                    });
+                oversampledProcessor.processBlock(output,
+                                                  output,
+                                                  numSamples,
+                                                  [this](const T* const* in, T* const* out, size_t oversampledSamples) {
+                                                      waveShaper.processBlock(in, out, oversampledSamples);
+                                                  });
 
             }
             // No oversampling
@@ -126,13 +123,12 @@ class SaturationStage {
         if constexpr (!PreFilter) {
             // Oversampled waveshaping
             if constexpr (OversamplingFactor > 1) {
-                oversampledProcessor.processBlock(
-                    input,
-                    output,
-                    numSamples,
-                    [this](const T* const* in, T* const* out, size_t oversampledSamples) {
-                        waveShaper.processBlock(in, out, oversampledSamples);
-                    });
+                oversampledProcessor.processBlock(input,
+                                                  output,
+                                                  numSamples,
+                                                  [this](const T* const* in, T* const* out, size_t oversampledSamples) {
+                                                      waveShaper.processBlock(in, out, oversampledSamples);
+                                                  });
 
             }
             // No oversampling
@@ -156,18 +152,14 @@ class SaturationStage {
      * @param newGain New input gain
      * @param skipSmoothing If true, skip smoothing and set immediately.
      */
-    void setDrive(Gain<T> newGain, bool skipSmoothing = false) {
-        waveShaper.setInputGain(newGain, skipSmoothing);
-    }
+    void setDrive(Gain<T> newGain, bool skipSmoothing = false) { waveShaper.setInputGain(newGain, skipSmoothing); }
 
     /**
      * @brief Set the bias amount.
      * @param newBias New bias amount
      * @param skipSmoothing If true, skip smoothing and set immediately.
      */
-    void setBias(T newBias, bool skipSmoothing = false) {
-        waveShaper.setBias(newBias, skipSmoothing);
-    }
+    void setBias(T newBias, bool skipSmoothing = false) { waveShaper.setBias(newBias, skipSmoothing); }
 
     /**
      * @brief Set the asymmetry amount.
@@ -183,9 +175,7 @@ class SaturationStage {
      * @param newShape New shape parameter
      * @param skipSmoothing If true, skip smoothing and set immediately.
      */
-    void setShape(T newShape, bool skipSmoothing = false) {
-        waveShaper.setShape(newShape, skipSmoothing);
-    }
+    void setShape(T newShape, bool skipSmoothing = false) { waveShaper.setShape(newShape, skipSmoothing); }
 
     /**
      * @brief Set the output gain of the saturation stage.
@@ -197,13 +187,13 @@ class SaturationStage {
     }
 
     /**
-     * @brief Set the pre-filter type.
-     * @param newType New filter type
+     * @brief Set the pre-filter response.
+     * @param newResponse New filter response type
      * @note Only applicable if PreFilter is true.
      */
-    void setPreFilterType(BiquadType newType) {
+    void setPreFilterResponse(typename BiquadFilter<T>::Response newResponse) {
         if constexpr (PreFilter)
-            preFilter.setType(newType);
+            preFilter.setResponse(newResponse);
     }
 
     /**
@@ -223,7 +213,7 @@ class SaturationStage {
      */
     void setPreFilterFrequency(Frequency<T> newFreq) {
         if constexpr (PreFilter)
-            preFilter.setFreq(newFreq);
+            preFilter.setFrequency(newFreq);
     }
 
     /**
@@ -238,13 +228,13 @@ class SaturationStage {
     }
 
     /**
-     * @brief Set the post-filter type.
-     * @param newType New filter type
+     * @brief Set the post-filter response.
+     * @param newResponse New filter response type
      * @note Only applicable if PostFilter is true.
      */
-    void setPostFilterType(BiquadType newType) {
+    void setPostFilterResponse(typename BiquadFilter<T>::Response newResponse) {
         if constexpr (PostFilter)
-            postFilter.setType(newType);
+            postFilter.setResponse(newResponse);
     }
 
     /**
@@ -264,7 +254,7 @@ class SaturationStage {
      */
     void setPostFilterFrequency(Frequency<T> newFreq) {
         if constexpr (PostFilter)
-            postFilter.setFreq(newFreq);
+            postFilter.setFrequency(newFreq);
     }
 
     /**

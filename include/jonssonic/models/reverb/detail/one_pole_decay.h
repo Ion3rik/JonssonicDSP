@@ -6,7 +6,7 @@
 
 #include "jonssonic/models/reverb/detail/decay_limits.h"
 
-namespace jnsc::detail {
+namespace jnsc::models::detail {
 
 /**
  * @brief OnePoleDecay implements a simple one-pole decay filter that is parametrized via T60 decay times at DC and
@@ -104,4 +104,4 @@ class OnePoleDecay {
     std::vector<T> z1; // state per channel
 };
 
-} // namespace jnsc::detail
+} // namespace jnsc::models::detail

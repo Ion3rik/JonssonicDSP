@@ -107,7 +107,8 @@ class Reverb {
         // Prepare DSP components
         preDelay.prepare(numChannels, sampleRate, Time<T>::Milliseconds(MAX_PRE_DELAY_MS));
         fdn.prepare(numChannels, sampleRate, Time<T>::Samples(maxDelaySamples));
-        lowCutFilter.prepare(numChannels, sampleRate, BiquadType::Highpass);
+        lowCutFilter.prepare(numChannels, sampleRate);
+        lowCutFilter.setResponse(BiquadFilter<T>::Response::Highpass);
 
         // Set fixed parameters
         fdn.setControlSmoothingTime(Time<T>::Milliseconds(SMOOTHING_TIME_MS));
@@ -209,7 +210,7 @@ class Reverb {
      * @brief Set the low cut frequency.
      * @param freqHz Low cut frequency in Hz.
      */
-    void setLowCutFreqHz(T freqHz) { lowCutFilter.setFreq(Frequency<T>::Hertz(freqHz)); }
+    void setLowCutFreqHz(T freqHz) { lowCutFilter.setFrequency(Frequency<T>::Hertz(freqHz)); }
 
     /**
      * @brief Set the modulation rate in Hz.
@@ -247,7 +248,7 @@ class Reverb {
                                  MixingMatrixType::Householder,
                                  MixingMatrixType::DecorrelatedSum,
                                  MixingMatrixType::DecorrelatedSum,
-                                 DampingType::BiquadShelf,
+                                 models::Shelf1Decay<T>,
                                  models::FilteredNoise<T>,
                                  LinearInterpolator<T>>
         fdn;

@@ -4,16 +4,11 @@
 
 #pragma once
 #include "jonssonic/utils/detail/config_utils.h"
-#include <jonssonic/core/common/audio_buffer.h>
-#include <jonssonic/core/common/quantities.h>
-#include <jonssonic/core/filters/biquad_chain.h>
-#include <jonssonic/core/nonlinear/wave_shaper.h>
-#include <jonssonic/core/oversampling/oversampler.h>
-#include <jonssonic/utils/buffer_utils.h>
+#include <jonssonic/core/filters/biquad_filter.h>
 
 namespace jnsc::effects {
 /**
- * @brief Variable Q Equalizer with highpass, high and low mid peaks, and highshelf filters.
+ * @brief Three-band variable Q equalizer with highpass, low and high mid peaking, and highshelf filters.
  * @param T Sample data type (e.g., float, double)
  */
 template <typename T>
@@ -57,19 +52,15 @@ class Equalizer {
      */
     void prepare(size_t newNumChannels, size_t newMaxBlockSize, T newSampleRate) {
 
-        // Store config variables
-        numChannels = utils::detail::clampChannels(newNumChannels);
-        sampleRate = utils::detail::clampSampleRate(newSampleRate);
-
         // Prepare biquad chain
-        eq.prepare(numChannels, 4, sampleRate); // 4 sections: LowCut, LowMid, HighMid, HighShelf
-        eq.setType(0, BiquadType::Highpass);    // LowCut
-        eq.setType(1, BiquadType::Peak);        // LowMid
-        eq.setType(2, BiquadType::Peak);        // HighMid
-        eq.setType(3, BiquadType::Highshelf);   // HighShelf
+        eq.prepare(newNumChannels, newSampleRate, 4); // 4 sections: LowCut, LowMid, HighMid, HighShelf
+        eq.section(0).setResponse(BiquadFilter<T>::Response::Highpass);  // LowCut
+        eq.section(1).setResponse(BiquadFilter<T>::Response::Peak);      // LowMid
+        eq.section(2).setResponse(BiquadFilter<T>::Response::Peak);      // HighMid
+        eq.section(3).setResponse(BiquadFilter<T>::Response::Highshelf); // HighShelf
 
         // Fixed parameters
-        eq.setFreq(3, Frequency<T>::Hertz(HIGH_SHELF_CUTOFF)); // HighShelf fixed freq
+        eq.section(3).setFrequency(Frequency<T>::Hertz(HIGH_SHELF_CUTOFF)); // HighShelf fixed freq
     }
 
     void reset() { eq.reset(); }
@@ -91,7 +82,7 @@ class Equalizer {
      * @param skipSmoothing If true, skip smoothing and set immediately.
      */
     void setLowCutFreq(T newFreqHz, bool /*skipSmoothing*/) {
-        eq.setFreq(0, Frequency<T>::Hertz(newFreqHz));
+        eq.section(0).setFrequency(Frequency<T>::Hertz(newFreqHz));
     }
 
     /**
@@ -100,9 +91,9 @@ class Equalizer {
      * @param skipSmoothing If true, skip smoothing and set immediately.
      */
     void setLowMidGainDb(T newGainDb, bool /*skipSmoothing*/) {
-        eq.setGain(1, Gain<T>::Decibels(newGainDb));
+        eq.section(1).setGain(Gain<T>::Decibels(newGainDb));
         T newQ = computeVariableQ(newGainDb);
-        eq.setQ(1, newQ);
+        eq.section(1).setQ(newQ);
     }
 
     /**
@@ -111,9 +102,9 @@ class Equalizer {
      * @param skipSmoothing If true, skip smoothing and set immediately.
      */
     void setHighMidGainDb(T newGainDb, bool /*skipSmoothing*/) {
-        eq.setGain(2, Gain<T>::Decibels(newGainDb));
+        eq.section(2).setGain(Gain<T>::Decibels(newGainDb));
         T newQ = computeVariableQ(newGainDb);
-        eq.setQ(2, newQ);
+        eq.section(2).setQ(newQ);
     }
 
     /**
@@ -122,7 +113,7 @@ class Equalizer {
      * @param skipSmoothing If true, skip smoothing and set immediately.
      */
     void setHighShelfGainDb(T newGainDb, bool /*skipSmoothing*/) {
-        eq.setGain(3, Gain<T>::Decibels(newGainDb));
+        eq.section(3).setGain(Gain<T>::Decibels(newGainDb));
     }
 
     /**
@@ -131,7 +122,7 @@ class Equalizer {
      * @param skipSmoothing If true, skip smoothing and set immediately.
      */
     void setLowMidFreq(T newFreqHz, bool /*skipSmoothing*/) {
-        eq.setFreq(1, Frequency<T>::Hertz(newFreqHz));
+        eq.section(1).setFrequency(Frequency<T>::Hertz(newFreqHz));
     }
     /**
      * @brief Set high mid frequency in Hz.
@@ -139,22 +130,18 @@ class Equalizer {
      * @param skipSmoothing If true, skip smoothing and set immediately.
      */
     void setHighMidFreq(T newFreqHz, bool /*skipSmoothing*/) {
-        eq.setFreq(2, Frequency<T>::Hertz(newFreqHz));
+        eq.section(2).setFrequency(Frequency<T>::Hertz(newFreqHz));
     }
 
     /// Get number of channels.
-    size_t getNumChannels() const { return numChannels; }
+    size_t getNumChannels() const { return eq.getNumChannels(); }
 
     /// Get sample rate.
-    T getSampleRate() const { return sampleRate; }
+    T getSampleRate() const { return eq.getSampleRate(); }
 
   private:
-    // CONFIG VARIABLES
-    size_t numChannels = 0;
-    T sampleRate = T(44100);
+    BiquadFilter<T> eq;
 
-    // PROCESSORS
-    BiquadChain<T> eq;
     /**
      * @brief Compute variable Q factor based on gain in dB.
      * @param gainDb Gain in decibels

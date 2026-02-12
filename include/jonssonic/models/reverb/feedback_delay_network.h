@@ -6,9 +6,10 @@
 #include <jonssonic/core/common/dsp_param.h>
 #include <jonssonic/core/delays/delay_line.h>
 #include <jonssonic/core/filters/biquad_filter.h>
-#include <jonssonic/core/filters/damping_filter.h>
 #include <jonssonic/core/mixing/mixing_matrix.h>
 #include <jonssonic/models/generators/filtered_noise.h>
+#include <jonssonic/models/reverb/decay_filter.h>
+#include <type_traits>
 
 namespace jnsc::models {
 /**
@@ -18,7 +19,7 @@ namespace jnsc::models {
  * @tparam FeedbackMatrixType Type of mixing matrix for feedback (default: Householder)
  * @tparam InputMatrixType Type of mixing matrix for input (default: DecorrelatedSum)
  * @tparam OutputMatrixType Type of mixing matrix for output (default: DecorrelatedSum)
- * @tparam DampingType Type of damping filter used in the feedback loop (default: FirstOrderShelf)
+ * @tparam DecayType Type of decay filter for delay line outputs (default: Shelf1Decay<T>)
  * @tparam UseModulation If true, enable delay line modulation (default: true)
  * @tparam Interpolator Interpolator type for fractional delay support (default: LinearInterpolator)
  */
@@ -28,7 +29,7 @@ template <typename T,
           MixingMatrixType FeedbackMatrixType = MixingMatrixType::Householder,
           MixingMatrixType InputMatrixType = MixingMatrixType::DecorrelatedSum,
           MixingMatrixType OutputMatrixType = MixingMatrixType::DecorrelatedSum,
-          DampingType DampingType = DampingType::FirstOrderShelf,
+          typename DecayType = Shelf1Decay<T>,
           typename ModulationSourceType = FilteredNoise<T>,
           typename InterpolatorType = LinearInterpolator<T>>
 class FeedbackDelayNetwork {
@@ -244,7 +245,7 @@ class FeedbackDelayNetwork {
 
     // Processor components
     DelayLine<T, InterpolatorType> Dm;
-    DampingFilter<T, DampingType> G;
+    DecayFilter<T, DecayType> G;
     ModulationSourceType modSource;
 
     // FDN Matrices
@@ -266,13 +267,14 @@ class FeedbackDelayNetwork {
 
     // Helper method
     void updateDampingFilter() {
-        if constexpr (DampingType == DampingType::FirstOrderShelf || DampingType == DampingType::BiquadShelf)
+        constexpr bool isShelf = std::is_same_v<DecayType, Shelf1Decay<T>> || std::is_same_v<DecayType, Shelf2Decay<T>>;
+        if constexpr (isShelf) {
             for (size_t m = 0; m < M; ++m)
-                G.setByT60(m, Fc, RT60_LO, RT60_HI, Dm.getTargetDelay(m));
-
-        if constexpr (DampingType == DampingType::OnePole)
+                G.engine().setDecayTimes(m, Fc, RT60_LO, RT60_HI, Dm.getTargetDelay(m));
+        } else if constexpr (std::is_same_v<DecayType, OnePoleDecay<T>>) {
             for (size_t m = 0; m < M; ++m)
-                G.setByT60(m, RT60_LO, RT60_HI, Dm.getTargetDelay(m));
+                G.engine().setDecayTimes(m, RT60_LO, RT60_HI, Dm.getTargetDelay(m));
+        }
     }
 };
 

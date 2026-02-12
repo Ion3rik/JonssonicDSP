@@ -8,7 +8,7 @@
 #include <jonssonic/core/filters/biquad_filter.h>
 #include <jonssonic/core/filters/one_pole_filter.h>
 
-namespace jnsc::detail {
+namespace jnsc::models::detail {
 
 /**
  * @brief ShelfDecay implements a first or second order shelving filter that is parametrized via T60 decay times at low
@@ -50,8 +50,8 @@ class ShelfDecay {
         sampleRate = utils::detail::clampSampleRate(newSampleRate);
 
         // Prepare the shelf filter and initialize gain buffer
-        shelf.prepare(newNumChannels, newSampleRate);
-        shelf.setResponse(Response::Lowshelf);
+        shelf.prepare(numChannels, sampleRate);
+        shelf.setResponse(FilterType::Response::Lowshelf);
         gBase.resize(numChannels, T(0));
 
         // Mark as prepared
@@ -76,7 +76,7 @@ class ShelfDecay {
             return;
 
         // Set crossover frequency
-        shelf.setFreq(newCrossOverFreq);
+        shelf.setFrequency(newCrossOverFreq);
 
         // Clamp T60 values and convert to seconds for coefficient calculations
         T T60_Low = DecayLimits<T>::clampTime(newT60Low, sampleRate).toSeconds(sampleRate);
@@ -87,15 +87,16 @@ class ShelfDecay {
         T gHigh = std::pow(T(10), -3.0 * newDelayTime.toSeconds(sampleRate) / T60_High);
 
         // Switch shelving type based on gain relationship
-        gHigh < gLow ? shelf.channel(ch).setResponse(Response::Highshelf) // damp high frequencies if gHigh < gBase
-                     : shelf.channel(ch).setResponse(Response::Lowshelf); // damp low frequencies if gLow < gBase
+        gHigh < gLow
+            ? shelf.channel(ch).setResponse(FilterType::Response::Highshelf) // damp high frequencies if gHigh < gBase
+            : shelf.channel(ch).setResponse(FilterType::Response::Lowshelf); // damp low frequencies if gLow < gBase
 
         // Base gain = max of the two gains i.e. least damping
         gBase[ch] = std::max(gLow, gHigh);
 
         // Compute shelf gain relative to base gain
         T shelfGain = std::min(gLow, gHigh) / gBase[ch];
-        shelf.channel(ch).setGain(shelfGain);
+        shelf.channel(ch).setGain(Gain<T>::Linear(shelfGain));
     }
 
     /**
@@ -120,4 +121,4 @@ class ShelfDecay {
     FilterType shelf;
 };
 
-} // namespace jnsc::detail
+} // namespace jnsc::models::detail

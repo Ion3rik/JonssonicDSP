@@ -6,7 +6,7 @@
 #include "jonssonic/utils/detail/config_utils.h"
 #include <jonssonic/core/common/quantities.h>
 
-namespace jnsc::detail {
+namespace jnsc::models::detail {
 /**
  * @brief Struct defining limits for decay filter parameters,
  * @tparam T Sample data type (e.g., float, double)
@@ -24,4 +24,4 @@ struct DecayLimits {
     }
 };
 
-} // namespace jnsc::detail
+} // namespace jnsc::models::detail

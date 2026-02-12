@@ -180,6 +180,13 @@ class BiquadFilter {
         // Access specific section of this channel
         ChannelSectionProxy section(size_t sectionIdx) { return ChannelSectionProxy(bqf, ch, sectionIdx); }
 
+        void setResponse(Response newResponse) {
+            for (size_t s = 0; s < bqf.topology.getNumSections(); ++s) {
+                bqf.design.setResponse(ch, s, newResponse);
+                bqf.applyDesignToTopology(ch, s);
+            }
+        }
+
         void setFrequency(Frequency<T> newFreq) {
             for (size_t s = 0; s < bqf.topology.getNumSections(); ++s) {
                 bqf.design.setFrequency(ch, s, newFreq);
@@ -210,6 +217,13 @@ class BiquadFilter {
     class SectionProxy {
       public:
         SectionProxy(BiquadFilter& bqf, size_t section) : bqf(bqf), section(section) {}
+
+        void setResponse(Response newResponse) {
+            for (size_t ch = 0; ch < bqf.topology.getNumChannels(); ++ch) {
+                bqf.design.setResponse(ch, section, newResponse);
+                bqf.applyDesignToTopology(ch, section);
+            }
+        }
 
         void setFrequency(Frequency<T> newFreq) {
             for (size_t ch = 0; ch < bqf.topology.getNumChannels(); ++ch) {
@@ -246,6 +260,11 @@ class BiquadFilter {
         ChannelSectionProxy(BiquadFilter& bqf, size_t ch, size_t section) : bqf(bqf), ch(ch), section(section) {
             assert(ch < bqf.topology.getNumChannels() && "Channel index out of bounds");
             assert(section < bqf.topology.getNumSections() && "Section index out of bounds");
+        }
+
+        void setResponse(Response newResponse) {
+            bqf.design.setResponse(ch, section, newResponse);
+            bqf.applyDesignToTopology(ch, section);
         }
 
         void setFrequency(Frequency<T> newFreq) {

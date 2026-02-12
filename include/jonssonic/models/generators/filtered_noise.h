@@ -5,7 +5,7 @@
 #pragma once
 #include "jonssonic/utils/detail/config_utils.h"
 
-#include <jonssonic/core/filters/first_order_filter.h>
+#include <jonssonic/core/filters/one_pole_filter.h>
 #include <jonssonic/core/generators/noise.h>
 #include <vector>
 
@@ -50,8 +50,8 @@ class FilteredNoise<T, noiseType, FilterType::Lowpass1stOrder> {
         // Prepare components
         noise.prepare(newNumChannels);
         filter.prepare(newNumChannels, sampleRate);
-        filter.setType(FirstOrderType::Lowpass);
-        filter.setFreq(Frequency<T>::Hertz(1000)); // Default cutoff frequency
+        filter.setResponse(OnePoleFilter<T>::Response::Lowpass);
+        filter.setFrequency(Frequency<T>::Hertz(1000)); // Default cutoff frequency
 
         // Mark as prepared
         togglePrepared = true;
@@ -83,7 +83,7 @@ class FilteredNoise<T, noiseType, FilterType::Lowpass1stOrder> {
      * @brief Set the lowpass filter cutoff frequency in various units.
      * @param newFreq Cutoff frequency struct.
      */
-    void setCutoff(Frequency<T> newFreq) { filter.setFreq(newFreq); }
+    void setCutoff(Frequency<T> newFreq) { filter.setFrequency(newFreq); }
 
     size_t getNumChannels() const { return numChannels; }
 
@@ -94,7 +94,7 @@ class FilteredNoise<T, noiseType, FilterType::Lowpass1stOrder> {
     size_t numChannels = 0;
     T sampleRate = T(44100);
     Noise<T, noiseType> noise;
-    FirstOrderFilter<T> filter;
+    OnePoleFilter<T> filter;
 };
 
 // =============================================================================
@@ -120,8 +120,9 @@ class FilteredNoise<T, noiseType, FilterType::Lowpass2ndOrder> {
 
         // Prepare components
         noise.prepare(newNumChannels);
-        filter.prepare(newNumChannels, sampleRate, BiquadType::Lowpass);
-        filter.setFreq(Frequency<T>::Hertz(1000)); // Default cutoff frequency
+        filter.prepare(newNumChannels, sampleRate);
+        filter.setResponse(BiquadFilter<T>::Response::Lowpass);
+        filter.setFrequency(Frequency<T>::Hertz(1000)); // Default cutoff frequency
 
         // Mark as prepared
         togglePrepared = true;
@@ -152,7 +153,7 @@ class FilteredNoise<T, noiseType, FilterType::Lowpass2ndOrder> {
      * @brief Set the lowpass filter cutoff frequency in various units.
      * @param newFreq Cutoff frequency struct.
      */
-    void setCutoff(Frequency<T> newFreq) { filter.setFreq(newFreq); }
+    void setCutoff(Frequency<T> newFreq) { filter.setFrequency(newFreq); }
 
     size_t getNumChannels() const { return numChannels; }
     bool isPrepared() const { return togglePrepared; }

@@ -5,7 +5,6 @@
 #pragma once
 #include <jonssonic/core/common/audio_buffer.h>
 #include <jonssonic/core/common/quantities.h>
-#include <jonssonic/core/filters/utility_filters.h>
 #include <jonssonic/core/mixing/dry_wet_mixer.h>
 #include <jonssonic/models/saturation/saturation_stage.h>
 #include <jonssonic/utils/buffer_utils.h>
@@ -73,16 +72,13 @@ class Distortion {
         distortion.prepare(newNumChannels, newMaxBlockSize, newSampleRate);
         distortionOS.prepare(newNumChannels, newMaxBlockSize, newSampleRate);
 
-        // Prepare DC blocker
-        dcBlocker.prepare(newNumChannels, newSampleRate);
-
         // Setup post-filters for tone control
-        distortion.setPostFilterType(BiquadType::Lowpass);
-        distortionOS.setPostFilterType(BiquadType::Lowpass);
+        distortion.setPostFilterResponse(BiquadFilter<T>::Response::Lowpass);
+        distortionOS.setPostFilterResponse(BiquadFilter<T>::Response::Lowpass);
 
         // Setup pre-filters to remove low-frequency content
-        distortion.setPreFilterType(BiquadType::Highpass);
-        distortionOS.setPreFilterType(BiquadType::Highpass);
+        distortion.setPreFilterResponse(BiquadFilter<T>::Response::Highpass);
+        distortionOS.setPreFilterResponse(BiquadFilter<T>::Response::Highpass);
         distortion.setPreFilterFrequency(Frequency<T>::Hertz(T(PRE_FILTER_CUTOFF_HZ)));
         distortionOS.setPreFilterFrequency(Frequency<T>::Hertz(T(PRE_FILTER_CUTOFF_HZ)));
 
@@ -110,7 +106,6 @@ class Distortion {
     void reset() {
         distortion.reset();
         distortionOS.reset();
-        dcBlocker.reset();
         outputGain.reset();
         dryWetMixer.reset();
         fxBuffer.clear();
@@ -134,9 +129,6 @@ class Distortion {
         else {
             distortion.processBlock(fxBuffer.readPtrs(), fxBuffer.writePtrs(), numSamples);
         }
-
-        // Apply DC blocker to counter act possible asymmetry induced DC offset
-        dcBlocker.processBlock(fxBuffer.readPtrs(), fxBuffer.writePtrs(), numSamples);
 
         // Apply dry/wet mixing (with delay compensation if oversampling)
         size_t dryDelaySamples = getLatencySamples();
@@ -229,7 +221,6 @@ class Distortion {
     // PROCESSORS
     models::SaturationStage<T, WaveShaperType::Dynamic, true, true, OVERSAMPLING_FACTOR> distortionOS;
     models::SaturationStage<T, WaveShaperType::Dynamic, true, true, 1> distortion;
-    DCBlocker<T> dcBlocker;
     DryWetMixer<T> dryWetMixer;
     DspParam<T> outputGain;
 
