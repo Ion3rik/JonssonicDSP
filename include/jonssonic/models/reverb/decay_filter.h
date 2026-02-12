@@ -4,43 +4,51 @@
 
 #pragma once
 
+#include "jonssonic/models/reverb/detail/one_pole_decay.h"
+#include "jonssonic/models/reverb/detail/shelf_decay.h"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
-#include <jonssonic/core/filters/biquad_filter.h>
-#include <jonssonic/core/filters/one_pole_filter.h>
 
-namespace jnsc {
-/// Enumeration of supported damping filter types
-enum class DampingType { OnePole, Shelf };
+namespace jnsc::models {
+/**
+ * @brief Type aliases for decay filter types
+ * @tparam T Sample data type (e.g., float, double)
+ * @param Shelf1Decay First-order shelving decay filter
+ * @param Shelf2Decay Second-order shelving decay filter
+ */
 
-// =============================================================================
-// Template Declaration
-// =============================================================================
-/// DampingFilter class template
-template <typename T, DampingType Type = DampingType::OnePole>
-class DampingFilter;
-// =============================================================================
-// One-Pole Damping Filter Specialization
-// =============================================================================
+template <typename T>
+using OnePoleDecay = detail::OnePoleDecay<T>;
+
+template <typename T>
+using Shelf1Decay = ShelfDecay<T, OnePoleFilter<T>>;
+
+template <typename T>
+using Shelf2Decay = ShelfDecay<T, BiquadFilter<T>>;
 
 /**
- * @brief DampingFilter specialization for One-Pole type.
- *       Implements a one-pole lowpass filter parametrized by T60 at a frequency.
+ * @brief DecayFilter implements a multichannel decay filter that is parametrized via T60 decay times.
+ * @tparam T Sample data type (e.g., float, double)
+ * @tparam DecayType Type of decay filter (e.g., OnePole, Shelf
  */
-template <typename T>
-class DampingFilter<T, DampingType::OnePole> {
+template <typename T, typename DecayType>
+class DecayFilter {
   public:
     /// Default constructor.
-    DampingFilter() = default;
+    DecayFilter() = default;
     /**
      * @brief Parameterized constructor that calls @ref prepare.
      * @param newNumChannels Number of channels.
      * @param newSampleRate Sample rate in Hz.
      */
-    DampingFilter(size_t newNumChannels, T newSampleRate) { prepare(newNumChannels, newSampleRate); }
+    DecayFilter(size_t newNumChannels, T newSampleRate) { prepare(newNumChannels, newSampleRate); }
+
     /// Default destructor.
-    ~DampingFilter() = default;
+    ~DecayFilter() = default;
+
+    /// Reset the filter state
+    void reset() { filter.reset(); }
 
     /**
      * @brief Prepare the filter for processing.
@@ -51,102 +59,61 @@ class DampingFilter<T, DampingType::OnePole> {
         // Store config variables
         numChannels = utils::detail::clampChannels(newNumChannels);
         sampleRate = utils::detail::clampSampleRate(newSampleRate);
-
-        // Initialize state and coefficient vectors
-        z1.assign(numChannels, T(0));
-        a.assign(numChannels, T(0));
-        b.assign(numChannels, T(0));
-        togglePrepared = true;
-    }
-
-    /**
-     * @brief Set filter coefficients based on T60 at DC and Nyquist.
-     * @param newT60Dc Desired decay time at DC (0 Hz)
-     * @param newT60Nyq Desired decay time at Nyquist (fs/2 Hz)
-     * @param newDelayTime Delay time used in the damping calculation
-     * @note Coeffs are only updated if @ref prepare has been called before.
-     */
-    void setByT60(size_t ch, Time<T> newT60Dc, Time<T> newT60Nyq, Time<T> newDelayTime) {
-        assert(ch < numChannels && "Channel index out of bounds.");
-        assert(sampleRate > T(0) && "Sample rate must be set and greater than zero.");
-
-        // Early exit if not prepared
-        if (!togglePrepared)
-            return;
-
-        // Clamp T60 values
-        T T60_DC = std::clamp(newT60Dc.toSeconds(sampleRate),
-                              detail::DampingLimits<T>::MIN_T60,
-                              detail::DampingLimits<T>::MAX_T60);
-        T T60_NYQ = std::clamp(newT60Nyq.toSeconds(sampleRate),
-                               detail::DampingLimits<T>::MIN_T60,
-                               detail::DampingLimits<T>::MAX_T60);
-
-        // Compute coefficients based on T60 values
-        T g0 = std::pow(T(10), -3.0 * newDelayTime.toSeconds(sampleRate) / T60_DC);
-        T g1 = std::pow(T(10), -3.0 * newDelayTime.toSeconds(sampleRate) / T60_NYQ);
-        a[ch] = (g0 + g1) / 2;
-        b[ch] = (g0 - g1) / 2;
     }
 
     /**
      * @brief Process a single sample through the filter for a given channel.
      * @param ch Channel index
-     * @param x Input sample
+     * @param input Input sample
      * @return Filtered output sample
      * @note Must call @ref prepare before processing.
      */
-    T processSample(size_t ch, T x) {
-        assert(ch < numChannels && "Channel index out of bounds");
-        T y = a[ch] * x + b[ch] * z1[ch];
-        z1[ch] = y;
-        return y;
-    }
-
-    /// Reset the filter state
-    void reset() { std::fill(z1.begin(), z1.end(), T(0)); }
+    T processSample(size_t ch, T input) { filter.processSample(ch, input); }
 
     /// Get number of prepared channels
     size_t getNumChannels() const { return numChannels; }
 
     /// Check if the filter is prepared
-    bool isPrepared() const { return togglePrepared; }
+    bool isPrepared() const { return filter.isPrepared(); }
+
+    /// Get the underlying filter object (e.g., for setting coefficients)
+    DecayType& engine() { return filter; }
 
   private:
-    bool togglePrepared = false;
+    // Config variables
     T sampleRate = T(44100);
     size_t numChannels = 0;
-    std::vector<T> a;  // feedforward coefficient
-    std::vector<T> b;  // feedback coefficient
-    std::vector<T> z1; // state per channel
+
+    // Filter object
+    DecayType filter;
 };
 
 // =============================================================================
 // Shelf Damping Filter Specialization
 // =============================================================================
 /**
- * @brief DampingFilter specialization for Shelf type.
+ * @brief DecayFilter specialization for Shelf type.
  *       Implements a biquad shelving filter parametrized
  *       by crossover frequency and T60 below and above it.
  */
 template <typename T>
-class DampingFilter<T, DampingType::Shelf> {
+class DecayFilter<T, DecayType::Shelf> {
   public:
     /// Default constructor.
-    DampingFilter() = default;
+    DecayFilter() = default;
 
     /**
      * @brief Parameterized constructor that calls @ref prepare.
      * @param newNumChannels Number of channels.
      * @param newSampleRate Sample rate in Hz.
      */
-    DampingFilter(size_t newNumChannels, T newSampleRate) { prepare(newNumChannels, newSampleRate); }
+    DecayFilter(size_t newNumChannels, T newSampleRate) { prepare(newNumChannels, newSampleRate); }
 
     /// No copy nor move semantics
-    DampingFilter(const DampingFilter&) = delete;
-    DampingFilter& operator=(const DampingFilter&) = delete;
-    DampingFilter(DampingFilter&&) = delete;
-    DampingFilter& operator=(DampingFilter&&) = delete;
+    DecayFilter(const DecayFilter&) = delete;
+    DecayFilter& operator=(const DecayFilter&) = delete;
+    DecayFilter(DecayFilter&&) = delete;
+    DecayFilter& operator=(DecayFilter&&) = delete;
 
     /**
      * @brief Prepare the filter for processing.
