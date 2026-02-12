@@ -59,8 +59,7 @@ class AudioBuffer<T, BufferLayout::Planar> {
      * @param numSamples Number of samples per channel.
      */
     AudioBuffer(size_t numChannels, size_t numSamples)
-        : m_numChannels(numChannels), m_numSamples(numSamples),
-          m_data(numChannels * numSamples, T(0)) {}
+        : m_numChannels(numChannels), m_numSamples(numSamples), m_data(numChannels * numSamples, T(0)) {}
 
     /**
      * @brief Get array of const pointers to each channel's data (for read-only access).
@@ -155,12 +154,13 @@ class AudioBuffer<T, BufferLayout::Planar> {
      * @brief Resize the buffer.
      * @param numChannels New number of channels
      * @param numSamples New number of samples per channel
+     * @param initValue Initial value for new samples
      */
-    void resize(size_t numChannels, size_t numSamples) {
+    void resize(size_t numChannels, size_t numSamples, T initValue = T(0)) {
         m_numChannels = numChannels;
         m_numSamples = numSamples;
         m_data.assign(numChannels * numSamples,
-                      T(0)); // This is what you expect for audio buffers not std::vector::resize()
+                      initValue); // This is what you expect for audio buffers not std::vector::resize()
     }
 
     // ========================================================================
@@ -170,8 +170,7 @@ class AudioBuffer<T, BufferLayout::Planar> {
     // Proxy class for channel access
     class ChannelProxy {
       public:
-        ChannelProxy(T* channelData, size_t numSamples)
-            : m_channelData(channelData), m_numSamples(numSamples) {}
+        ChannelProxy(T* channelData, size_t numSamples) : m_channelData(channelData), m_numSamples(numSamples) {}
         T& operator[](size_t sample) {
             assert(sample < m_numSamples && "Sample index out of bounds");
             return m_channelData[sample];
@@ -335,8 +334,7 @@ class AudioBuffer<T, BufferLayout::Interleaved> {
      * @param numSamples Number of samples per channel
      */
     AudioBuffer(size_t numChannels, size_t numSamples)
-        : m_numChannels(numChannels), m_numSamples(numSamples),
-          m_data(numChannels * numSamples, T(0)) {}
+        : m_numChannels(numChannels), m_numSamples(numSamples), m_data(numChannels * numSamples, T(0)) {}
 
     /**
      * @brief Get array of const pointers to each sample's data (for read-only access).
@@ -441,11 +439,12 @@ class AudioBuffer<T, BufferLayout::Interleaved> {
      * @brief Resize the buffer.
      * @param numChannels New number of channels
      * @param numSamples New number of samples per channel
+     * @param initValue Initial value for new samples
      */
-    void resize(size_t numChannels, size_t numSamples) {
+    void resize(size_t numChannels, size_t numSamples, T initValue = T(0)) {
         m_numChannels = numChannels;
         m_numSamples = numSamples;
-        m_data.assign(numChannels * numSamples, T(0));
+        m_data.assign(numChannels * numSamples, initValue);
     }
 
     // Proxy for sample-major access: buffer[sample][channel]
@@ -489,9 +488,7 @@ class AudioBuffer<T, BufferLayout::Interleaved> {
     }
     ConstSampleProxy operator[](size_t sample) const {
         assert(sample < m_numSamples && "Sample index out of bounds");
-        return ConstSampleProxy(m_data.data() + (sample * m_numChannels),
-                                m_numChannels,
-                                m_numChannels);
+        return ConstSampleProxy(m_data.data() + (sample * m_numChannels), m_numChannels, m_numChannels);
     }
 
     // Arithmetic and assignment operators remain unchanged

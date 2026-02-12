@@ -4,22 +4,15 @@
 
 #pragma once
 
-// Internal includes
-#include "detail/filter_limits.h"
-#include "jonssonic/utils/detail/config_utils.h"
-
-// Public API includes
-#include <jonssonic/core/common/quantities.h>
-#include <jonssonic/core/filters/biquad_filter.h>
-#include <jonssonic/core/filters/filter_types.h>
-#include <jonssonic/core/filters/first_order_filter.h>
-
-// Standard library includes
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <jonssonic/core/filters/biquad_filter.h>
+#include <jonssonic/core/filters/one_pole_filter.h>
 
 namespace jnsc {
+/// Enumeration of supported damping filter types
+enum class DampingType { OnePole, Shelf };
 
 // =============================================================================
 // Template Declaration
@@ -129,15 +122,15 @@ class DampingFilter<T, DampingType::OnePole> {
 };
 
 // =============================================================================
-// Biquad Shelf Damping Filter Specialization
+// Shelf Damping Filter Specialization
 // =============================================================================
 /**
- * @brief DampingFilter specialization for BiquadShelf type.
+ * @brief DampingFilter specialization for Shelf type.
  *       Implements a biquad shelving filter parametrized
  *       by crossover frequency and T60 below and above it.
  */
 template <typename T>
-class DampingFilter<T, DampingType::BiquadShelf> {
+class DampingFilter<T, DampingType::Shelf> {
   public:
     /// Default constructor.
     DampingFilter() = default;
@@ -240,122 +233,6 @@ class DampingFilter<T, DampingType::BiquadShelf> {
     size_t numChannels = 0;
     std::vector<T> gBase;
     BiquadFilter<T> shelf;
-};
-
-// =============================================================================
-// First-Order Damping Filter Specialization
-// =============================================================================
-/**
- * @brief DampingFilter specialization for FirstOrderShelf type.
- *       Implements a first-order shelving filter parametrized
- *       by crossover frequency and T60 below and above it.
- */
-template <typename T>
-class DampingFilter<T, DampingType::FirstOrderShelf> {
-  public:
-    /// Default constructor.
-    DampingFilter() = default;
-
-    /**
-     * @brief Parameterized constructor that calls @ref prepare.
-     * @param newNumChannels Number of channels.
-     * @param newSampleRate Sample rate in Hz.
-     */
-    DampingFilter(size_t newNumChannels, T newSampleRate) { prepare(newNumChannels, newSampleRate); }
-
-    /// Default destructor.
-    ~DampingFilter() = default;
-
-    /// No copy nor move semantics
-    DampingFilter(const DampingFilter&) = delete;
-    DampingFilter& operator=(const DampingFilter&) = delete;
-    DampingFilter(DampingFilter&&) = delete;
-    DampingFilter& operator=(DampingFilter&&) = delete;
-
-    /**
-     * @brief Prepare the filter for processing.
-     * @param newSampleRate Sample rate in Hz
-     * @param newNumChannels Number of channels
-     * @note Must be called before processing.
-     */
-    void prepare(size_t newNumChannels, T newSampleRate) {
-        numChannels = utils::detail::clampChannels(newNumChannels);
-        sampleRate = utils::detail::clampSampleRate(newSampleRate);
-        shelf.prepare(newNumChannels, newSampleRate, FirstOrderType::Highshelf);
-        gBase.resize(numChannels, T(0));
-        togglePrepared = true;
-    }
-    /**
-     * @brief Set filter coefficients based on T60 at low and high frequencies.
-     * @param ch Channel index
-     * @param crossOverFreq Crossover frequency between low and high shelving
-     * @param newT60Low Desired decay time below crossover frequency
-     * @param newT60High Desired decay time above crossover frequency
-     * @param newDelayTime Delay time used in the damping calculation
-     * @note Must call prepare() before this.
-     */
-    void
-    setByT60(size_t ch, Frequency<T> newCrossOverFreq, Time<T> newT60Low, Time<T> newT60High, Time<T> newDelayTime) {
-        assert(ch < numChannels && "Channel index out of bounds.");
-        assert(sampleRate > T(0) && "Sample rate must be set and greater than zero.");
-        // Early exit if not prepared
-        if (!togglePrepared)
-            return;
-
-        // Clamp crossover frequency
-        T crossOverFreqHz = std::clamp(newCrossOverFreq.toHertz(sampleRate),
-                                       detail::FilterLimits<T>::MIN_FREQ_NORM * sampleRate,
-                                       detail::FilterLimits<T>::MAX_FREQ_NORM * sampleRate);
-        // Clamp T60 values
-        T T60_Low = std::clamp(newT60Low.toSeconds(sampleRate),
-                               detail::DampingLimits<T>::MIN_T60_SEC,
-                               detail::DampingLimits<T>::MAX_T60_SEC);
-
-        T T60_High = std::clamp(newT60High.toSeconds(sampleRate),
-                                detail::DampingLimits<T>::MIN_T60_SEC,
-                                detail::DampingLimits<T>::MAX_T60_SEC);
-
-        // Set crossover frequency
-        shelf.setFreq(newCrossOverFreq);
-
-        // Compute gains based on T60
-        T gLow = std::pow(T(10), -3.0 * newDelayTime.toSeconds(sampleRate) / T60_Low);
-        T gHigh = std::pow(T(10), -3.0 * newDelayTime.toSeconds(sampleRate) / T60_High);
-        // Switch shelving type based on gain relationship
-        gHigh < gLow ? shelf.setType(FirstOrderType::Highshelf) // damp high frequencies if gHigh < gBase
-                     : shelf.setType(FirstOrderType::Lowshelf); // damp low frequencies if gLow < gBase
-
-        // Base gain = max of the two gains i.e. least damping
-        gBase[ch] = std::max(gLow, gHigh);
-
-        // Compute shelf gain relative to base gain
-        T shelfGain = std::min(gLow, gHigh) / gBase[ch];
-        shelf.setGain(Gain<T>::Linear(shelfGain));
-    }
-
-    /**
-     * @brief Process a single sample through the filter for a given channel.
-     * @param ch Channel index
-     * @param x Input sample
-     * @return Filtered output sample
-     */
-    T processSample(size_t ch, T x) { return shelf.processSample(ch, gBase[ch] * x); }
-
-    /// Reset the filter state
-    void reset() { shelf.reset(); }
-
-    /// Get number of prepared channels
-    size_t getNumChannels() const { return numChannels; }
-
-    /// Check if the filter is prepared
-    bool isPrepared() const { return togglePrepared; }
-
-  private:
-    bool togglePrepared = false;
-    T sampleRate = T(44100);
-    size_t numChannels = 0;
-    std::vector<T> gBase;
-    FirstOrderFilter<T> shelf;
 };
 
 } // namespace jnsc

@@ -60,7 +60,7 @@ class BiquadFilter {
      */
     void prepare(size_t newNumChannels, T newSampleRate, size_t newNumSections = 1) {
         topology.prepare(newNumChannels, newNumSections);
-        design.prepare(newSampleRate);
+        design.prepare(newNumChannels, newSampleRate, newNumSections);
     }
 
     /**
@@ -107,10 +107,12 @@ class BiquadFilter {
      * @param newResponse Desired filter response type.
      */
     void setResponse(Response newResponse) {
-        design.setResponse(newResponse);
-        for (size_t ch = 0; ch < topology.getNumChannels(); ++ch)
-            for (size_t section = 0; section < topology.getNumSections(); ++section)
+        for (size_t ch = 0; ch < topology.getNumChannels(); ++ch) {
+            for (size_t section = 0; section < topology.getNumSections(); ++section) {
+                design.setResponse(ch, section, newResponse);
                 applyDesignToTopology(ch, section);
+            }
+        }
     }
 
     /**
@@ -118,10 +120,12 @@ class BiquadFilter {
      * @param newFreq Frequency struct.
      */
     void setFrequency(Frequency<T> newFreq) {
-        design.setFrequency(newFreq);
-        for (size_t ch = 0; ch < topology.getNumChannels(); ++ch)
-            for (size_t section = 0; section < topology.getNumSections(); ++section)
+        for (size_t ch = 0; ch < topology.getNumChannels(); ++ch) {
+            for (size_t section = 0; section < topology.getNumSections(); ++section) {
+                design.setFrequency(ch, section, newFreq);
                 applyDesignToTopology(ch, section);
+            }
+        }
     }
 
     /**
@@ -129,10 +133,12 @@ class BiquadFilter {
      * @param newQ Quality factor.
      */
     void setQ(T newQ) {
-        design.setQ(newQ);
-        for (size_t ch = 0; ch < topology.getNumChannels(); ++ch)
-            for (size_t section = 0; section < topology.getNumSections(); ++section)
+        for (size_t ch = 0; ch < topology.getNumChannels(); ++ch) {
+            for (size_t section = 0; section < topology.getNumSections(); ++section) {
+                design.setQ(ch, section, newQ);
                 applyDesignToTopology(ch, section);
+            }
+        }
     }
 
     /**
@@ -140,10 +146,12 @@ class BiquadFilter {
      * @param newGain Gain struct.
      */
     void setGain(Gain<T> newGain) {
-        design.setGain(newGain);
-        for (size_t ch = 0; ch < topology.getNumChannels(); ++ch)
-            for (size_t section = 0; section < topology.getNumSections(); ++section)
+        for (size_t ch = 0; ch < topology.getNumChannels(); ++ch) {
+            for (size_t section = 0; section < topology.getNumSections(); ++section) {
+                design.setGain(ch, section, newGain);
                 applyDesignToTopology(ch, section);
+            }
+        }
     }
 
     /// Get reference to the topology for direct access (e.g., for testing)
@@ -173,21 +181,24 @@ class BiquadFilter {
         ChannelSectionProxy section(size_t sectionIdx) { return ChannelSectionProxy(bqf, ch, sectionIdx); }
 
         void setFrequency(Frequency<T> newFreq) {
-            bqf.design.setFrequency(newFreq);
-            for (size_t s = 0; s < bqf.topology.getNumSections(); ++s)
+            for (size_t s = 0; s < bqf.topology.getNumSections(); ++s) {
+                bqf.design.setFrequency(ch, s, newFreq);
                 bqf.applyDesignToTopology(ch, s);
+            }
         }
 
         void setQ(T newQ) {
-            bqf.design.setQ(newQ);
-            for (size_t s = 0; s < bqf.topology.getNumSections(); ++s)
+            for (size_t s = 0; s < bqf.topology.getNumSections(); ++s) {
+                bqf.design.setQ(ch, s, newQ);
                 bqf.applyDesignToTopology(ch, s);
+            }
         }
 
         void setGain(Gain<T> newGain) {
-            bqf.design.setGain(newGain);
-            for (size_t s = 0; s < bqf.topology.getNumSections(); ++s)
+            for (size_t s = 0; s < bqf.topology.getNumSections(); ++s) {
+                bqf.design.setGain(ch, s, newGain);
                 bqf.applyDesignToTopology(ch, s);
+            }
         }
 
       private:
@@ -201,24 +212,27 @@ class BiquadFilter {
         SectionProxy(BiquadFilter& bqf, size_t section) : bqf(bqf), section(section) {}
 
         void setFrequency(Frequency<T> newFreq) {
-            bqf.design.setFrequency(newFreq);
-            for (size_t ch = 0; ch < bqf.topology.getNumChannels(); ++ch)
+            for (size_t ch = 0; ch < bqf.topology.getNumChannels(); ++ch) {
+                bqf.design.setFrequency(ch, section, newFreq);
                 bqf.applyDesignToTopology(ch, section);
+            }
         }
 
         // Access specific channel of this section
         ChannelSectionProxy channel(size_t channelIdx) { return ChannelSectionProxy(bqf, channelIdx, section); }
 
         void setQ(T newQ) {
-            bqf.design.setQ(newQ);
-            for (size_t ch = 0; ch < bqf.topology.getNumChannels(); ++ch)
+            for (size_t ch = 0; ch < bqf.topology.getNumChannels(); ++ch) {
+                bqf.design.setQ(ch, section, newQ);
                 bqf.applyDesignToTopology(ch, section);
+            }
         }
 
         void setGain(Gain<T> newGain) {
-            bqf.design.setGain(newGain);
-            for (size_t ch = 0; ch < bqf.topology.getNumChannels(); ++ch)
+            for (size_t ch = 0; ch < bqf.topology.getNumChannels(); ++ch) {
+                bqf.design.setGain(ch, section, newGain);
                 bqf.applyDesignToTopology(ch, section);
+            }
         }
 
       private:
@@ -235,17 +249,17 @@ class BiquadFilter {
         }
 
         void setFrequency(Frequency<T> newFreq) {
-            bqf.design.setFrequency(newFreq);
+            bqf.design.setFrequency(ch, section, newFreq);
             bqf.applyDesignToTopology(ch, section);
         }
 
         void setQ(T newQ) {
-            bqf.design.setQ(newQ);
+            bqf.design.setQ(ch, section, newQ);
             bqf.applyDesignToTopology(ch, section);
         }
 
         void setGain(Gain<T> newGain) {
-            bqf.design.setGain(newGain);
+            bqf.design.setGain(ch, section, newGain);
             bqf.applyDesignToTopology(ch, section);
         }
 
@@ -276,7 +290,9 @@ class BiquadFilter {
 
     // Function to apply design coefficients to the topology for a specific channel and section
     void applyDesignToTopology(size_t ch, size_t section) {
-        topology.setCoeffs(ch, section, design.getB0(), design.getB1(), design.getB2(), design.getA1(), design.getA2());
+        T b0, b1, b2, a1, a2;
+        design.computeCoeffs(ch, section, b0, b1, b2, a1, a2);
+        topology.setCoeffs(ch, section, b0, b1, b2, a1, a2);
     }
 };
 

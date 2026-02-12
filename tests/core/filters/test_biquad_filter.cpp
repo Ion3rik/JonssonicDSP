@@ -227,7 +227,7 @@ TYPED_TEST(BiquadFilterTest, ChannelSectionProxy) {
     this->biquadFilter.channel(0).section(1).setFrequency(2000.0_hz);
 
     // Verify the design parameters updated correctly.
-    EXPECT_NEAR(2000.0, design.getFrequency().toHertz(fs), 1e-6f);
+    EXPECT_NEAR(2000.0, design.getFrequency(0, 1).toHertz(fs), 1e-6f);
 
     // Verify that only the coefficients for channel 0, section 1 were updated.
     for (size_t ch = 0; ch < this->biquadFilter.getNumChannels(); ++ch) {
@@ -257,7 +257,9 @@ TYPED_TEST(BiquadFilterTest, SectionProxy) {
     this->biquadFilter.section(2).setFrequency(2000.0_hz);
 
     // Verify the design parameters updated correctly.
-    EXPECT_NEAR(2000.0, design.getFrequency().toHertz(fs), 1e-6f);
+    for (size_t ch = 0; ch < this->biquadFilter.getNumChannels(); ++ch) {
+        EXPECT_NEAR(2000.0, design.getFrequency(ch, 2).toHertz(fs), 1e-6f);
+    }
 
     // Verify that only the coefficients for section 2 were updated across all channels.
     for (size_t ch = 0; ch < this->biquadFilter.getNumChannels(); ++ch) {
@@ -287,7 +289,9 @@ TYPED_TEST(BiquadFilterTest, ChannelProxy) {
     this->biquadFilter.channel(1).setFrequency(2000.0_hz);
 
     // Verify the design parameters updated correctly.
-    EXPECT_NEAR(2000.0, design.getFrequency().toHertz(fs), 1e-6f);
+    for (size_t s = 0; s < this->biquadFilter.getNumSections(); ++s) {
+        EXPECT_NEAR(2000.0, design.getFrequency(1, s).toHertz(fs), 1e-6f);
+    }
 
     // Verify that only the coefficients for channel 1 were updated across all sections.
     for (size_t ch = 0; ch < this->biquadFilter.getNumChannels(); ++ch) {
