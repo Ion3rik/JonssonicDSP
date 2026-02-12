@@ -3,9 +3,11 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include "jonssonic/core/filters/detail/bilinear_one_pole_design.h"
-#include "jonssonic/core/filters/detail/df1_one_pole_topology.h"
-#include "jonssonic/core/filters/routing.h"
+#include "jonssonic/core/filters/detail/filter_limits.h"
+#include "jonssonic/utils/detail/config_utils.h"
+#include <jonssonic/core/filters/detail/bilinear_one_pole_design.h>
+#include <jonssonic/core/filters/detail/df1_one_pole_topology.h>
+#include <jonssonic/core/filters/routing.h>
 
 namespace jnsc {
 /**
@@ -58,8 +60,14 @@ class OnePoleFilter {
      * @note Prepares both the topology and design components of the engine.
      */
     void prepare(size_t newNumChannels, T newSampleRate, size_t newNumSections = 1) {
-        topology.prepare(newNumChannels, newNumSections);
-        design.prepare(newSampleRate);
+        // Clamp sample rate, number of channels, and sections to allowed limits
+        sampleRate = utils::detail::clampSampleRate(newSampleRate);
+        numChannels = utils::detail::clampChannels(newNumChannels);
+        numSections = detail::FilterLimits<T>::clampSections(newNumSections);
+
+        // Prepare topology and design with the new configuration
+        topology.prepare(numChannels, numSections);
+        design.prepare(numChannels, sampleRate, numSections);
     }
 
     /**
@@ -106,10 +114,12 @@ class OnePoleFilter {
      * @param newResponse Desired filter response type.
      */
     void setResponse(Response newResponse) {
-        design.setResponse(newResponse);
-        for (size_t ch = 0; ch < topology.getNumChannels(); ++ch)
-            for (size_t section = 0; section < topology.getNumSections(); ++section)
+        for (size_t ch = 0; ch < topology.getNumChannels(); ++ch) {
+            for (size_t section = 0; section < topology.getNumSections(); ++section) {
+                design.setResponse(ch, section, newResponse);
                 applyDesignToTopology(ch, section);
+            }
+        }
     }
 
     /**
@@ -117,10 +127,12 @@ class OnePoleFilter {
      * @param newFreq Frequency struct.
      */
     void setFrequency(Frequency<T> newFreq) {
-        design.setFrequency(newFreq);
-        for (size_t ch = 0; ch < topology.getNumChannels(); ++ch)
-            for (size_t section = 0; section < topology.getNumSections(); ++section)
+        for (size_t ch = 0; ch < topology.getNumChannels(); ++ch) {
+            for (size_t section = 0; section < topology.getNumSections(); ++section) {
+                design.setFrequency(ch, section, newFreq);
                 applyDesignToTopology(ch, section);
+            }
+        }
     }
 
     /**
@@ -128,10 +140,12 @@ class OnePoleFilter {
      * @param newGain Gain struct.
      */
     void setGain(Gain<T> newGain) {
-        design.setGain(newGain);
-        for (size_t ch = 0; ch < topology.getNumChannels(); ++ch)
-            for (size_t section = 0; section < topology.getNumSections(); ++section)
+        for (size_t ch = 0; ch < topology.getNumChannels(); ++ch) {
+            for (size_t section = 0; section < topology.getNumSections(); ++section) {
+                design.setGain(ch, section, newGain);
                 applyDesignToTopology(ch, section);
+            }
+        }
     }
 
     /// Get reference to the topology for direct access (e.g., for testing)
@@ -139,13 +153,13 @@ class OnePoleFilter {
     /// Get reference to the design for direct access (e.g., for testing)
     const Design& getDesign() const { return design; }
     /// Check if the filter is prepared
-    bool isPrepared() const { return topology.isPrepared(); }
+    bool isPrepared() const { return topology.isPrepared() && design.isPrepared(); }
     /// Get the number of channels
-    size_t getNumChannels() const { return topology.getNumChannels(); }
+    size_t getNumChannels() const { return numChannels; }
     /// Get the sample rate from the design
-    T getSampleRate() const { return design.getSampleRate(); }
+    T getSampleRate() const { return sampleRate; }
     /// Get the number of sections
-    size_t getNumSections() const { return topology.getNumSections(); }
+    size_t getNumSections() const { return numSections; }
 
     /// Forward declaration of proxy classes for channel and section parameter setting.
     class ChannelSectionProxy;
@@ -154,7 +168,7 @@ class OnePoleFilter {
     class ChannelProxy {
       public:
         ChannelProxy(OnePoleFilter& opf, size_t ch) : opf(opf), ch(ch) {
-            assert(ch < opf.topology.getNumChannels() && "Channel index out of bounds");
+            assert(ch < opf.getNumChannels() && "Channel index out of bounds");
         }
 
         // Access specific section of this channel
@@ -162,16 +176,18 @@ class OnePoleFilter {
 
         /// Set frequency for this channel across all sections.
         void setFrequency(Frequency<T> newFreq) {
-            opf.design.setFrequency(newFreq);
-            for (size_t s = 0; s < opf.topology.getNumSections(); ++s)
+            for (size_t s = 0; s < opf.topology.getNumSections(); ++s) {
+                opf.design.setFrequency(ch, s, newFreq);
                 opf.applyDesignToTopology(ch, s);
+            }
         }
 
         /// Set gain for this channel across all sections.
         void setGain(Gain<T> newGain) {
-            opf.design.setGain(newGain);
-            for (size_t s = 0; s < opf.topology.getNumSections(); ++s)
+            for (size_t s = 0; s < opf.topology.getNumSections(); ++s) {
+                opf.design.setGain(ch, s, newGain);
                 opf.applyDesignToTopology(ch, s);
+            }
         }
 
       private:
@@ -189,16 +205,18 @@ class OnePoleFilter {
 
         // Set frequency for this section across all channels.
         void setFrequency(Frequency<T> newFreq) {
-            opf.design.setFrequency(newFreq);
-            for (size_t ch = 0; ch < opf.topology.getNumChannels(); ++ch)
+            for (size_t ch = 0; ch < opf.topology.getNumChannels(); ++ch) {
+                opf.design.setFrequency(ch, section, newFreq);
                 opf.applyDesignToTopology(ch, section);
+            }
         }
 
         // Set gain for this section across all channels.
         void setGain(Gain<T> newGain) {
-            opf.design.setGain(newGain);
-            for (size_t ch = 0; ch < opf.topology.getNumChannels(); ++ch)
+            for (size_t ch = 0; ch < opf.topology.getNumChannels(); ++ch) {
+                opf.design.setGain(ch, section, newGain);
                 opf.applyDesignToTopology(ch, section);
+            }
         }
 
       private:
@@ -210,19 +228,19 @@ class OnePoleFilter {
     class ChannelSectionProxy {
       public:
         ChannelSectionProxy(OnePoleFilter& opf, size_t ch, size_t section) : opf(opf), ch(ch), section(section) {
-            assert(ch < opf.topology.getNumChannels() && "Channel index out of bounds");
-            assert(section < opf.topology.getNumSections() && "Section index out of bounds");
+            assert(ch < opf.getNumChannels() && "Channel index out of bounds");
+            assert(section < opf.getNumSections() && "Section index out of bounds");
         }
 
         /// Set frequency for this specific channel and section.
         void setFrequency(Frequency<T> newFreq) {
-            opf.design.setFrequency(newFreq);
+            opf.design.setFrequency(ch, section, newFreq);
             opf.applyDesignToTopology(ch, section);
         }
 
         /// Set gain for this specific channel and section.
         void setGain(Gain<T> newGain) {
-            opf.design.setGain(newGain);
+            opf.design.setGain(ch, section, newGain);
             opf.applyDesignToTopology(ch, section);
         }
 
@@ -247,13 +265,22 @@ class OnePoleFilter {
     SectionProxy section(size_t section) { return SectionProxy(*this, section); }
 
   private:
+    // Config variables
+    T sampleRate = T(44100);
+    size_t numChannels = 0;
+    size_t numSections = 0;
+
     // Topology and design instances
     Topology topology;
     Design design;
 
     // Function to apply design coefficients to the topology for a specific channel and section
     void applyDesignToTopology(size_t ch, size_t section) {
-        topology.setCoeffs(ch, section, design.getB0(), design.getB1(), design.getA1());
+        assert(ch < numChannels && "Channel index out of bounds");
+        assert(section < numSections && "Section index out of bounds");
+        T b0, b1, a1;
+        design.computeCoeffs(ch, section, b0, b1, a1);
+        topology.setCoeffs(ch, section, b0, b1, a1);
     }
 };
 

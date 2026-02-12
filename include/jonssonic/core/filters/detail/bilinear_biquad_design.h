@@ -29,9 +29,14 @@ class BilinearBiquadDesign {
 
     /**
      * @brief Parameterized constructor that calls @ref prepare.
-     * @param newSampleRate Sample rate in Hz
+     * @param newNumChannels Number of channels.
+     * @param newSampleRate Sample rate in Hz.
+     * @param newNumSections Number of second-order sections.
+     * @note Clamps the sample rate, number of channels, and sections to valid ranges to avoid unstable behavior.
      */
-    BilinearBiquadDesign(T newSampleRate) { prepare(newSampleRate); }
+    BilinearBiquadDesign(size_t newNumChannels, T newSampleRate, size_t newNumSections) {
+        prepare(newNumChannels, newSampleRate, newNumSections);
+    }
 
     /// Default destructor
     ~BilinearBiquadDesign() = default;
@@ -42,11 +47,13 @@ class BilinearBiquadDesign {
      * @param newSampleRate Sample rate in Hz.
      * @param newNumSections Number of second-order sections.
      * @note Must be called before calling @ref setFrequency.
-     * @note Clamps the sample rate to a valid range to avoid unstable behavior.
+     * @note Clamps the sample rate, number of channels, and sections to valid ranges to avoid unstable behavior.
      */
     void prepare(size_t newNumChannels, T newSampleRate, size_t newNumSections) {
-        // Store clamped sample rate.
+        // Clamp sample rate, number of channels, and sections to allowed limits
         fs = utils::detail::clampSampleRate(newSampleRate);
+        newNumChannels = utils::detail::clampChannels(newNumChannels);
+        newNumSections = FilterLimits<T>::clampSections(newNumSections);
 
         // Initialize parameter buffers
         response.resize(newNumChannels, newNumSections, Response::Lowpass);

@@ -49,8 +49,10 @@ class DF1OnePoleTopology {
      * @param newNumSections Number of first-order sections
      */
     void prepare(size_t newNumChannels, size_t newNumSections) {
-        numChannels = newNumChannels;
-        numSections = newNumSections;
+        // Clamp channels and sections to allowed limits
+        numChannels = utils::detail::clampChannels(newNumChannels);
+        numSections = FilterLimits<T>::clampSections(newNumSections);
+        // Allocate coefficient and state buffers
         coeffs.resize(numChannels, numSections * COEFFS_PER_SECTION);
         state.resize(numChannels, numSections * STATE_VARS_PER_SECTION);
         togglePrepared = true;
