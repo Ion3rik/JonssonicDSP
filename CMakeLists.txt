@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 
 # Project configuration
 project(JonssonicDSP 
-    VERSION 0.1.0
+    VERSION 0.2.0
 	DESCRIPTION "JonssonicDSP - A Modular Realtime C++ Audio DSP Library"
 	LANGUAGES CXX
 )

@@ -1,0 +1,44 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python for documentation (optional)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Generate documentation (optional)
+        run: |
+          if [ -f Doxyfile ]; then
+            sudo apt-get update && sudo apt-get install -y doxygen
+            doxygen Doxyfile
+          fi
+
+      - name: Create release archive
+        run: |
+          mkdir -p release
+          cp -r include release/
+          cp LICENSE README.md release/
+          if [ -d docs ]; then cp -r docs release/; fi
+          cd release
+          tar -czf ../jonssonic-dsp-${{ github.ref_name }}.tar.gz .
+          zip -r ../jonssonic-dsp-${{ github.ref_name }}.zip .
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            jonssonic-dsp-${{ github.ref_name }}.tar.gz
+            jonssonic-dsp-${{ github.ref_name }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
