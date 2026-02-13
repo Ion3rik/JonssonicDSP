@@ -1,0 +1,4 @@
+var structjnsc_1_1RoutingWrapper_3_01Filter_3_01T_00_01Topology_00_01Design_00_01CurrentRouting_01_4_00_01Routing_1_1Series_01_4 =
+[
+    [ "Type", "structjnsc_1_1RoutingWrapper_3_01Filter_3_01T_00_01Topology_00_01Design_00_01CurrentRouting_01_4_00_01Routing_1_1Series_01_4.html#a7434a9c85f45583e418283961d1c3805", null ]
+];

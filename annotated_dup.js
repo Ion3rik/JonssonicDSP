@@ -1,0 +1,88 @@
+var annotated_dup =
+[
+    [ "jnsc", "namespacejnsc.html", [
+      [ "AllpassMod", "namespacejnsc_1_1AllpassMod.html", [
+        [ "Block", "structjnsc_1_1AllpassMod_1_1Block.html", "structjnsc_1_1AllpassMod_1_1Block" ],
+        [ "Sample", "structjnsc_1_1AllpassMod_1_1Sample.html", "structjnsc_1_1AllpassMod_1_1Sample" ]
+      ] ],
+      [ "CombMod", "namespacejnsc_1_1CombMod.html", [
+        [ "Block", "structjnsc_1_1CombMod_1_1Block.html", "structjnsc_1_1CombMod_1_1Block" ],
+        [ "Sample", "structjnsc_1_1CombMod_1_1Sample.html", "structjnsc_1_1CombMod_1_1Sample" ]
+      ] ],
+      [ "effects", "namespacejnsc_1_1effects.html", [
+        [ "Compressor", "classjnsc_1_1effects_1_1Compressor.html", "classjnsc_1_1effects_1_1Compressor" ],
+        [ "Delay", "classjnsc_1_1effects_1_1Delay.html", "classjnsc_1_1effects_1_1Delay" ],
+        [ "Distortion", "classjnsc_1_1effects_1_1Distortion.html", "classjnsc_1_1effects_1_1Distortion" ],
+        [ "Equalizer", "classjnsc_1_1effects_1_1Equalizer.html", "classjnsc_1_1effects_1_1Equalizer" ],
+        [ "Flanger", "classjnsc_1_1effects_1_1Flanger.html", "classjnsc_1_1effects_1_1Flanger" ],
+        [ "Reverb", "classjnsc_1_1effects_1_1Reverb.html", "classjnsc_1_1effects_1_1Reverb" ]
+      ] ],
+      [ "models", "namespacejnsc_1_1models.html", [
+        [ "DecayFilter", "classjnsc_1_1models_1_1DecayFilter.html", "classjnsc_1_1models_1_1DecayFilter" ],
+        [ "DynamicsStage", "classjnsc_1_1models_1_1DynamicsStage.html", "classjnsc_1_1models_1_1DynamicsStage" ],
+        [ "FeedbackDelayNetwork", "classjnsc_1_1models_1_1FeedbackDelayNetwork.html", "classjnsc_1_1models_1_1FeedbackDelayNetwork" ],
+        [ "FilteredNoise", "classjnsc_1_1models_1_1FilteredNoise.html", null ],
+        [ "FilteredNoise< T, noiseType, FilterType::Lowpass1stOrder >", "classjnsc_1_1models_1_1FilteredNoise_3_01T_00_01noiseType_00_01FilterType_1_1Lowpass1stOrder_01_4.html", "classjnsc_1_1models_1_1FilteredNoise_3_01T_00_01noiseType_00_01FilterType_1_1Lowpass1stOrder_01_4" ],
+        [ "FilteredNoise< T, noiseType, FilterType::Lowpass2ndOrder >", "classjnsc_1_1models_1_1FilteredNoise_3_01T_00_01noiseType_00_01FilterType_1_1Lowpass2ndOrder_01_4.html", "classjnsc_1_1models_1_1FilteredNoise_3_01T_00_01noiseType_00_01FilterType_1_1Lowpass2ndOrder_01_4" ],
+        [ "ModulatedDelayStage", "classjnsc_1_1models_1_1ModulatedDelayStage.html", "classjnsc_1_1models_1_1ModulatedDelayStage" ],
+        [ "SaturationStage", "classjnsc_1_1models_1_1SaturationStage.html", "classjnsc_1_1models_1_1SaturationStage" ]
+      ] ],
+      [ "utils", "namespacejnsc_1_1utils.html", [
+        [ "Xorshift32", "structjnsc_1_1utils_1_1Xorshift32.html", "structjnsc_1_1utils_1_1Xorshift32" ]
+      ] ],
+      [ "AllpassFilter", "classjnsc_1_1AllpassFilter.html", "classjnsc_1_1AllpassFilter" ],
+      [ "AudioBuffer", "classjnsc_1_1AudioBuffer.html", null ],
+      [ "AudioBuffer< T, BufferLayout::Interleaved >", "classjnsc_1_1AudioBuffer_3_01T_00_01BufferLayout_1_1Interleaved_01_4.html", "classjnsc_1_1AudioBuffer_3_01T_00_01BufferLayout_1_1Interleaved_01_4" ],
+      [ "AudioBuffer< T, BufferLayout::Planar >", "classjnsc_1_1AudioBuffer_3_01T_00_01BufferLayout_1_1Planar_01_4.html", "classjnsc_1_1AudioBuffer_3_01T_00_01BufferLayout_1_1Planar_01_4" ],
+      [ "BiquadFilter", "classjnsc_1_1BiquadFilter.html", "classjnsc_1_1BiquadFilter" ],
+      [ "CircularAudioBuffer", "classjnsc_1_1CircularAudioBuffer.html", "classjnsc_1_1CircularAudioBuffer" ],
+      [ "CombFilter", "classjnsc_1_1CombFilter.html", "classjnsc_1_1CombFilter" ],
+      [ "Crossfader", "classjnsc_1_1Crossfader.html", "classjnsc_1_1Crossfader" ],
+      [ "DelayLine", "classjnsc_1_1DelayLine.html", "classjnsc_1_1DelayLine" ],
+      [ "DryWetMixer", "classjnsc_1_1DryWetMixer.html", "classjnsc_1_1DryWetMixer" ],
+      [ "DspParam", "classjnsc_1_1DspParam.html", "classjnsc_1_1DspParam" ],
+      [ "EnvelopeFollower", "classjnsc_1_1EnvelopeFollower.html", null ],
+      [ "EnvelopeFollower< T, EnvelopeType::Peak >", "classjnsc_1_1EnvelopeFollower_3_01T_00_01EnvelopeType_1_1Peak_01_4.html", "classjnsc_1_1EnvelopeFollower_3_01T_00_01EnvelopeType_1_1Peak_01_4" ],
+      [ "EnvelopeFollower< T, EnvelopeType::RMS >", "classjnsc_1_1EnvelopeFollower_3_01T_00_01EnvelopeType_1_1RMS_01_4.html", "classjnsc_1_1EnvelopeFollower_3_01T_00_01EnvelopeType_1_1RMS_01_4" ],
+      [ "Frequency", "structjnsc_1_1Frequency.html", "structjnsc_1_1Frequency" ],
+      [ "Gain", "structjnsc_1_1Gain.html", "structjnsc_1_1Gain" ],
+      [ "GainComputer", "classjnsc_1_1GainComputer.html", "classjnsc_1_1GainComputer" ],
+      [ "GainSmoother", "classjnsc_1_1GainSmoother.html", null ],
+      [ "GainSmoother< T, GainSmootherType::AttackRelease >", "classjnsc_1_1GainSmoother_3_01T_00_01GainSmootherType_1_1AttackRelease_01_4.html", "classjnsc_1_1GainSmoother_3_01T_00_01GainSmootherType_1_1AttackRelease_01_4" ],
+      [ "LagrangeInterpolator", "structjnsc_1_1LagrangeInterpolator.html", null ],
+      [ "LinearInterpolator", "structjnsc_1_1LinearInterpolator.html", null ],
+      [ "MixingMatrix", "classjnsc_1_1MixingMatrix.html", null ],
+      [ "MixingMatrix< T, MixingMatrixType::DecorrelatedSum >", "classjnsc_1_1MixingMatrix_3_01T_00_01MixingMatrixType_1_1DecorrelatedSum_01_4.html", "classjnsc_1_1MixingMatrix_3_01T_00_01MixingMatrixType_1_1DecorrelatedSum_01_4" ],
+      [ "MixingMatrix< T, MixingMatrixType::Dense >", "classjnsc_1_1MixingMatrix_3_01T_00_01MixingMatrixType_1_1Dense_01_4.html", "classjnsc_1_1MixingMatrix_3_01T_00_01MixingMatrixType_1_1Dense_01_4" ],
+      [ "MixingMatrix< T, MixingMatrixType::Hadamard >", "classjnsc_1_1MixingMatrix_3_01T_00_01MixingMatrixType_1_1Hadamard_01_4.html", "classjnsc_1_1MixingMatrix_3_01T_00_01MixingMatrixType_1_1Hadamard_01_4" ],
+      [ "MixingMatrix< T, MixingMatrixType::Householder >", "classjnsc_1_1MixingMatrix_3_01T_00_01MixingMatrixType_1_1Householder_01_4.html", "classjnsc_1_1MixingMatrix_3_01T_00_01MixingMatrixType_1_1Householder_01_4" ],
+      [ "MixingMatrix< T, MixingMatrixType::Identity >", "classjnsc_1_1MixingMatrix_3_01T_00_01MixingMatrixType_1_1Identity_01_4.html", "classjnsc_1_1MixingMatrix_3_01T_00_01MixingMatrixType_1_1Identity_01_4" ],
+      [ "ModulationInput", "structjnsc_1_1ModulationInput.html", null ],
+      [ "NearestInterpolator", "structjnsc_1_1NearestInterpolator.html", null ],
+      [ "Noise", "classjnsc_1_1Noise.html", null ],
+      [ "Noise< T, NoiseType::Gaussian >", "classjnsc_1_1Noise_3_01T_00_01NoiseType_1_1Gaussian_01_4.html", "classjnsc_1_1Noise_3_01T_00_01NoiseType_1_1Gaussian_01_4" ],
+      [ "Noise< T, NoiseType::Uniform >", "classjnsc_1_1Noise_3_01T_00_01NoiseType_1_1Uniform_01_4.html", "classjnsc_1_1Noise_3_01T_00_01NoiseType_1_1Uniform_01_4" ],
+      [ "NoneInterpolator", "structjnsc_1_1NoneInterpolator.html", null ],
+      [ "OnePoleFilter", "classjnsc_1_1OnePoleFilter.html", "classjnsc_1_1OnePoleFilter" ],
+      [ "Oscillator", "classjnsc_1_1Oscillator.html", "classjnsc_1_1Oscillator" ],
+      [ "OversampledProcessor", "classjnsc_1_1OversampledProcessor.html", "classjnsc_1_1OversampledProcessor" ],
+      [ "OversampledProcessor< T, 0 >", "classjnsc_1_1OversampledProcessor_3_01T_00_010_01_4.html", "classjnsc_1_1OversampledProcessor_3_01T_00_010_01_4" ],
+      [ "Oversampler", "classjnsc_1_1Oversampler.html", "classjnsc_1_1Oversampler" ],
+      [ "RoutingWrapper", "structjnsc_1_1RoutingWrapper.html", null ],
+      [ "RoutingWrapper< Filter< T, Topology, Design, CurrentRouting >, Routing::Parallel >", "structjnsc_1_1RoutingWrapper_3_01Filter_3_01T_00_01Topology_00_01Design_00_01CurrentRouting_01_4_00_01Routing_1_1Parallel_01_4.html", "structjnsc_1_1RoutingWrapper_3_01Filter_3_01T_00_01Topology_00_01Design_00_01CurrentRouting_01_4_00_01Routing_1_1Parallel_01_4" ],
+      [ "RoutingWrapper< Filter< T, Topology, Design, CurrentRouting >, Routing::Series >", "structjnsc_1_1RoutingWrapper_3_01Filter_3_01T_00_01Topology_00_01Design_00_01CurrentRouting_01_4_00_01Routing_1_1Series_01_4.html", "structjnsc_1_1RoutingWrapper_3_01Filter_3_01T_00_01Topology_00_01Design_00_01CurrentRouting_01_4_00_01Routing_1_1Series_01_4" ],
+      [ "Time", "structjnsc_1_1Time.html", "structjnsc_1_1Time" ],
+      [ "TPTIntegrator", "classjnsc_1_1TPTIntegrator.html", "classjnsc_1_1TPTIntegrator" ],
+      [ "WaveShaper", "classjnsc_1_1WaveShaper.html", null ],
+      [ "WaveShaper< T, WaveShaperType::Atan >", "classjnsc_1_1WaveShaper_3_01T_00_01WaveShaperType_1_1Atan_01_4.html", "classjnsc_1_1WaveShaper_3_01T_00_01WaveShaperType_1_1Atan_01_4" ],
+      [ "WaveShaper< T, WaveShaperType::Cubic >", "classjnsc_1_1WaveShaper_3_01T_00_01WaveShaperType_1_1Cubic_01_4.html", "classjnsc_1_1WaveShaper_3_01T_00_01WaveShaperType_1_1Cubic_01_4" ],
+      [ "WaveShaper< T, WaveShaperType::Custom >", "classjnsc_1_1WaveShaper_3_01T_00_01WaveShaperType_1_1Custom_01_4.html", "classjnsc_1_1WaveShaper_3_01T_00_01WaveShaperType_1_1Custom_01_4" ],
+      [ "WaveShaper< T, WaveShaperType::Dynamic >", "classjnsc_1_1WaveShaper_3_01T_00_01WaveShaperType_1_1Dynamic_01_4.html", "classjnsc_1_1WaveShaper_3_01T_00_01WaveShaperType_1_1Dynamic_01_4" ],
+      [ "WaveShaper< T, WaveShaperType::FullWaveRectifier >", "classjnsc_1_1WaveShaper_3_01T_00_01WaveShaperType_1_1FullWaveRectifier_01_4.html", "classjnsc_1_1WaveShaper_3_01T_00_01WaveShaperType_1_1FullWaveRectifier_01_4" ],
+      [ "WaveShaper< T, WaveShaperType::HalfWaveRectifier >", "classjnsc_1_1WaveShaper_3_01T_00_01WaveShaperType_1_1HalfWaveRectifier_01_4.html", "classjnsc_1_1WaveShaper_3_01T_00_01WaveShaperType_1_1HalfWaveRectifier_01_4" ],
+      [ "WaveShaper< T, WaveShaperType::HardClip >", "classjnsc_1_1WaveShaper_3_01T_00_01WaveShaperType_1_1HardClip_01_4.html", "classjnsc_1_1WaveShaper_3_01T_00_01WaveShaperType_1_1HardClip_01_4" ],
+      [ "WaveShaper< T, WaveShaperType::None >", "classjnsc_1_1WaveShaper_3_01T_00_01WaveShaperType_1_1None_01_4.html", "classjnsc_1_1WaveShaper_3_01T_00_01WaveShaperType_1_1None_01_4" ],
+      [ "WaveShaper< T, WaveShaperType::Tanh >", "classjnsc_1_1WaveShaper_3_01T_00_01WaveShaperType_1_1Tanh_01_4.html", "classjnsc_1_1WaveShaper_3_01T_00_01WaveShaperType_1_1Tanh_01_4" ],
+      [ "WaveShaperProcessor", "classjnsc_1_1WaveShaperProcessor.html", "classjnsc_1_1WaveShaperProcessor" ]
+    ] ]
+];
