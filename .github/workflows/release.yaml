@@ -41,5 +41,16 @@ jobs:
             jonssonic-dsp-${{ github.ref_name }}.tar.gz
             jonssonic-dsp-${{ github.ref_name }}.zip
           prerelease: true
+          body: |
+            ## Installation Guide
+            
+            1. Download and extract the jonssonic-dsp-<version>.zip or .tar.gz from the assets below.
+            2. Copy the `include/jonssonic` directory into your project’s include path.
+            3. Include the desired headers in your source files, e.g.:
+               ```cpp
+               #include <jonssonic/effects/reverb.h>
+               ```
+            4. No library linking is required—JonssonicDSP is header-only.
+            5. See the README and documentation for usage examples and API details.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
