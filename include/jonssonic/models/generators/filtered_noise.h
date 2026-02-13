@@ -122,6 +122,7 @@ class FilteredNoise<T, noiseType, FilterType::Lowpass2ndOrder> {
         noise.prepare(newNumChannels);
         filter.prepare(newNumChannels, sampleRate);
         filter.setResponse(BiquadFilter<T>::Response::Lowpass);
+        filter.setQ(T(0.707));                          // Butterworth Q for flat response
         filter.setFrequency(Frequency<T>::Hertz(1000)); // Default cutoff frequency
 
         // Mark as prepared
