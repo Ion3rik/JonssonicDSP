@@ -1,5 +1,5 @@
 // JonssonicDSP - A modular realtime C++ audio DSP library
-// State Variable Filter TPT Topology class header file
+// TPT State Variable Filter Topology class header file
 // SPDX-License-Identifier: MIT
 #pragma once
 
@@ -10,33 +10,33 @@
 namespace jnsc::detail {
 
 /**
- * @brief State Variable Filter TPT Topology class implementing a multi-channel, multi-section state variable filter.
+ * @brief TPT State Variable Filter Topology class implementing a multi-channel, multi-section state variable filter.
  * @tparam T Sample data type (e.g., float, double)
  */
 template <typename T>
-class SVFTPTTopology {
+class TPTSVFTopology {
   public:
     /// Constexprs for state variable count per section
     static constexpr size_t STATE_VARS_PER_SECTION = 2; // z1, z2 for each of the 2 integrators in the biquad section
 
     /// Default constructor
-    SVFTPTTopology() = default;
+    TPTSVFTopology() = default;
 
     /**
      * @brief Parameterized constructor that calls @ref prepare.
      * @param newNumChannels Number of channels
      * @param newNumSections Number of second-order sections
      */
-    SVFTPTTopology(size_t newNumChannels, size_t newNumSections) { prepare(newNumChannels, newNumSections); }
+    TPTSVFTopology(size_t newNumChannels, size_t newNumSections) { prepare(newNumChannels, newNumSections); }
 
     /// Default destructor
-    ~SVFTPTTopology() = default;
+    ~TPTSVFTopology() = default;
 
     // No copy or move semantics
-    SVFTPTTopology(const SVFTPTTopology&) = delete;
-    SVFTPTTopology& operator=(const SVFTPTTopology&) = delete;
-    SVFTPTTopology(SVFTPTTopology&&) = delete;
-    SVFTPTTopology& operator=(SVFTPTTopology&&) = delete;
+    TPTSVFTopology(const TPTSVFTopology&) = delete;
+    TPTSVFTopology& operator=(const TPTSVFTopology&) = delete;
+    TPTSVFTopology(TPTSVFTopology&&) = delete;
+    TPTSVFTopology& operator=(TPTSVFTopology&&) = delete;
 
     /**
      * @brief Prepare the filter for processing.
@@ -68,8 +68,9 @@ class SVFTPTTopology {
      * @param hp Output variable for the highpass output.
      * @param bp Output variable for the bandpass output.
      * @param lp Output variable for the lowpass output.
+     * @param ap Output variable for the allpass output.
      */
-    void process(size_t ch, size_t section, T input, T g, T twoR, T& hp, T& bp, T& lp) {
+    void processSample(size_t ch, size_t section, T input, T g, T twoR, T& hp, T& bp, T& lp, T& ap) {
         T g0 = twoR + g;
         T d = T(1.0) / (T(1.0) + twoR * g + g * g);
 
@@ -86,13 +87,21 @@ class SVFTPTTopology {
 
         // Lowpass output
         lp = integrator.processSample(ch, stateBase + 1, bp, g);
+
+        // Allpass output
+        ap = hp + lp;
     }
+
+    /// Get number of prepared channels
+    size_t getNumChannels() const { return numChannels; }
+    /// Get number of prepared sections
+    size_t getNumSections() const { return numSections; }
 
   private:
     bool togglePrepared = false;
     size_t numChannels = 0;
     size_t numSections = 0;
-    TPTIntegrator<T> integrator; // TPT integrator for the state variable filter
+    TPTIntegrator<T> integrator;
 };
 
 } // namespace jnsc::detail
