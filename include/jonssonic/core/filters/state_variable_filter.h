@@ -218,12 +218,6 @@ class StateVariableFilter {
             }
         }
 
-        void setGain(Gain<T> newGain) {
-            for (size_t s = 0; s < bqf.topology.getNumSections(); ++s) {
-                bqf.design.setGain(ch, s, newGain);
-            }
-        }
-
       private:
         StateVariableFilter& bqf;
         size_t ch;
@@ -233,6 +227,9 @@ class StateVariableFilter {
     class SectionProxy {
       public:
         SectionProxy(StateVariableFilter& bqf, size_t section) : bqf(bqf), section(section) {}
+
+        // Access specific channel of this section
+        ChannelSectionProxy channel(size_t channelIdx) { return ChannelSectionProxy(bqf, channelIdx, section); }
 
         void setResponse(Response newResponse) {
             for (size_t ch = 0; ch < bqf.topology.getNumChannels(); ++ch) {
@@ -246,18 +243,9 @@ class StateVariableFilter {
             }
         }
 
-        // Access specific channel of this section
-        ChannelSectionProxy channel(size_t channelIdx) { return ChannelSectionProxy(bqf, channelIdx, section); }
-
         void setQ(T newQ) {
             for (size_t ch = 0; ch < bqf.topology.getNumChannels(); ++ch) {
                 bqf.design.setQ(ch, section, newQ);
-            }
-        }
-
-        void setGain(Gain<T> newGain) {
-            for (size_t ch = 0; ch < bqf.topology.getNumChannels(); ++ch) {
-                bqf.design.setGain(ch, section, newGain);
             }
         }
 
@@ -279,8 +267,6 @@ class StateVariableFilter {
         void setFrequency(Frequency<T> newFreq) { bqf.design.setFrequency(ch, section, newFreq); }
 
         void setQ(T newQ) { bqf.design.setQ(ch, section, newQ); }
-
-        void setGain(Gain<T> newGain) { bqf.design.setGain(ch, section, newGain); }
 
       private:
         StateVariableFilter& bqf;

@@ -57,20 +57,21 @@ class SVFDesign {
         numSections = FilterLimits<T>::clampSections(newNumSections);
 
         // Initialize parameters
-        responseMask.resize(numChannels, numSections);
+        responseOneHot.resize(numChannels, numSections * static_cast<size_t>(Response::numTypes));
         twoR.prepare(numChannels * numSections, fs);
         g.prepare(numChannels * numSections, fs);
+
+        // Mark as prepared
+        togglePrepared = true;
 
         // Set default frequency and Q for all sections and channels
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t section = 0; section < numSections; ++section) {
+                setResponse(ch, section, Response::Lowpass);          // Default to lowpass response
                 setFrequency(ch, section, Frequency<T>::Hertz(1000)); // Default to 1 kHz
                 setQ(ch, section, T(0.707));                          // Default to Butterworth Q
             }
         }
-
-        // Mark as prepared
-        togglePrepared = true;
     }
 
     /**
@@ -90,14 +91,14 @@ class SVFDesign {
      * @note Updates coefficients based on the current parameters and the new response type.
      */
     void setResponse(size_t ch, size_t section, Response newResponse) {
-        // Create one-hot response mask
-        std::array<float, Response::numTypes> mask = {};
-
-        // Set the appropriate response type to 1.0f in the mask
-        mask[static_cast<size_t>(newResponse)] = 1.0f;
-
-        // Write the response mask for this channel and section
-        responseMask[ch][section] = mask;
+        assert(ch < numChannels);
+        assert(section < numSections);
+        // Set one-hot encoding for the response type in the responseOneHot buffer
+        size_t numResponseTypes = static_cast<size_t>(Response::numTypes);
+        size_t baseIndex = section * numResponseTypes;
+        // Set one-hot encoding for the response type in the responseOneHot buffer
+        for (size_t i = 0; i < numResponseTypes; ++i)
+            responseOneHot[ch][baseIndex + i] = (i == static_cast<size_t>(newResponse)) ? 1.0f : 0.0f;
     }
 
     /**
@@ -136,19 +137,28 @@ class SVFDesign {
     T getNextTwoR(size_t ch, size_t section) { return twoR.getNextValue(index(ch, section)); }
 
     /// Get the response mask for a specific channel and section.
-    const std::array<float, Response::numTypes>& getResponseMask(size_t ch, size_t section) const {
-        return responseMask[index(ch, section)];
+    const T* getResponseMask(size_t ch, size_t section) const {
+        size_t numResponseTypes = static_cast<size_t>(Response::numTypes);
+        size_t baseIndex = section * numResponseTypes;
+        return &responseOneHot[ch][baseIndex];
     }
 
     /// Get current sample rate
     T getSampleRate() const { return fs; }
 
     /// Get current filter response type (for testing purposes)
-    const Response& getResponse(size_t ch = 0, size_t section = 0) const {
-        const auto& mask = responseMask[index(ch, section)];
-        for (size_t i = 0; i < mask.size(); ++i)
-            if (std::abs(mask[i] - 1.0f) < 1e-6f)
-                return static_cast<const Response&>(static_cast<Response>(i));
+    Response getResponse(size_t ch = 0, size_t section = 0) const {
+        size_t numResponseTypes = static_cast<size_t>(Response::numTypes);
+        size_t baseIndex = section * numResponseTypes;
+        const auto& oneHot = responseOneHot[ch];
+        Response response;
+        for (size_t i = 0; i < numResponseTypes; ++i) {
+            if (std::abs(oneHot[baseIndex + i] - 1.0f) < 1e-6f) {
+                response = static_cast<Response>(i);
+                break;
+            }
+        }
+        return response;
     }
     /// Get current frequency (for testing purposes)
     Frequency<T> getFrequency(size_t ch = 0, size_t section = 0) const {
@@ -164,7 +174,7 @@ class SVFDesign {
     size_t numChannels = 0;
     size_t numSections = 0;
     T fs = 0;
-    AudioBuffer<std::array<float, Response::numTypes>> responseMask; // store response type as one-hot vector.
+    AudioBuffer<T> responseOneHot; // Buffer to store one-hot encoded response types for each channel and section
     DspParam<T> twoR, g; // Onepole smoothed parameters for the TPT SVF topology (twoR = 2*R, g = tan(pi*fc/fs))
 
     // Helper function to index the 1D parameter buffers as 2D (channel, section)

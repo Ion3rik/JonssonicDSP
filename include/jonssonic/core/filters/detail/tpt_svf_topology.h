@@ -76,8 +76,8 @@ class TPTSVFTopology {
 
         // Get previous integrator states
         size_t stateBase = section * STATE_VARS_PER_SECTION;
-        T s0 = integrator.getState()(ch, stateBase + 0);
-        T s1 = integrator.getState()(ch, stateBase + 1);
+        T s0 = integrator.getState(ch, stateBase + 0);
+        T s1 = integrator.getState(ch, stateBase + 1);
 
         // Highpass output
         hp = (input - s1 - g0 * s0) * d;
@@ -91,11 +91,17 @@ class TPTSVFTopology {
         // Allpass output
         ap = hp + lp;
     }
-
+    /// Get the state variable for a specific channel and section.
+    T getState(size_t ch, size_t section, size_t stateVarIndex) const {
+        size_t stateBase = section * STATE_VARS_PER_SECTION;
+        return integrator.getState(ch, stateBase + stateVarIndex);
+    }
     /// Get number of prepared channels
     size_t getNumChannels() const { return numChannels; }
     /// Get number of prepared sections
     size_t getNumSections() const { return numSections; }
+    /// Check if the topology is prepared
+    bool isPrepared() const { return togglePrepared; }
 
   private:
     bool togglePrepared = false;

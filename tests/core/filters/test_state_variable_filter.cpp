@@ -8,8 +8,8 @@
 using namespace jnsc;
 
 // List of stateVariableFilter variants to test
-typedef ::testing::Types <
-    StateVariableFilter<float, detail::TPTSVFTopology<float>, detail::SVFDesign<float>> FilterVariants;
+typedef ::testing::Types<StateVariableFilter<float, detail::TPTSVFTopology<float>, detail::SVFDesign<float>>>
+    FilterVariants;
 
 // Typed test fixture for Filter class
 template <typename Variant>
@@ -90,7 +90,8 @@ TYPED_TEST(StateVariableFilterTest, SetQ) {
 
     // Set a Q of 0.5 and get initial design and coefficients
     this->StateVariableFilter.setResponse(Response::Lowpass);
-    this->StateVariableFilter.setQ(0.5f) EXPECT_NEAR(0.5f, design.getQ(), 1e-6f);
+    this->StateVariableFilter.setQ(0.5f);
+    EXPECT_NEAR(0.5f, design.getQ(), 1e-6f);
 
     // Set a Q of 2.0 and get updated design and coefficients
     this->StateVariableFilter.setQ(2.0f);
@@ -116,12 +117,15 @@ TYPED_TEST(StateVariableFilterTest, ProcessBlock) {
     // Prepare the StateVariableFilter
     size_t numChannels = 2;
     size_t numSections = 3;
+    this->StateVariableFilter.reset();
     this->StateVariableFilter.prepare(numChannels, numSections, this->sampleRate);
     this->StateVariableFilter.setResponse(Response::Lowpass);
 
     // Create input and output buffers
-    size_t numSamples = 4;
+    size_t numSamples = 1024;
     AudioBuffer<float> input(numChannels, numSamples);
+    for (size_t ch = 0; ch < numChannels; ++ch)
+            input[ch][0] = 1.0f; // Impulse input for testing
     AudioBuffer<float> output(numChannels, numSamples);
 
     // Process the block and verify that outputs are not NaN or Inf
@@ -146,12 +150,12 @@ TYPED_TEST(StateVariableFilterTest, Reset) {
 
     // Reset the StateVariableFilter and verify that the state buffers are cleared
     this->StateVariableFilter.reset();
-    const auto& state = this->StateVariableFilter.getTopology().getState();
-    size_t numStates = this->StateVariableFilter.getTopology().STATE_VARS_PER_SECTION;
+    const auto& topology = this->StateVariableFilter.getTopology();
+    size_t numStates = topology.STATE_VARS_PER_SECTION;
     for (size_t ch = 0; ch < this->StateVariableFilter.getNumChannels(); ++ch) {
         for (size_t s = 0; s < this->StateVariableFilter.getNumSections(); ++s) {
             for (size_t i = 0; i < numStates; ++i)
-                EXPECT_EQ(state[ch][s * numStates + i], 0.0f); // x1
+                EXPECT_EQ(topology.getState(ch, s, i), 0.0f); // x1
         }
     }
 }
@@ -213,9 +217,9 @@ TYPED_TEST(StateVariableFilterTest, ChannelProxy) {
 
     // Get references to design and topology for testing
     auto& design = this->StateVariableFilter.getDesign();
+    auto& topology = this->StateVariableFilter.getTopology();
 
     // Set frequency with channel proxy.
-    auto oldCoeffs = AudioBuffer<float>(topology.getCoeffs());
     this->StateVariableFilter.channel(1).setFrequency(2000.0_hz);
 
     // Verify that only the frequency of channel 1 were updated across all sections.

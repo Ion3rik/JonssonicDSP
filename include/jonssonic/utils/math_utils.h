@@ -4,6 +4,7 @@
 // Update: 18.11.2025
 
 #pragma once
+#include <array>
 #include <complex>
 #include <cstddef>
 #include <limits>
@@ -88,8 +89,7 @@ std::vector<std::complex<T>> complexSpectrum(const std::vector<T>& input) {
 // If oneSided=true, returns only the first N/2+1 bins (for real input)
 // If dB=true, returns 20*log10(mag+1e-12)
 template <typename T>
-std::vector<T>
-magnitudeSpectrum(const std::vector<T>& input, bool oneSided = false, bool dB = false) {
+std::vector<T> magnitudeSpectrum(const std::vector<T>& input, bool oneSided = false, bool dB = false) {
     auto spec = complexSpectrum(input);
     size_t N = spec.size();
     size_t outLen = oneSided ? (N / 2 + 1) : N;
@@ -255,5 +255,16 @@ struct Xorshift32 {
     // Returns float in [0, 1)
     float nextFloat01() { return (next() >> 1) * (1.0f / 2147483648.0f); }
 };
+
+/// Compile-time zero value for std::array.
+template <typename U, size_t N>
+constexpr std::array<U, N> zero_value() {
+    return std::array<U, N>{};
+}
+/// Compile-time zero value for scalar.
+template <typename U>
+constexpr U zero_value() {
+    return U(0);
+}
 
 } // namespace jnsc::utils

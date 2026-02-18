@@ -48,8 +48,8 @@ class TPTIntegrator {
      * @return Integrated output sample.
      */
     T processSample(size_t ch, size_t section, T x, T g) {
-        T y = (g * x + z(ch, section)) / (1 + g);
-        z(ch, section) = y + g * (x - y);
+        T y = (g * x + z[ch][section]) / (1 + g);
+        z[ch][section] = y + g * (x - y);
         return y;
     }
 
@@ -59,7 +59,7 @@ class TPTIntegrator {
      * @param section Section index.
      * @return State variable value.
      */
-    T getState(size_t ch, size_t section) const { return z(ch, section); }
+    T getState(size_t ch, size_t section) const { return z[ch][section]; }
 
     /// Get number of prepared channels
     size_t getNumChannels() const { return numChannels; }
