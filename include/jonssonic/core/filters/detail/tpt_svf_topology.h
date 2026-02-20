@@ -4,7 +4,7 @@
 #pragma once
 
 #include "jonssonic/utils/detail/config_utils.h"
-#include <jonssonic/core/common/tpt_integrator.h>
+#include <jonssonic/core/common/audio_buffer.h>
 #include <jonssonic/core/filters/detail/filter_limits.h>
 
 namespace jnsc::detail {
@@ -48,15 +48,15 @@ class TPTSVFTopology {
         numChannels = utils::detail::clampChannels(newNumChannels);
         numSections = FilterLimits<T>::clampSections(newNumSections);
 
-        // Prepare the TPT integrator
-        integrator.prepare(numChannels, STATE_VARS_PER_SECTION * numSections);
+        // Resize state buffer to hold state variables for all channels and sections
+        state.resize(numChannels, numSections * STATE_VARS_PER_SECTION);
 
         // Mark as prepared
         togglePrepared = true;
     }
 
     /// Reset the filter state
-    void reset() { integrator.reset(); }
+    void reset() { state.clear(); }
 
     /**
      * @brief Process a single sample for a specific channel and section.
@@ -70,31 +70,34 @@ class TPTSVFTopology {
      * @param lp Output variable for the lowpass output.
      * @param ap Output variable for the allpass output.
      */
-    void processSample(size_t ch, size_t section, T input, T g, T twoR, T& hp, T& bp, T& lp, T& ap) {
+    void processSample(size_t ch, size_t section, T input, T g, T twoR, T& hp, T& bp, T& lp) {
         T g0 = twoR + g;
         T d = T(1.0) / (T(1.0) + twoR * g + g * g);
 
         // Get previous integrator states
         size_t stateBase = section * STATE_VARS_PER_SECTION;
-        T s0 = integrator.getState(ch, stateBase + 0);
-        T s1 = integrator.getState(ch, stateBase + 1);
+        T z0 = state[ch][stateBase + 0];
+        T z1 = state[ch][stateBase + 1];
 
         // Highpass output
-        hp = (input - s1 - g0 * s0) * d;
+        hp = (input - z1 - g0 * z0) * d;
 
         // Bandpass output
-        bp = integrator.processSample(ch, stateBase + 0, hp, g);
+        T v0 = g * hp;
+        bp = v0 + z0;
 
         // Lowpass output
-        lp = integrator.processSample(ch, stateBase + 1, bp, g);
+        T v1 = g * bp;
+        lp = v1 + z1;
 
-        // Allpass output
-        ap = hp + lp;
+        // Update state variables for next sample
+        state[ch][section * STATE_VARS_PER_SECTION + 0] = bp + v0;
+        state[ch][section * STATE_VARS_PER_SECTION + 1] = lp + v1;
     }
     /// Get the state variable for a specific channel and section.
     T getState(size_t ch, size_t section, size_t stateVarIndex) const {
         size_t stateBase = section * STATE_VARS_PER_SECTION;
-        return integrator.getState(ch, stateBase + stateVarIndex);
+        return state[ch][stateBase + stateVarIndex];
     }
     /// Get number of prepared channels
     size_t getNumChannels() const { return numChannels; }
@@ -107,7 +110,7 @@ class TPTSVFTopology {
     bool togglePrepared = false;
     size_t numChannels = 0;
     size_t numSections = 0;
-    TPTIntegrator<T> integrator;
+    AudioBuffer<T> state;
 };
 
 } // namespace jnsc::detail

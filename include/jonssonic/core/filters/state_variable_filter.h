@@ -81,14 +81,13 @@ class StateVariableFilter {
                 T twoR = design.getNextTwoR(ch, s);
 
                 // Process single sample through the topology for this channel and section.
-                topology.processSample(ch, s, output, g, twoR, hp, bp, lp, ap);
+                topology.processSample(ch, s, output, g, twoR, hp, bp, lp);
 
                 // Select output based on the design's response mask for this channel and section.
                 const auto& responseMask = design.getResponseMask(ch, s);
                 output = hp * responseMask[static_cast<size_t>(Response::Highpass)] +
                          bp * responseMask[static_cast<size_t>(Response::Bandpass)] +
-                         lp * responseMask[static_cast<size_t>(Response::Lowpass)] +
-                         ap * responseMask[static_cast<size_t>(Response::Allpass)];
+                         lp * responseMask[static_cast<size_t>(Response::Lowpass)];
             }
         }
 
@@ -100,14 +99,13 @@ class StateVariableFilter {
                 T twoR = design.getNextTwoR(ch, s);
 
                 // Process single sample through the topology for this channel and section.
-                topology.processSample(ch, s, input, g, twoR, hp, bp, lp, ap);
+                topology.processSample(ch, s, input, g, twoR, hp, bp, lp);
 
                 // Select output based on the design's response mask for this channel and section.
                 const auto& responseMask = design.getResponseMask(ch, s);
                 output += hp * responseMask[static_cast<size_t>(Response::Highpass)] +
                           bp * responseMask[static_cast<size_t>(Response::Bandpass)] +
-                          lp * responseMask[static_cast<size_t>(Response::Lowpass)] +
-                          ap * responseMask[static_cast<size_t>(Response::Allpass)];
+                          lp * responseMask[static_cast<size_t>(Response::Lowpass)];
             }
         }
         return output;

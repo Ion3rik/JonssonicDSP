@@ -23,7 +23,7 @@ template <typename T>
 class SVFDesign {
   public:
     /// Enumeration of the supported filter responses
-    enum class Response { Lowpass, Highpass, Bandpass, Allpass, numTypes };
+    enum class Response { Lowpass, Highpass, Bandpass, numTypes };
 
     /// Default constructor
     SVFDesign() = default;
