@@ -94,6 +94,7 @@ class TPTSVFTopology {
         state[ch][section * STATE_VARS_PER_SECTION + 0] = bp + v0;
         state[ch][section * STATE_VARS_PER_SECTION + 1] = lp + v1;
     }
+
     /// Get the state variable for a specific channel and section.
     T getState(size_t ch, size_t section, size_t stateVarIndex) const {
         size_t stateBase = section * STATE_VARS_PER_SECTION;
