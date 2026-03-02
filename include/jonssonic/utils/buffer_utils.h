@@ -22,11 +22,8 @@ namespace jnsc::utils {
  * @param numSamples Number of samples per channel
  */
 template <typename T>
-inline void mapChannels(const T* const* input,
-                        T* const* output,
-                        size_t numInputChannels,
-                        size_t numOutputChannels,
-                        size_t numSamples) {
+inline void mapChannels(
+    const T* const* input, T* const* output, size_t numInputChannels, size_t numOutputChannels, size_t numSamples) {
     for (int outCh = 0; outCh < numOutputChannels; ++outCh) {
         if (numInputChannels == numOutputChannels) {
             // Direct copy
@@ -57,8 +54,7 @@ void planarToInterleaved(const T* const* planarBuffer,
                          T* const* interleavedBuffer,
                          size_t numChannels,
                          size_t numSamples) {
-    for (size_t n = 0; n < numSamples;
-         ++n) // outer loop over samples for better cache performance for writing
+    for (size_t n = 0; n < numSamples; ++n) // outer loop over samples for better cache performance for writing
         for (size_t ch = 0; ch < numChannels; ++ch)
             interleavedBuffer[n][ch] = planarBuffer[ch][n];
 }
@@ -72,8 +68,7 @@ void interleavedToPlanar(const T* const* interleavedBuffer,
                          T* const* planarBuffer,
                          size_t numChannels,
                          size_t numSamples) {
-    for (size_t ch = 0; ch < numChannels;
-         ++ch) // outer loop over channels for better cache performance for writing
+    for (size_t ch = 0; ch < numChannels; ++ch) // outer loop over channels for better cache performance for writing
         for (size_t n = 0; n < numSamples; ++n)
             planarBuffer[ch][n] = interleavedBuffer[n][ch];
 }
@@ -116,21 +111,17 @@ void copyToBuffer(const T* const* src, T* const* dest, size_t numChannels, size_
  * @param numSamples Number of samples per channel
  */
 template <typename T>
-void crossfadeBuffers(const T* const* bufferA,
-                      const T* const* bufferB,
-                      T* const* output,
-                      size_t numChannels,
-                      size_t numSamples) {
+void crossfadeBuffers(
+    const T* const* bufferA, const T* const* bufferB, T* const* output, size_t numChannels, size_t numSamples) {
     for (size_t ch = 0; ch < numChannels; ++ch) {
         for (size_t n = 0; n < numSamples; ++n) {
             // Equal power crossfade
             T fadeFactor = static_cast<T>(n) / static_cast<T>(numSamples - 1);
-            T gainA =
-                std::cos(fadeFactor * (static_cast<T>(M_PI) / static_cast<T>(2))); // cos(0 to π/2)
-            T gainB =
-                std::sin(fadeFactor * (static_cast<T>(M_PI) / static_cast<T>(2))); // sin(0 to π/2)
+            T gainA = std::cos(fadeFactor * (static_cast<T>(M_PI) / static_cast<T>(2))); // cos(0 to π/2)
+            T gainB = std::sin(fadeFactor * (static_cast<T>(M_PI) / static_cast<T>(2))); // sin(0 to π/2)
             output[ch][n] = bufferA[ch][n] * gainA + bufferB[ch][n] * gainB;
         }
     }
 }
-} // namespace jnsc
+
+} // namespace jnsc::utils

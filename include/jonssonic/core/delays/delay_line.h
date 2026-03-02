@@ -1,7 +1,6 @@
 // Jonssonic - A C++ audio DSP library
 // Delay line class header file
 // SPDX-License-Identifier: MIT
-// TO DO: Seprate a lower level DelayCore class without modulation nor smoothing?
 
 #pragma once
 #include "jonssonic/utils/detail/config_utils.h"
@@ -81,11 +80,11 @@ class DelayLine {
                                 readIndex,
                                 delayFrac);
 
-        // Write input sample to buffer (increments and wraps internally)
-        circularBuffer.write(ch, input);
-
         // Read output sample with interpolation
         return Interpolator::interpolateBackward(circularBuffer.readChannelPtr(ch), readIndex, delayFrac, bufferSize);
+
+        // Write input sample to buffer (increments and wraps internally)
+        circularBuffer.write(ch, input);
     }
 
     /**
@@ -105,11 +104,11 @@ class DelayLine {
         T delayFrac;
         computeReadIndexAndFrac(modulatedDelay, circularBuffer.getChannelWriteIndex(ch), readIndex, delayFrac);
 
-        // Write input sample to buffer (increments and wraps internally)
-        circularBuffer.write(ch, input);
-
         // Interpolate output sample
         return Interpolator::interpolateBackward(circularBuffer.readChannelPtr(ch), readIndex, delayFrac, bufferSize);
+
+        // Write input sample to buffer (increments and wraps internally)
+        circularBuffer.write(ch, input);
     }
 
     /**
@@ -222,6 +221,12 @@ class DelayLine {
 
     /// Get current delay time for specific channel
     Time<T> getCurrentDelay(size_t ch) const { return Time<T>::Samples(delaySamples.getCurrentValue(ch)); }
+
+    /// Get current sample rate
+    T getSampleRate() const { return sampleRate; }
+
+    /// Get number of channels
+    size_t getNumChannels() const { return numChannels; }
 
   private:
     // Config variables
