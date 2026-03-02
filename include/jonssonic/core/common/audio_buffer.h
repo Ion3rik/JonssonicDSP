@@ -64,22 +64,12 @@ class AudioBuffer<T, BufferLayout::Planar> {
     /**
      * @brief Get array of const pointers to each channel's data (for read-only access).
      */
-    const T* const* readPtrs() const {
-        m_readPtrs.resize(m_numChannels);
-        for (size_t ch = 0; ch < m_numChannels; ++ch)
-            m_readPtrs[ch] = m_data.data() + (ch * m_numSamples);
-        return m_readPtrs.data();
-    }
+    const T* const* readPtrs() const { return m_readPtrs.data(); }
 
     /**
      * @brief Get array of pointers to each channel's data (for write access).
      */
-    T* const* writePtrs() {
-        m_writePtrs.resize(m_numChannels);
-        for (size_t ch = 0; ch < m_numChannels; ++ch)
-            m_writePtrs[ch] = m_data.data() + (ch * m_numSamples);
-        return m_writePtrs.data();
-    }
+    T* const* writePtrs() { return m_writePtrs.data(); }
 
     /**
      * @brief Get a pointer to the start of a channel's data (for write access).
@@ -159,8 +149,18 @@ class AudioBuffer<T, BufferLayout::Planar> {
     void resize(size_t numChannels, size_t numSamples, T initValue = T(0)) {
         m_numChannels = numChannels;
         m_numSamples = numSamples;
+
+        // Resize the flat data buffer
         m_data.assign(numChannels * numSamples,
                       initValue); // This is what you expect for audio buffers not std::vector::resize()
+
+        // Resize and update channel pointers
+        m_readPtrs.resize(m_numChannels);
+        m_writePtrs.resize(m_numChannels);
+        for (size_t ch = 0; ch < m_numChannels; ++ch) {
+            m_readPtrs[ch] = m_data.data() + (ch * m_numSamples);
+            m_writePtrs[ch] = m_data.data() + (ch * m_numSamples);
+        }
     }
 
     // ========================================================================
@@ -341,24 +341,14 @@ class AudioBuffer<T, BufferLayout::Interleaved> {
      * @note For interleaved, each pointer is to the first channel of a sample (i.e., &data[sample *
      * numChannels]). Useful for per-sample block processing.
      */
-    const T* const* readPtrs() const {
-        m_readPtrs.resize(m_numSamples);
-        for (size_t s = 0; s < m_numSamples; ++s)
-            m_readPtrs[s] = m_data.data() + (s * m_numChannels);
-        return m_readPtrs.data();
-    }
+    const T* const* readPtrs() const { return m_readPtrs.data(); }
 
     /**
      * @brief Get array of pointers to each sample's data (for write access).
      * @note For interleaved, each pointer is to the first channel of a sample (i.e., &data[sample *
      * numChannels]). Useful for per-sample block processing.
      */
-    T* const* writePtrs() {
-        m_writePtrs.resize(m_numSamples);
-        for (size_t s = 0; s < m_numSamples; ++s)
-            m_writePtrs[s] = m_data.data() + (s * m_numChannels);
-        return m_writePtrs.data();
-    }
+    T* const* writePtrs() { return m_writePtrs.data(); }
 
     /**
      * @brief Get a pointer to the start of a sample's data (all channels at that sample, for write
@@ -444,7 +434,17 @@ class AudioBuffer<T, BufferLayout::Interleaved> {
     void resize(size_t numChannels, size_t numSamples, T initValue = T(0)) {
         m_numChannels = numChannels;
         m_numSamples = numSamples;
+
+        // Resize the flat data buffer
         m_data.assign(numChannels * numSamples, initValue);
+
+        // Resize and update sample pointers
+        m_readPtrs.resize(m_numSamples);
+        m_writePtrs.resize(m_numSamples);
+        for (size_t s = 0; s < m_numSamples; ++s) {
+            m_readPtrs[s] = m_data.data() + (s * m_numChannels);
+            m_writePtrs[s] = m_data.data() + (s * m_numChannels);
+        }
     }
 
     // Proxy for sample-major access: buffer[sample][channel]
