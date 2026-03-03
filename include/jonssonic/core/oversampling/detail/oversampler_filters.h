@@ -104,8 +104,7 @@ class FIRHalfbandStage {
                 // Filter even branch (h0 coefficients, symmetric optimization)
                 T y0 = T(0);
                 for (size_t k = 0; k < K0; ++k) {
-                    T sum = downsamplerBuffer.read(evenCh, k) +
-                            downsamplerBuffer.read(evenCh, halfFIRTaps - k);
+                    T sum = downsamplerBuffer.read(evenCh, k) + downsamplerBuffer.read(evenCh, halfFIRTaps - k);
                     y0 += coeffs0[k] * sum;
                 }
 
@@ -134,8 +133,7 @@ class FIRHalfbandStage {
 
     // COEFFICIENTS
     static constexpr size_t K0 =
-        (FIRTaps / 2 + 1) /
-        2; // Number of unique symmetric even polyphase coefficients actually stored
+        (FIRTaps / 2 + 1) / 2; // Number of unique symmetric even polyphase coefficients actually stored
     static constexpr size_t centerTapIdx = FIRTaps / 4; // Center tap index in odd polyphase branch
     static constexpr size_t halfFIRTaps = FIRTaps / 2;  // Half the number of FIR taps
     std::array<T, K0> coeffs0; // Even polyphase coefficients (odd branch is just 0.5 * center tap)

@@ -242,7 +242,7 @@ class Reverb {
     T sampleRate = T(44100);
 
     // Core processor components
-    DelayLine<T, LinearInterpolator<T>> preDelay;
+    DelayLine<T, jnsc::detail::LinearInterpolator<T>> preDelay;
     models::FeedbackDelayNetwork<T,
                                  FDN_SIZE,
                                  MixingMatrixType::Householder,
@@ -250,7 +250,7 @@ class Reverb {
                                  MixingMatrixType::DecorrelatedSum,
                                  models::Shelf1Decay<T>,
                                  models::FilteredNoise<T>,
-                                 LinearInterpolator<T>>
+                                 jnsc::detail::LinearInterpolator<T>>
         fdn;
     BiquadFilter<T> lowCutFilter;
 };

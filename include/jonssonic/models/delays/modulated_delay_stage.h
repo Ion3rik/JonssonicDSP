@@ -20,7 +20,7 @@ namespace jnsc::models {
  * @tparam UseCrossFeedback If true, enables cross-feedback between channels for ping-pong effects.
  */
 template <typename T,
-          typename Interpolator = LinearInterpolator<T>,
+          typename Interpolator = jnsc::detail::LinearInterpolator<T>,
           bool UseInternalLFO = true,
           bool UseDamping = false,
           bool UseCrossFeedback = false>
@@ -32,11 +32,11 @@ class ModulatedDelayStage {
     /**
      * @brief Parameterized constructor that calls @ref prepare.
      * @param newNumChannels Number of channels
-     * @param newMaxDelayMs Maximum delay time in milliseconds
+     * @param newMaxDelay Maximum delay time struct.
      * @param newSampleRate Sample rate in Hz
      */
-    ModulatedDelayStage(size_t newNumChannels, T newMaxDelayMs, T newSampleRate) {
-        prepare(newNumChannels, newMaxDelayMs, newSampleRate);
+    ModulatedDelayStage(size_t newNumChannels, Time<T> newMaxDelay, T newSampleRate) {
+        prepare(newNumChannels, newMaxDelay, newSampleRate);
     }
 
     /// Default destructor.

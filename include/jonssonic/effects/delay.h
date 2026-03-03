@@ -176,7 +176,7 @@ class Delay {
     T sampleRate = T(44100);
 
     // Processing components
-    models::ModulatedDelayStage<T, LagrangeInterpolator<T>, false, true, true> modulatedDelayStage;
+    models::ModulatedDelayStage<T, jnsc::detail::LagrangeInterpolator<T>, false, true, true> modulatedDelayStage;
     Oscillator<T> wowLfo;
     Oscillator<T> flutterLfo;
 

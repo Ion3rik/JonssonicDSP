@@ -3,10 +3,10 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
+#include "jonssonic/core/delays/detail/interpolators.h"
 #include "jonssonic/utils/detail/config_utils.h"
 #include <jonssonic/core/common/circular_audio_buffer.h>
 #include <jonssonic/core/common/dsp_param.h>
-#include <jonssonic/core/common/interpolators.h>
 #include <jonssonic/core/common/quantities.h>
 #include <jonssonic/utils/math_utils.h>
 
@@ -16,7 +16,7 @@ namespace jnsc {
  * @param T Sample data type (e.g., float, double)
  * @param Interpolator Interpolator type for fractional delay support (default: LinearInterpolator)
  */
-template <typename T, typename Interpolator = LinearInterpolator<T>>
+template <typename T, typename Interpolator = detail::LinearInterpolator<T>>
 class DelayLine {
   public:
     /// Default constructor
@@ -48,14 +48,21 @@ class DelayLine {
      * @param newMaxDelay Maximum delay time in various units.
      */
     void prepare(size_t newNumChannels, T newSampleRate, Time<T> newMaxDelay) {
+        // Store config parameters with clamping
         numChannels = utils::detail::clampChannels(newNumChannels);
         sampleRate = utils::detail::clampSampleRate(newSampleRate);
+
+        // Prepare circular buffer based on max delay time
         size_t maxDelaySamples = newMaxDelay.toSamples(sampleRate); // convert to samples
-        circularBuffer.resize(numChannels, maxDelaySamples);        // resize circular buffer
-        bufferSize = circularBuffer.getBufferSize();                // get actual buffer size (power of two)
-        delaySamples.prepare(numChannels, sampleRate);              // prepare smoother for delay time
-        delaySamples.setBounds(T(0),
-                               static_cast<T>(maxDelaySamples)); // set bounds to actual max delay requested
+        circularBuffer.resize(numChannels, maxDelaySamples + 1); // resize circular buffer (buffer size = max delay + 1)
+
+        // Prepare parameter smoother for delay time control
+        delaySamples.prepare(numChannels, sampleRate);
+
+        // Set bounds for delay time
+        delaySamples.setBounds(T(0), static_cast<T>(maxDelaySamples));
+
+        // Mark as prepared
         togglePrepared = true;
     }
 
@@ -72,19 +79,13 @@ class DelayLine {
      * @return Delayed output sample
      */
     T processSample(size_t ch, T input) {
-        // Calculate integer read index and fractional part for interpolation
-        size_t readIndex;
-        T delayFrac;
-        computeReadIndexAndFrac(delaySamples.getNextValue(ch),
-                                circularBuffer.getChannelWriteIndex(ch),
-                                readIndex,
-                                delayFrac);
+        // Write input sample to buffer (advances write position)
+        circularBuffer.write(ch, input);
 
         // Read output sample with interpolation
-        return Interpolator::interpolateBackward(circularBuffer.readChannelPtr(ch), readIndex, delayFrac, bufferSize);
+        T output = Interpolator::interpolate(circularBuffer, ch, delaySamples.getNextValue(ch));
 
-        // Write input sample to buffer (increments and wraps internally)
-        circularBuffer.write(ch, input);
+        return output;
     }
 
     /**
@@ -96,19 +97,16 @@ class DelayLine {
      */
 
     T processSample(size_t ch, T input, T modulation) {
+        // Write input sample to buffer (advances write position)
+        circularBuffer.write(ch, input);
+
         // Calculate modulated delay time with internal clamping (base delay + modulation)
         T modulatedDelay = delaySamples.applyAdditiveMod(ch, modulation);
 
-        // Split into integer and fractional parts for interpolation
-        size_t readIndex;
-        T delayFrac;
-        computeReadIndexAndFrac(modulatedDelay, circularBuffer.getChannelWriteIndex(ch), readIndex, delayFrac);
+        // Read output sample with interpolation
+        T output = Interpolator::interpolate(circularBuffer, ch, modulatedDelay);
 
-        // Interpolate output sample
-        return Interpolator::interpolateBackward(circularBuffer.readChannelPtr(ch), readIndex, delayFrac, bufferSize);
-
-        // Write input sample to buffer (increments and wraps internally)
-        circularBuffer.write(ch, input);
+        return output;
     }
 
     /**
@@ -132,9 +130,7 @@ class DelayLine {
      * @param modulation Modulation signal pointers (one per channel, in samples)
      * @param numSamples Number of samples to process
      *
-     * @note The modulation signal is added to the base delay time.
-     *       Modulation values should be in samples and will be clamped to valid range [0,
-     * bufferSize-1].
+     * @note The modulation signal is added to the base delay time and clamped internally.
      * @note Input, output, and modulation must all have the same number of channels as prepared.
      */
     void processBlock(const T* const* input, T* const* output, const T* const* modulation, size_t numSamples) {
@@ -177,18 +173,7 @@ class DelayLine {
      * @param ch Channel index
      * @return Delayed output sample
      */
-    T readSample(size_t ch) {
-        // Calculate read index and fractional part for interpolation
-        size_t readIndex;
-        T delayFrac;
-        computeReadIndexAndFrac(delaySamples.getNextValue(ch),
-                                circularBuffer.getChannelWriteIndex(ch),
-                                readIndex,
-                                delayFrac);
-
-        // Read output sample with interpolation
-        return Interpolator::interpolateBackward(circularBuffer.readChannelPtr(ch), readIndex, delayFrac, bufferSize);
-    }
+    T readSample(size_t ch) { return Interpolator::interpolate(circularBuffer, ch, delaySamples.getNextValue(ch)); }
 
     /**
      * @brief Read a delayed sample from the buffer with modulated delay without writing.
@@ -200,17 +185,12 @@ class DelayLine {
         // Calculate modulated delay time with internal clamping (base delay + modulation)
         T modulatedDelay = delaySamples.applyAdditiveMod(ch, modulation);
 
-        // Calculate read index and fractional part for interpolation
-        size_t readIndex;
-        T delayFrac;
-        computeReadIndexAndFrac(modulatedDelay, circularBuffer.getChannelWriteIndex(ch), readIndex, delayFrac);
-
         // Read output sample with interpolation
-        return Interpolator::interpolateBackward(circularBuffer.readChannelPtr(ch), readIndex, delayFrac, bufferSize);
+        return Interpolator::interpolate(circularBuffer, ch, modulatedDelay);
     }
 
     /**
-     * @brief Write a sample to the circular buffer and advance the write position.
+     * @brief Write a sample to the delay line and advance the write position.
      * @param ch Channel index
      * @param input Input sample to write
      */
@@ -232,26 +212,25 @@ class DelayLine {
     // Config variables
     T sampleRate = T(44100); // Sample rate in Hz
     size_t numChannels;      // Number of audio channels
-    size_t bufferSize;       // Maximum delay in samples (always power of two)
     bool togglePrepared = false;
 
     // DSP Components
     CircularAudioBuffer<T> circularBuffer; // Multi-channel circular buffer
     DspParam<T> delaySamples;              // Multi-channel Delay time in samples
-
-    // Helper function to compute read index and fractional part for interpolation (in-place
-    // version)
-    void computeReadIndexAndFrac(T delay, size_t writeIdx, size_t& readIndex, T& delayFrac) const {
-        // Clamp delay to valid range as safety measure
-        delay = std::max(T(0), std::min(delay, static_cast<T>(bufferSize - 1)));
-
-        // Split into integer and fractional parts using floor for proper handling
-        T delayFloor = std::floor(delay);
-        size_t delayInt = static_cast<size_t>(delayFloor);
-        delayFrac = delay - delayFloor;
-
-        // Calculate read index with wrap-around
-        readIndex = (writeIdx + bufferSize - delayInt) & (bufferSize - 1);
-    }
 };
+
+/**
+ * @brief Type aliases for common delay line configurations with different interpolators.
+ * @tparam T Sample data type (e.g., float, double)
+ * @param NearestDelayLine: Delay line using nearest neighbor interpolation (no fractional delay support)
+ * @param LinearDelayLine: Delay line using linear interpolation (basic fractional delay support)
+ * @param LagrangeDelayLine: Delay line using 4-point Lagrange interpolation (higher-quality fractional delay support)
+ */
+template <typename T>
+using NearestDelayLine = DelayLine<T, detail::NearestInterpolator<T>>;
+template <typename T>
+using LinearDelayLine = DelayLine<T, detail::LinearInterpolator<T>>;
+template <typename T>
+using LagrangeDelayLine = DelayLine<T, detail::LagrangeInterpolator<T>>;
+
 } // namespace jnsc

@@ -11,34 +11,34 @@
 
 namespace jnsc {
 // MODULATION STRUCTURES
-namespace AllpassMod {
-/**
- * @brief Modulation input structure for AllpassFilter single sample processing
- * @param T Sample data type (e.g., float, double)
- */
-template <typename T>
-struct Sample : public ModulationInput<T> {
-    T delayMod = T(0);
-    T gainMod = T(1);
-};
+struct AllpassMod {
+    /**
+     * @brief Modulation input structure for AllpassFilter single sample processing
+     * @param T Sample data type (e.g., float, double)
+     */
+    template <typename T>
+    struct Sample : public ModulationInput<T> {
+        T delayMod = T(0);
+        T gainMod = T(1);
+    };
 
-/**
- * @brief Modulation input structure for AllpassFilter block processing
- * @param T Sample data type (e.g., float, double)
- */
-template <typename T>
-struct Block : public ModulationInput<T> {
-    const T* const* delayMod = nullptr; // modulation buffer for delay time (in samples)
-    const T* const* gainMod = nullptr;  // modulation buffer for gain
+    /**
+     * @brief Modulation input structure for AllpassFilter block processing
+     * @param T Sample data type (e.g., float, double)
+     */
+    template <typename T>
+    struct Block : public ModulationInput<T> {
+        const T* const* delayMod = nullptr; // modulation buffer for delay time (in samples)
+        const T* const* gainMod = nullptr;  // modulation buffer for gain
+    };
 };
-} // namespace AllpassMod
 
 /**
  * @brief Allpass Filter
  * @param T Sample data type (e.g., float, double)
  * @param Interpolator Interpolator type for fractional delay support (default: LinearInterpolator)
  */
-template <typename T, typename Interpolator = LinearInterpolator<T>>
+template <typename T, typename Interpolator = detail::LinearInterpolator<T>>
 class AllpassFilter {
   public:
     /// Default constructor

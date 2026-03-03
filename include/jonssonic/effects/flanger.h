@@ -156,7 +156,7 @@ class Flanger {
     T sampleRate = T(44100);
 
     // Processors
-    models::ModulatedDelayStage<T, LagrangeInterpolator<T>, true, false, false> delayStage;
+    models::ModulatedDelayStage<T, jnsc::detail::LagrangeInterpolator<T>, true, false, false> delayStage;
 };
 
 } // namespace jnsc::effects

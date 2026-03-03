@@ -144,8 +144,7 @@ TEST_F(AllpassFilterTest, ProcessBlock_WithModulation) {
     std::vector<std::vector<float>> outputBuffer(numChannels, std::vector<float>(blockSize, 0.0f));
 
     // Create modulation buffers
-    std::vector<std::vector<float>> delayModBuffer(numChannels,
-                                                   std::vector<float>(blockSize, 2.0f));
+    std::vector<std::vector<float>> delayModBuffer(numChannels, std::vector<float>(blockSize, 2.0f));
     std::vector<std::vector<float>> gainModBuffer(numChannels, std::vector<float>(blockSize, 1.1f));
 
     // Add impulse
@@ -280,7 +279,7 @@ TEST_F(AllpassFilterTest, ImpulseResponse) {
     EXPECT_NEAR(outputs[0], 0.7f, 0.05f);
 
     // At delay time, should see the delayed component
-    float echoSample = outputs[static_cast<size_t>(delaySamples.toSamples(sampleRate))];
+    float echoSample = outputs[static_cast<size_t>(delaySamples.toSamples(sampleRate) + 1)];
     EXPECT_NEAR(echoSample, 1.0f - 0.7f * 0.7f, 0.05f);
 
     // Allpass should produce finite output

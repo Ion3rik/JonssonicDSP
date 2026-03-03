@@ -31,7 +31,7 @@ template <typename T,
           MixingMatrixType OutputMatrixType = MixingMatrixType::DecorrelatedSum,
           typename DecayType = Shelf1Decay<T>,
           typename ModulationSourceType = FilteredNoise<T>,
-          typename InterpolatorType = LinearInterpolator<T>>
+          typename InterpolatorType = jnsc::detail::LinearInterpolator<T>>
 class FeedbackDelayNetwork {
   public:
     /// Default constructor

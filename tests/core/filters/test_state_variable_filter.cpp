@@ -118,14 +118,14 @@ TYPED_TEST(StateVariableFilterTest, ProcessBlock) {
     size_t numChannels = 2;
     size_t numSections = 3;
     this->StateVariableFilter.reset();
-    this->StateVariableFilter.prepare(numChannels, numSections, this->sampleRate);
+    this->StateVariableFilter.prepare(numChannels, this->sampleRate, numSections);
     this->StateVariableFilter.setResponse(Response::Lowpass);
 
     // Create input and output buffers
     size_t numSamples = 1024;
     AudioBuffer<float> input(numChannels, numSamples);
     for (size_t ch = 0; ch < numChannels; ++ch)
-            input[ch][0] = 1.0f; // Impulse input for testing
+        input[ch][0] = 1.0f; // Impulse input for testing
     AudioBuffer<float> output(numChannels, numSamples);
 
     // Process the block and verify that outputs are not NaN or Inf

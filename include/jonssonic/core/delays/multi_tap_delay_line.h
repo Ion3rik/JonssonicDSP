@@ -3,10 +3,10 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
+#include "jonssonic/core/delays/detail/interpolators.h"
 #include "jonssonic/utils/detail/config_utils.h"
 #include <jonssonic/core/common/circular_audio_buffer.h>
 #include <jonssonic/core/common/dsp_param.h>
-#include <jonssonic/core/common/interpolators.h>
 #include <jonssonic/core/common/quantities.h>
 #include <jonssonic/utils/math_utils.h>
 
@@ -17,7 +17,7 @@ namespace jnsc {
  * @param NumTaps Number of delay taps.
  * @param Interpolator Interpolator type for fractional delay support (default: LinearInterpolator).
  */
-template <typename T, size_t NumTaps, typename Interpolator = LinearInterpolator<T>>
+template <typename T, size_t NumTaps, typename Interpolator = detail::LinearInterpolator<T>>
 class MultiTapDelayLine {
   public:
     /// Default constructor
@@ -57,14 +57,13 @@ class MultiTapDelayLine {
         // Prepare circular buffer based on max delay time
         size_t maxDelaySamples = newMaxDelay.toSamples(sampleRate); // convert to samples
         circularBuffer.resize(numChannels, maxDelaySamples);        // resize circular buffer
-        bufferSize = circularBuffer.getBufferSize();                // get actual buffer size (power of two)
 
         // Prepare DSP parameters for tap delay times and gains
         tapDelay.prepare(numChannels * NumTaps, sampleRate);
         tapGain.prepare(numChannels * NumTaps, sampleRate);
 
         // Set default bounds for delay times and gains
-        tapDelay.setBounds(T(0), static_cast<T>(bufferSize - 1));
+        tapDelay.setBounds(T(0), maxDelaySamples);
         tapGain.setBounds(T(-1), T(1));
 
         // Mark as prepared
@@ -86,15 +85,17 @@ class MultiTapDelayLine {
      * @note This method uses no interpolation.
      */
     T processSample(size_t ch, T input) {
+        // Write input sample to buffer
+        circularBuffer.write(ch, input);
 
         // Accumulate output from all taps
         T output = T(0);
         for (size_t tap = 0; tap < NumTaps; ++tap)
             output += tapGain.getNextValue(index(ch, tap)) *
-                      circularBuffer.read(ch, static_cast<size_t>(tapDelay.getNextValue(index(ch, tap))));
+                      Interpolator::interpolate(circularBuffer, ch, tapDelay.getNextValue(index(ch, tap)));
 
-        // Write input sample to buffer (increments and wraps internally)
-        circularBuffer.write(ch, input);
+        // Increment buffer write position
+        circularBuffer.increment(ch);
 
         // Return the mixed output from all taps
         return output;
@@ -109,24 +110,20 @@ class MultiTapDelayLine {
      */
 
     T processSample(size_t ch, T input, const std::array<T, NumTaps>& modulation) {
+        // Write input sample to buffer
+        circularBuffer.write(ch, input);
+
         // Accumulate output from all taps with modulated delay
         T output = T(0);
         for (size_t tap = 0; tap < NumTaps; ++tap) {
             // Calculate modulated delay time with internal clamping (base delay + modulation)
             T modulatedDelay = tapDelay.applyAdditiveMod(index(ch, tap), modulation[tap]);
 
-            // Split into integer and fractional parts for interpolation
-            size_t readIndex;
-            T delayFrac;
-            computeReadIndexAndFrac(modulatedDelay, circularBuffer.getChannelWriteIndex(ch), readIndex, delayFrac);
-
             // Accumulate output from this tap with gain
             output +=
-                tapGain.getNextValue(index(ch, tap)) *
-                Interpolator::interpolateBackward(circularBuffer.readChannelPtr(ch), readIndex, delayFrac, bufferSize);
+                tapGain.getNextValue(index(ch, tap)) * Interpolator::interpolate(circularBuffer, ch, modulatedDelay);
         }
-        // Write input sample to buffer (increments and wraps internally)
-        circularBuffer.write(ch, input);
+
         return output;
     }
 
@@ -234,43 +231,31 @@ class MultiTapDelayLine {
     }
 
     /**
-     * @brief Read all taps for a specific channel and mix them together without writing.
+     * @brief Read a specific tap for a specific channel without modulation.
      * @param ch Channel index
+     * @param tap Tap index
      * @return Delayed output sample
      * @note This method uses no interpolation.
      */
-    T readSample(size_t ch) {
-        T output = T(0);
-        for (size_t tap = 0; tap < NumTaps; ++tap)
-            output += tapGain.getNextValue(index(ch, tap)) *
-                      circularBuffer.read(ch, static_cast<size_t>(tapDelay.getNextValue(index(ch, tap))));
-
-        return output;
+    T readSample(size_t ch, size_t tap) {
+        // Read output sample with interpolation and gain for this tap
+        return tapGain.getNextValue(index(ch, tap)) *
+               Interpolator::interpolate(circularBuffer, ch, tapDelay.getNextValue(index(ch, tap)));
     }
 
     /**
-     * @brief Read all taps for a specific channel with modulated delay and mix them together without writing.
+     * @brief Read a specific tap for a specific channel with modulation without writing.
      * @param ch Channel index
+     * @param tap Tap index
      * @param modulation Array of modulation values in samples to be added to base delay for each tap
-     * @return Delayed output sample
+     * @return Delayed output sample of a specific tap with modulation
      */
-    T readSample(size_t ch, const std::array<T, NumTaps>& modulation) {
-        T output = T(0);
-        for (size_t tap = 0; tap < NumTaps; ++tap) {
-            // Calculate modulated delay time with internal clamping (base delay + modulation)
-            T modulatedDelay = tapDelay.applyAdditiveMod(index(ch, tap), modulation[tap]);
+    T readSample(size_t ch, size_t tap, T modulation) {
+        // Calculate modulated delay time with internal clamping (base delay + modulation)
+        T modulatedDelay = tapDelay.applyAdditiveMod(index(ch, tap), modulation);
 
-            // Calculate read index and fractional part for interpolation
-            size_t readIndex;
-            T delayFrac;
-            computeReadIndexAndFrac(modulatedDelay, circularBuffer.getChannelWriteIndex(ch), readIndex, delayFrac);
-
-            // Read output sample with interpolation
-            output +=
-                tapGain.getNextValue(index(ch, tap)) *
-                Interpolator::interpolateBackward(circularBuffer.readChannelPtr(ch), readIndex, delayFrac, bufferSize);
-        }
-        return output;
+        // Read output sample with interpolation and gain for this tap
+        return tapGain.getNextValue(index(ch, tap)) * Interpolator::interpolate(circularBuffer, ch, modulatedDelay);
     }
 
     /**
@@ -278,7 +263,10 @@ class MultiTapDelayLine {
      * @param ch Channel index
      * @param input Input sample to write
      */
-    void writeSample(size_t ch, T input) { circularBuffer.write(ch, input); }
+    void writeSample(size_t ch, T input) {
+        circularBuffer.write(ch, input);
+        circularBuffer.increment(ch);
+    }
 
     /// Get target delay time for specific channel and tap
     Time<T> getTargetTapDelay(size_t ch, size_t tap) const {
@@ -320,18 +308,6 @@ class MultiTapDelayLine {
     CircularAudioBuffer<T> circularBuffer; // Multi-channel circular buffer
     DspParam<T> tapDelay;                  // Multi-channel, multi-tap delay time in samples
     DspParam<T> tapGain;                   // Multi-channel, multi-tap gain for each tap
-
-    // Helper function to compute read index and fractional part for interpolation (in-place
-    // version)
-    void computeReadIndexAndFrac(T delay, size_t writeIdx, size_t& readIndex, T& delayFrac) const {
-        // Split into integer and fractional parts using floor for proper handling
-        T delayFloor = std::floor(delay);
-        size_t delayInt = static_cast<size_t>(delayFloor);
-        delayFrac = delay - delayFloor;
-
-        // Calculate read index with wrap-around
-        readIndex = (writeIdx + bufferSize - delayInt) & (bufferSize - 1);
-    }
 
     // Helper function to calculate parameter index for multi-tap delay (where taps are stored contiguously per channel)
     inline size_t index(size_t ch, size_t tap) const { return ch * numTaps + tap; }

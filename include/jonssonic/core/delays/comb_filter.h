@@ -11,36 +11,36 @@
 
 namespace jnsc {
 // MODULATION STRUCTURES
-namespace CombMod {
-/**
- * @brief Modulation input structure for CombFilter single sample processing
- * @param T Sample data type (e.g., float, double)
- */
-template <typename T>
-struct Sample : public ModulationInput<T> {
-    T delayMod = T(0);
-    T feedbackMod = T(1);
-    T feedforwardMod = T(1);
-};
+struct CombMod {
+    /**
+     * @brief Modulation input structure for CombFilter single sample processing
+     * @param T Sample data type (e.g., float, double)
+     */
+    template <typename T>
+    struct Sample : public ModulationInput<T> {
+        T delayMod = T(0);
+        T feedbackMod = T(1);
+        T feedforwardMod = T(1);
+    };
 
-/**
- * @brief Modulation input structure for CombFilter block processing
- * @param T Sample data type (e.g., float, double)
- */
-template <typename T>
-struct Block : public ModulationInput<T> {
-    const T* const* delayMod = nullptr;       // modulation buffer for delay time (in samples)
-    const T* const* feedbackMod = nullptr;    // modulation buffer for feedback gain
-    const T* const* feedforwardMod = nullptr; // modulation buffer for feedforward gain
+    /**
+     * @brief Modulation input structure for CombFilter block processing
+     * @param T Sample data type (e.g., float, double)
+     */
+    template <typename T>
+    struct Block : public ModulationInput<T> {
+        const T* const* delayMod = nullptr;       // modulation buffer for delay time (in samples)
+        const T* const* feedbackMod = nullptr;    // modulation buffer for feedback gain
+        const T* const* feedforwardMod = nullptr; // modulation buffer for feedforward gain
+    };
 };
-} // namespace CombMod
 
 /**
  * @brief General Comb Filter supporting feedback and feedforward
  * @param T Sample data type (e.g., float, double)
  * @param Interpolator Interpolator type for fractional delay support (default: LinearInterpolator)
  */
-template <typename T, typename Interpolator = LinearInterpolator<T>>
+template <typename T, typename Interpolator = detail::LinearInterpolator<T>>
 class CombFilter {
   public:
     /// Default constructor

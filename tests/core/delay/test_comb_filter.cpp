@@ -149,8 +149,7 @@ TEST_F(CombFilterTest, ProcessBlock_WithModulation) {
     std::vector<std::vector<float>> outputBuffer(numChannels, std::vector<float>(blockSize, 0.0f));
 
     // Create modulation buffers
-    std::vector<std::vector<float>> delayModBuffer(numChannels,
-                                                   std::vector<float>(blockSize, 2.0f));
+    std::vector<std::vector<float>> delayModBuffer(numChannels, std::vector<float>(blockSize, 2.0f));
     std::vector<std::vector<float>> fbModBuffer(numChannels, std::vector<float>(blockSize, 1.1f));
     std::vector<std::vector<float>> ffModBuffer(numChannels, std::vector<float>(blockSize, 0.95f));
 
@@ -204,7 +203,7 @@ TEST_F(CombFilterTest, FeedbackBehavior) {
     Time<float> delaySamples = 48.0_samples;
     comb.setDelay(delaySamples, true);
     comb.setFeedbackGain(0.7_lin, true);
-    comb.setFeedforwardGain(1.0_lin, true); // Feedforward = 1 gives us pure feedback comb
+    comb.setFeedforwardGain(1.0_lin, true); // Feedforward = 0 gives us pure feedback comb
 
     // Send impulse and collect outputs
     std::vector<float> outputs;
@@ -221,15 +220,15 @@ TEST_F(CombFilterTest, FeedbackBehavior) {
     // Sample 96: reads 0.7 from delay, writes 0.49, output = 0.7
 
     // Check first echo at delay time - should be 1.0 (original impulse, not yet attenuated)
-    float firstEcho = outputs[static_cast<size_t>(delaySamples.toSamples(sampleRate))];
+    float firstEcho = outputs[static_cast<size_t>(delaySamples.toSamples(sampleRate) + 1)];
     EXPECT_NEAR(firstEcho, 1.0f, 0.05f);
 
     // Check second echo at delay*2 (sample 96)
-    float secondEcho = outputs[static_cast<size_t>(delaySamples.toSamples(sampleRate) * 2)];
+    float secondEcho = outputs[static_cast<size_t>((delaySamples.toSamples(sampleRate) + 1) * 2)];
     EXPECT_NEAR(secondEcho, 0.7f, 0.05f);
 
     // Check third echo at delay*3 (sample 144)
-    float thirdEcho = outputs[static_cast<size_t>(delaySamples.toSamples(sampleRate) * 3)];
+    float thirdEcho = outputs[static_cast<size_t>((delaySamples.toSamples(sampleRate) + 1) * 3)];
     EXPECT_NEAR(thirdEcho, 0.49f, 0.05f);
 }
 
