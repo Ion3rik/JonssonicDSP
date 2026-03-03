@@ -6,7 +6,6 @@
 #include "detail/oversampler_filters.h"
 #include <jonssonic/core/common/audio_buffer.h>
 #include <jonssonic/core/common/circular_audio_buffer.h>
-#include <jonssonic/core/common/interpolators.h>
 
 namespace jnsc {
 /**
@@ -32,9 +31,7 @@ class Oversampler {
      * @param newNumChannels Number of channels
      * @param newMaxBlockSize Maximum block size for processing (at base sample rate)
      */
-    Oversampler(size_t newNumChannels, size_t newMaxBlockSize) {
-        prepare(newNumChannels, newMaxBlockSize);
-    }
+    Oversampler(size_t newNumChannels, size_t newMaxBlockSize) { prepare(newNumChannels, newMaxBlockSize); }
 
     /// Default destructor.
     ~Oversampler() = default;
@@ -60,20 +57,17 @@ class Oversampler {
         if constexpr (Factor >= 4) {
             stage2.prepare(newNumChannels); // prepare stage 2
             intermediateBuffer1to2.resize(newNumChannels,
-                                          newMaxBlockSize *
-                                              2); // buffer for factor 1 to 2 oversampling
+                                          newMaxBlockSize * 2); // buffer for factor 1 to 2 oversampling
         }
         if constexpr (Factor >= 8) {
             stage3.prepare(newNumChannels); // prepare stage 3
             intermediateBuffer2to4.resize(newNumChannels,
-                                          newMaxBlockSize *
-                                              4); // buffer for factor 2 to 4 oversampling
+                                          newMaxBlockSize * 4); // buffer for factor 2 to 4 oversampling
         }
         if constexpr (Factor == 16) {
             stage4.prepare(newNumChannels); // prepare stage 4
             intermediateBuffer4to8.resize(newNumChannels,
-                                          newMaxBlockSize *
-                                              8); // buffer for factor 4 to 8 oversampling
+                                          newMaxBlockSize * 8); // buffer for factor 4 to 8 oversampling
         }
     }
 
@@ -127,9 +121,7 @@ class Oversampler {
             // stage1 1x to 2x
             stage1.upsample(input, intermediateBuffer1to2.writePtrs(), numInputSamples);
             // stage2 2x to 4x
-            stage2.upsample(intermediateBuffer1to2.readPtrs(),
-                            intermediateBuffer2to4.writePtrs(),
-                            2 * numInputSamples);
+            stage2.upsample(intermediateBuffer1to2.readPtrs(), intermediateBuffer2to4.writePtrs(), 2 * numInputSamples);
             // stage3 4x to 8x
             stage3.upsample(intermediateBuffer2to4.readPtrs(), output, 4 * numInputSamples);
         }
@@ -139,13 +131,9 @@ class Oversampler {
             // stage1 1x to 2x
             stage1.upsample(input, intermediateBuffer1to2.writePtrs(), numInputSamples);
             // stage2 2x to 4x
-            stage2.upsample(intermediateBuffer1to2.readPtrs(),
-                            intermediateBuffer2to4.writePtrs(),
-                            2 * numInputSamples);
+            stage2.upsample(intermediateBuffer1to2.readPtrs(), intermediateBuffer2to4.writePtrs(), 2 * numInputSamples);
             // stage3 4x to 8x
-            stage3.upsample(intermediateBuffer2to4.readPtrs(),
-                            intermediateBuffer4to8.writePtrs(),
-                            4 * numInputSamples);
+            stage3.upsample(intermediateBuffer2to4.readPtrs(), intermediateBuffer4to8.writePtrs(), 4 * numInputSamples);
             // stage4 8x to 16x
             stage4.upsample(intermediateBuffer4to8.readPtrs(), output, 8 * numInputSamples);
         }
@@ -208,9 +196,7 @@ class Oversampler {
     }
 
     static constexpr size_t getUpsampledLength(size_t inputLength) { return inputLength * Factor; }
-    static constexpr size_t getDownsampledLength(size_t inputLength) {
-        return inputLength / Factor;
-    }
+    static constexpr size_t getDownsampledLength(size_t inputLength) { return inputLength / Factor; }
 
     size_t getLatencySamples() const {
         T latency = 0; // Factor 1 (bypass)
