@@ -21,15 +21,19 @@ namespace jnsc::effects {
 template <typename T>
 class Chorus {
     /** @brief Tunable constants
-     * @param NUM_TAPS Maximum number of delay taps (voices) for the chorus effect
+     * @param NUM_VOICES Number of delay taps (voices) for the chorus effect
+     * @param NORM_FACTOR Normalization factor = 1/sqrt(NUM_VOICES)
      * @param MAX_MODULATION_MS Maximum modulation depth in milliseconds
+     * @param MAX_FEEDBACK Maximum feedback amount (0.0 - 1.0)
      * @param SMOOTHING_TIME_MS Smoothing time for parameter changes in milliseconds
      * @param MAX_DELAY_MS Maximum delay time in milliseconds
      */
-    static constexpr size_t MAX_NUM_TAPS = 8;
-    static constexpr T MAX_MODULATION_MS = T(8.0);
-    static constexpr int SMOOTHING_TIME_MS = 100;
-    static constexpr T MAX_DELAY_MS = T(60.0);
+    static constexpr size_t NUM_VOICES = 2;
+    static constexpr T NORM_FACTOR = T(0.5); // NOTE: remember to update if NUM_VOICES changes!
+    static constexpr T MAX_MODULATION_MS = T(10.0);
+    static constexpr T MAX_FEEDBACK = T(0.9);
+    static constexpr int SMOOTHING_TIME_MS = 50;
+    static constexpr T MAX_DELAY_MS = T(50.0);
 
   public:
     /// Default constructor.
@@ -64,17 +68,23 @@ class Chorus {
         // Prepare DSP components
         multiTapDelay.prepare(numChannels, sampleRate, Time<T>::Milliseconds(MAX_DELAY_MS));
         multiTapDelay.setControlSmoothingTime(Time<T>::Milliseconds(T(SMOOTHING_TIME_MS)));
-        lfo.prepare(numChannels * MAX_NUM_TAPS, sampleRate);
+        lfo.prepare(numChannels * NUM_VOICES, sampleRate);
         lfo.setWaveform(Waveform::Sine);
 
         // Prepare parameters
         modDepthSamples.prepare(numChannels, sampleRate);
-        lfoPhaseOffset.prepare(numChannels * MAX_NUM_TAPS, sampleRate);
+        lfoPhaseOffset.prepare(numChannels * NUM_VOICES, sampleRate);
+        feedback.prepare(numChannels, sampleRate);
+
+        // Set voice gains
+        Gain<T> voiceGain = Gain<T>::Linear(NORM_FACTOR);
+        for (size_t tap = 0; tap < NUM_VOICES; ++tap)
+            multiTapDelay.setTapGain(tap, voiceGain);
 
         // Set Default Parameters
         setRate(T(0.5), true);
         setDepth(T(0.5), true);
-        setNumVoices(2, true);
+        setFeedback(T(0.0), true);
         setDelayMs(T(15.0), true);
         setSpread(T(1.0), true);
     }
@@ -95,21 +105,35 @@ class Chorus {
      */
     void processBlock(const T* const* input, T* const* output, size_t numSamples) {
         for (size_t ch = 0; ch < numChannels; ++ch) {
+            // Calculate the base LFO index for this channel
+            size_t voiceBaseIdx = ch * NUM_VOICES;
             for (size_t n = 0; n < numSamples; ++n) {
-                // Write input sample to delay line
-                multiTapDelay.writeSample(ch, input[ch][n]);
+                // Get current input sample
+                T inputSample = input[ch][n];
 
-                // Get the smoothed modulation depth in samples
+                // Initialize output to zero before accumulating
+                T outputSample = T(0);
+
+                // Get the modulation depth for this channel
                 T modDepth = modDepthSamples.getNextValue(ch);
 
                 // Loop over active voices
-                for (size_t tap = 0; tap < numActiveVoices; ++tap) {
-                    // Run LFO for this channel-tap combination to get modulation value
-                    T mod = modDepth * lfo.processSample(ch * MAX_NUM_TAPS + tap);
+                for (size_t tap = 0; tap < NUM_VOICES; ++tap) {
+                    // Get the phase offset for this channel-tap combination
+                    T phaseOffset = lfoPhaseOffset.getNextValue(index(ch, tap));
 
-                    // Read delayed sample with interpolation and gain for this tap
-                    output[ch][n] = multiTapDelay.readSample(ch, tap, mod);
+                    // Run LFO for this channel-tap combination to get modulation value (unipolar: 0 to +1)
+                    T lfoValue = lfo.processSample(voiceBaseIdx + tap, phaseOffset) * T(0.5) + T(0.5);
+                    T mod = modDepth * lfoValue;
+
+                    // Read delayed sample with interpolation and gain for this tap and accumulate to output
+                    outputSample += multiTapDelay.readSample(ch, tap, mod);
                 }
+
+                // Write the input sample plus feedback into the delay line
+                multiTapDelay.writeSample(ch, inputSample + feedback.getNextValue(ch) * outputSample * NORM_FACTOR);
+                // Store the final output sample
+                output[ch][n] = outputSample;
             }
         }
     }
@@ -127,28 +151,16 @@ class Chorus {
     void setDepth(T depth, bool skipSmoothing = false) {
         if (sampleRate <= T(0))
             return; // Avoid division by zero
-        Time<T> depthMs = Time<T>::Milliseconds(depth * MAX_MODULATION_MS);
-        modDepthSamples.setTarget(depthMs.toSamples(sampleRate), skipSmoothing);
+        T mds = Time<T>::Milliseconds(depth * MAX_MODULATION_MS).toSamples(sampleRate);
+        modDepthSamples.setTarget(mds, skipSmoothing);
     }
 
     /**
-     * @brief Set the number of voices (taps) for the chorus effect.
-     * @param numVoices Number of voices (1 to MAX_NUM_TAPS)
+     * @brief Set the feedback amount.
+     * @param feedbackAmount Normalized feedback amount 0.0 - 1.0
      */
-    void setNumVoices(size_t numVoices, bool skipSmoothing = false) {
-        // Clamp number of voices to valid range
-        numActiveVoices = std::min(std::max(numVoices, size_t(1)), MAX_NUM_TAPS);
-
-        // Update the tap gains based on number of active voices
-        // (i.e. we activate the first numActiveVoices taps and set
-        // their gains, while muting the rest)
-        for (size_t tap = 0; tap < MAX_NUM_TAPS; ++tap) {
-            T gain = static_cast<T>(tap < numActiveVoices) * T(1.0) / std::sqrt(T(numActiveVoices));
-            multiTapDelay.setTapGain(tap, Gain<T>::Linear(gain), skipSmoothing);
-        }
-
-        // Update LFO phase offsets to reflect the new number of active voices
-        updateLfoPhaseOffsets(skipSmoothing);
+    void setFeedback(T feedbackAmount, bool skipSmoothing = false) {
+        feedback.setTarget(feedbackAmount * MAX_FEEDBACK, skipSmoothing);
     }
 
     /**
@@ -165,11 +177,16 @@ class Chorus {
      * @param spread Spread amount 0.0 - 1.0 (0 = all channels in phase, 1 = maximum phase offset)
      */
     void setSpread(T spread, bool skipSmoothing = false) {
-        // Store the new spread amount
-        currentSpread = spread;
+        // Distribute voices
+        T voiceSpread = T(0.5) / static_cast<T>(NUM_VOICES);
 
-        // Update LFO phase offsets for all channel-tap combinations based on the new spread
-        updateLfoPhaseOffsets(skipSmoothing);
+        // Spread param offsets channels further apart
+        for (size_t ch = 0; ch < numChannels; ++ch) {
+            for (size_t tap = 0; tap < NUM_VOICES; ++tap) {
+                T offset = (spread * ch) / static_cast<T>(numChannels) + (tap * voiceSpread);
+                lfoPhaseOffset.setTarget(index(ch, tap), offset, skipSmoothing);
+            }
+        }
     }
 
     /// Get number of channels
@@ -183,42 +200,17 @@ class Chorus {
     T sampleRate = T(44100);
 
     // Processors
-    MultiTapDelayLine<T, MAX_NUM_TAPS> multiTapDelay;
+    MultiTapDelayLine<T, NUM_VOICES> multiTapDelay;
     Oscillator<T> lfo;
 
     // Parameters
     DspParam<T> modDepthSamples;
     DspParam<T> lfoPhaseOffset;
-    size_t numActiveVoices = 0;
-    T currentSpread = T(0);
+    DspParam<T> feedback;
+    T normFactor;
 
-    void updateLfoPhaseOffsets(bool skipSmoothing = false) {
-
-        // Distribute voice phases evenly
-        T voicePhaseStep = T(1.0) / T(numActiveVoices);
-
-        for (size_t ch = 0; ch < numChannels; ++ch) {
-            // Channel-specific phase offset controlled by spread parameter
-            T channelPhaseOffset = currentSpread * static_cast<T>(ch) / static_cast<T>(numChannels);
-
-            for (size_t tap = 0; tap < MAX_NUM_TAPS; ++tap) {
-                // Calculate the LFO index for this channel-tap combination
-                size_t lfoIndex = ch * MAX_NUM_TAPS + tap;
-
-                // Fixed voice phase (only for active taps)
-                T voicePhase = (tap < numActiveVoices) ? (voicePhaseStep * static_cast<T>(tap)) : T(0);
-
-                // Combine voice phase + channel offset
-                T totalPhase = voicePhase + channelPhaseOffset;
-
-                // Wrap to 0-1 range
-                totalPhase = totalPhase - std::floor(totalPhase);
-
-                // Set phase for this specific LFO
-                lfoPhaseOffset.setTarget(lfoIndex, totalPhase, skipSmoothing);
-            }
-        }
-    }
+    // Helper function for indexing
+    inline size_t index(size_t ch, size_t tap) { return ch * NUM_VOICES + tap; }
 };
 
 } // namespace jnsc::effects

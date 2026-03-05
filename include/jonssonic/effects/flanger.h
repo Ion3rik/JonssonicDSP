@@ -33,7 +33,7 @@ class Flanger {
     static constexpr T MAX_MODULATION_MS = T(3.0);
     static constexpr int SMOOTHING_TIME_MS = 100;
     static constexpr T MAX_DELAY_MS = T(10.0);
-    static constexpr T MAX_FEEDBACK = T(0.8);
+    static constexpr T MAX_FEEDBACK = T(0.9);
 
   public:
     /// Default constructor.
@@ -70,6 +70,7 @@ class Flanger {
         delayStage.prepare(numChannels, Time<T>::Milliseconds(MAX_DELAY_MS), sampleRate);
         delayStage.setControlSmoothingTime(Time<T>::Milliseconds(T(SMOOTHING_TIME_MS)));
         delayStage.setFeedforward(T(1), true); // 50/50 wet/dry mix internally for classic flanger sound
+        delayStage.setLfoType(Waveform::Triangle);
 
         // Set Default Parameters
         setRate(T(0.5), true);      // 0.5 Hz

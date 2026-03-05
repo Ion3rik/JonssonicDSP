@@ -234,7 +234,7 @@ class ModulatedDelayStage {
      */
     void setLfoType(Waveform newType) {
         if constexpr (UseInternalLFO) {
-            lfo.setWaveformType(newType);
+            lfo.setWaveform(newType);
         }
     }
 
@@ -289,7 +289,8 @@ class ModulatedDelayStage {
         for (size_t n = 0; n < numSamples; ++n) {
             // First pass: read delayed samples from all channels
             for (size_t ch = 0; ch < numChannels; ++ch) {
-                T modValue = lfo.processSample(ch, lfoPhaseOffset.getNextValue(ch)) * modDepthSamples.getNextValue(ch);
+                T lfoValue = lfo.processSample(ch, lfoPhaseOffset.getNextValue(ch)) * T(0.5) + T(0.5);
+                T modValue = lfoValue * modDepthSamples.getNextValue(ch);
                 T sample = delayLine.readSample(ch, modValue);
 
                 if constexpr (UseDamping)
@@ -373,8 +374,8 @@ class ModulatedDelayStage {
                 // Get LFO modulation value if internal LFO is used
                 T modValue = T(0);
                 if constexpr (UseInternalLFO) {
-                    modValue =
-                        lfo.processSample(ch, lfoPhaseOffset.getNextValue(ch)) * modDepthSamples.getNextValue(ch);
+                    T lfoValue = lfo.processSample(ch, lfoPhaseOffset.getNextValue(ch)) * T(0.5) + T(0.5);
+                    modValue = lfoValue * modDepthSamples.getNextValue(ch);
                 }
 
                 // Read delayed sample with modulation

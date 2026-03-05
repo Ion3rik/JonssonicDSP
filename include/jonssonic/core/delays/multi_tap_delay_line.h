@@ -282,7 +282,6 @@ class MultiTapDelayLine {
     T sampleRate = T(44100); // Sample rate in Hz
     size_t numChannels;      // Number of audio channels
     size_t bufferSize;       // Maximum delay in samples (always power of two)
-    size_t numTaps;          // Number of delay taps
     bool togglePrepared = false;
 
     // DSP Components
@@ -291,6 +290,6 @@ class MultiTapDelayLine {
     DspParam<T> tapGain;                   // Multi-channel, multi-tap gain for each tap
 
     // Helper function to calculate parameter index for multi-tap delay (where taps are stored contiguously per channel)
-    inline size_t index(size_t ch, size_t tap) const { return ch * numTaps + tap; }
+    inline size_t index(size_t ch, size_t tap) const { return ch * NumTaps + tap; }
 };
 } // namespace jnsc

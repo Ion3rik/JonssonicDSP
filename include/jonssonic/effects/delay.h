@@ -107,8 +107,8 @@ class Delay {
         // Process LFOs to modulation buffer (note: could implement oscillator bank to internalize additive oscillators)
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t n = 0; n < numSamples; ++n) {
-                T wowValue = wowLfo.processSample(ch);
-                T flutterValue = flutterLfo.processSample(ch);
+                T wowValue = wowLfo.processSample(ch) * T(0.5) + T(0.5);         // unipolar 0 to 1
+                T flutterValue = flutterLfo.processSample(ch) * T(0.5) + T(0.5); // unipolar 0 to 1
                 modulationBuffer[ch][n] =
                     wowValue * WOW_PORTION_OF_MODULATION + flutterValue * (T(1) - WOW_PORTION_OF_MODULATION);
             }
