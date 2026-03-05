@@ -89,10 +89,14 @@ class Distortion {
         // Prepare internal buffers and oversampler
         fxBuffer.resize(newNumChannels, newMaxBlockSize);
 
+        // Prepare output gain
+        outputGain.prepare(newNumChannels, newSampleRate);
+
         // Set parameter smoothing times
         distortion.setControlSmoothingTime(Time<T>::Milliseconds(PARAM_SMOOTH_TIME_MS));
         distortionOS.setControlSmoothingTime(Time<T>::Milliseconds(PARAM_SMOOTH_TIME_MS));
         dryWetMixer.setControlSmoothingTime(Time<T>::Milliseconds(PARAM_SMOOTH_TIME_MS));
+        outputGain.setSmoothingTime(Time<T>::Milliseconds(PARAM_SMOOTH_TIME_MS));
 
         // Set Default Parameters
         setDriveDb(T(0), true);      // 0 dB drive
