@@ -5,13 +5,12 @@
 #pragma once
 
 #include "jonssonic/utils/detail/config_utils.h"
-#include <algorithm>
 #include <jonssonic/core/common/audio_buffer.h>
 #include <jonssonic/core/common/dsp_param.h>
 #include <jonssonic/core/generators/oscillator.h>
 #include <jonssonic/models/delays/modulated_delay_stage.h>
+#include <jonssonic/utils/buffer_utils.h>
 #include <jonssonic/utils/math_utils.h>
-#include <vector>
 
 namespace jnsc::effects {
 
@@ -96,6 +95,7 @@ class Flanger {
      */
     void processBlock(const T* const* input, T* const* output, size_t numSamples) {
         delayStage.processBlock(input, output, numSamples);
+        utils::applyGain<T>(output, numChannels, numSamples, T(0.5));
     }
 
     /**
