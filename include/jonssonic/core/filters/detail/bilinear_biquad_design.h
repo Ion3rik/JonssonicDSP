@@ -22,7 +22,7 @@ template <typename T>
 class BilinearBiquadDesign {
   public:
     /// Enumeration of the supported filter responses
-    enum class Response { Lowpass, Highpass, Bandpass, Allpass, Notch, Peak, Lowshelf, Highshelf };
+    enum class Response { Lowpass, Highpass, Bandpass, Allpass, Notch, Peak, Lowshelf, Highshelf, Tilt };
 
     /// Default constructor
     BilinearBiquadDesign() = default;
@@ -100,6 +100,9 @@ class BilinearBiquadDesign {
         case Response::Highshelf:
             makeHighshelf(ch, section, b0, b1, b2, a1, a2);
             break;
+        case Response::Tilt:
+            makeTilt(ch, section, b0, b1, b2, a1, a2);
+            break;
         default:
             // Handle unsupported types or add implementations
             break;
@@ -135,7 +138,7 @@ class BilinearBiquadDesign {
      * @param section Section index.
      * @param newGain Gain struct.
      * @note Updates coefficients based on the current parameters and response type.
-     * @note Only applicable for peaking and shelving response types.
+     * @note Only applicable for peaking, shelving, and tilt response types.
      */
     void setGain(size_t ch, size_t section, Gain<T> newGain) {
         g[ch][section] = FilterLimits<T>::clampGain(newGain).toLinear();
@@ -266,6 +269,19 @@ class BilinearBiquadDesign {
         b0 = (A * ((A + T(1)) + (A - T(1)) * cosw0 + T(2) * sqrtA * alpha)) / a0;
         b1 = (-T(2) * A * ((A - T(1)) + (A + T(1)) * cosw0)) / a0;
         b2 = (A * ((A + T(1)) + (A - T(1)) * cosw0 - T(2) * sqrtA * alpha)) / a0;
+        a1 = (T(2) * ((A - T(1)) - (A + T(1)) * cosw0)) / a0;
+        a2 = ((A + T(1)) - (A - T(1)) * cosw0 - T(2) * sqrtA * alpha) / a0;
+    }
+    void makeTilt(size_t ch, size_t section, T& b0, T& b1, T& b2, T& a1, T& a2) {
+        T A = g[ch][section];
+        T cosw0 = std::cos(w0[ch][section]);
+        T sinw0 = std::sin(w0[ch][section]);
+        T alpha = sinw0 / (T(2) * Q[ch][section]);
+        T sqrtA = std::sqrt(A);
+        T a0 = (A + T(1)) - (A - T(1)) * cosw0 + T(2) * sqrtA * alpha;
+        b0 = ((A + T(1)) + (A - T(1)) * cosw0 + T(2) * sqrtA * alpha) / a0;
+        b1 = (-T(2) * ((A - T(1)) + (A + T(1)) * cosw0)) / a0;
+        b2 = ((A + T(1)) + (A - T(1)) * cosw0 - T(2) * sqrtA * alpha) / a0;
         a1 = (T(2) * ((A - T(1)) - (A + T(1)) * cosw0)) / a0;
         a2 = ((A + T(1)) - (A - T(1)) * cosw0 - T(2) * sqrtA * alpha) / a0;
     }
