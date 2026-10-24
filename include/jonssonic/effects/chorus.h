@@ -1,4 +1,4 @@
-// Jonssonic - A C++ audio DSP library
+// Jonssonic - A Modular Realtime C++ Audio DSP Library
 // Chorus effect header file
 // SPDX-License-Identifier: MIT
 

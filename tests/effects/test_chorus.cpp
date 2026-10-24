@@ -35,7 +35,7 @@ TEST_F(ChorusTest, ProcessBlockWorks) {
 TEST_F(ChorusTest, SettersWork) {
     chorus.setRate(1.0f, true);
     chorus.setDepth(0.5f, true);
-    chorus.setNumVoices(4, true);
+    chorus.setFeedback(0.3f, true);
     chorus.setDelayMs(20.0f, true);
     chorus.setSpread(0.7f, true);
     SUCCEED();

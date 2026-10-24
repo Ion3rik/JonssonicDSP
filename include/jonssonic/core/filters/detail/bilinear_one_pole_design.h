@@ -16,7 +16,7 @@ template <typename T>
 class BilinearOnePoleDesign {
   public:
     /// Enumeration of the supported filter responses
-    enum class Response { Lowpass, Highpass, Allpass, Lowshelf, Highshelf };
+    enum class Response { Lowpass, Highpass, Allpass, Lowshelf, Highshelf, Tilt };
 
     /// Default constructor
     BilinearOnePoleDesign() = default;
@@ -78,6 +78,9 @@ class BilinearOnePoleDesign {
             break;
         case Response::Highshelf:
             makeHighShelf(ch, section, b0, b1, a1);
+            break;
+        case Response::Tilt:
+            makeTilt(ch, section, b0, b1, a1);
             break;
         default:
             // Handle unsupported types or add implementations
@@ -177,6 +180,15 @@ class BilinearOnePoleDesign {
         b0 = (sqrt_g * k + g[ch][section]) / a0;
         b1 = (sqrt_g * k - g[ch][section]) / a0;
         a1 = (sqrt_g * k - T(1)) / a0;
+    }
+
+    void makeTilt(size_t ch, size_t section, T& b0, T& b1, T& a1) {
+        T k = std::tan(T(0.5) * w0[ch][section]);
+        T gain = g[ch][section];
+        T a0 = gain * k + T(1);
+        b0 = (k + gain) / a0;
+        b1 = (k - gain) / a0;
+        a1 = (gain * k - T(1)) / a0;
     }
 };
 

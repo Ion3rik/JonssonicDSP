@@ -10,4 +10,5 @@
 #include <jonssonic/effects/distortion.h>
 #include <jonssonic/effects/equalizer.h>
 #include <jonssonic/effects/flanger.h>
+#include <jonssonic/effects/phaser.h>
 #include <jonssonic/effects/reverb.h>
