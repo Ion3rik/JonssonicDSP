@@ -77,7 +77,7 @@ class OnePoleFilter {
      * @return Output sample.
      * @note Must call @ref prepare before processing.
      */
-    float processSample(size_t ch, T input) {
+    T processSample(size_t ch, T input) {
         // SERIES ROUTING
         if constexpr (RoutingType == Routing::Series) {
             T output = input;

@@ -137,12 +137,12 @@ class Flanger {
      * @brief Set the channel spread (phase offset between channels).
      * @param spread Spread amount 0.0 - 1.0
      *                     0.0 = mono (all channels in phase)
-     *                     1.0 = maximum spread (phase distributed across channels)
+     *                     1.0 = maximum spread (90-degree phase difference in stereo)
      */
     void setSpread(T spread, bool skipSmoothing = false) {
         // Update phase offsets based on spread (normalized to 0-1)
         for (size_t ch = 0; ch < numChannels; ++ch) {
-            delayStage.setLfoPhaseOffset(ch, (spread * ch) / T(numChannels), skipSmoothing);
+            delayStage.setLfoPhaseOffset(ch, (spread * T(0.5) * T(ch)) / T(numChannels), skipSmoothing);
         }
     }
 

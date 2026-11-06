@@ -3,235 +3,182 @@
 // SPDX-License-Identifier: MIT
 
 #include <gtest/gtest.h>
+#include <jonssonic/core/common/audio_buffer.h>
 #include <jonssonic/core/filters/state_variable_filter.h>
+#include <complex>
+#include <type_traits>
+#include <vector>
 
 using namespace jnsc;
 
-// List of stateVariableFilter variants to test
-typedef ::testing::Types<StateVariableFilter<float, detail::TPTSVFTopology<float>, detail::SVFDesign<float>>>
-    FilterVariants;
+template <typename T>
+class StateVariableFilterTest : public ::testing::Test {};
+using SampleTypes = ::testing::Types<float, double>;
+TYPED_TEST_SUITE(StateVariableFilterTest, SampleTypes);
 
-// Typed test fixture for Filter class
-template <typename Variant>
-class StateVariableFilterTest : public ::testing::Test {
-  protected:
-    static constexpr float sampleRate = 48000.0f;
-    Variant StateVariableFilter;
-
-    void SetUp() override {}
-    void TearDown() override {}
-};
-
-// Register the test suite with the list of StateVariableFilter variants
-TYPED_TEST_SUITE(StateVariableFilterTest, FilterVariants);
-
-TYPED_TEST(StateVariableFilterTest, Routing) {
-    // Test that we can instantiate both series and parallel variants of the onePoleFilter with the Routing wrapper.
-    Series<StateVariableFilter<float>> seriesFilter;
-    Parallel<StateVariableFilter<float>> parallelFilter;
-}
-
-TYPED_TEST(StateVariableFilterTest, PrepareFilter) {
-    this->StateVariableFilter.prepare(2, this->sampleRate, 3);
-
-    EXPECT_TRUE(this->StateVariableFilter.isPrepared());
-    EXPECT_EQ(this->StateVariableFilter.getNumChannels(), 2);
-    EXPECT_EQ(this->StateVariableFilter.getNumSections(), 3);
-    EXPECT_EQ(this->StateVariableFilter.getSampleRate(), this->sampleRate);
-}
-
-TYPED_TEST(StateVariableFilterTest, SetResponse) {
-    using Response = typename TypeParam::Response;
-    // Prepare the StateVariableFilter
-    this->StateVariableFilter.prepare(1, this->sampleRate);
-
-    // Get reference to the design for testing
-    auto& design = this->StateVariableFilter.getDesign();
-
-    // Set a lowpass response and get intial design
-    this->StateVariableFilter.setResponse(Response::Lowpass);
-    auto response = design.getResponse();
-    EXPECT_EQ(response, Response::Lowpass);
-
-    // Set a highpass response and get updated design and coefficients
-    this->StateVariableFilter.setResponse(Response::Highpass);
-    response = design.getResponse();
-    EXPECT_EQ(response, Response::Highpass);
-}
-
-TYPED_TEST(StateVariableFilterTest, SetFrequency) {
-    using Response = typename TypeParam::Response;
-    // Prepare the StateVariableFilter
-    float fs = this->sampleRate;
-    this->StateVariableFilter.prepare(1, fs);
-
-    // Get reference to the design and topology for testing
-    auto& design = this->StateVariableFilter.getDesign();
-
-    this->StateVariableFilter.setResponse(Response::Lowpass);
-
-    // Set a 1000 Hz frequency and get initial design and coefficients
-    this->StateVariableFilter.setFrequency(1000.0_hz);
-    EXPECT_NEAR(1000.0, design.getFrequency().toHertz(fs), 1e-6f);
-
-    // Set a 2000 Hz frequency and get updated design and coefficients
-    this->StateVariableFilter.setFrequency(2000.0_hz);
-    EXPECT_NEAR(2000.0, design.getFrequency().toHertz(fs), 1e-6f);
-}
-
-TYPED_TEST(StateVariableFilterTest, SetQ) {
-    using Response = typename TypeParam::Response;
-    // Prepare the StateVariableFilter
-    float fs = this->sampleRate;
-    this->StateVariableFilter.prepare(1, fs);
-
-    // Get references to design and topology for testing
-    auto& design = this->StateVariableFilter.getDesign();
-
-    // Set a Q of 0.5 and get initial design and coefficients
-    this->StateVariableFilter.setResponse(Response::Lowpass);
-    this->StateVariableFilter.setQ(0.5f);
-    EXPECT_NEAR(0.5f, design.getQ(), 1e-6f);
-
-    // Set a Q of 2.0 and get updated design and coefficients
-    this->StateVariableFilter.setQ(2.0f);
-    EXPECT_NEAR(2.0f, design.getQ(), 1e-6f);
-}
-
-TYPED_TEST(StateVariableFilterTest, ProcessSample) {
-    using Response = typename TypeParam::Response;
-    // Prepare the StateVariableFilter
-    this->StateVariableFilter.prepare(1, this->sampleRate);
-    auto& design = this->StateVariableFilter.getDesign();
-    this->StateVariableFilter.setResponse(Response::Lowpass);
-
-    // Process a sample and verify that the output is not NaN or Inf
-    float inputSample = 0.5f;
-    float outputSample = this->StateVariableFilter.processSample(0, inputSample);
-    EXPECT_FALSE(std::isnan(outputSample));
-    EXPECT_FALSE(std::isinf(outputSample));
-}
-
-TYPED_TEST(StateVariableFilterTest, ProcessBlock) {
-    using Response = typename TypeParam::Response;
-    // Prepare the StateVariableFilter
-    size_t numChannels = 2;
-    size_t numSections = 3;
-    this->StateVariableFilter.reset();
-    this->StateVariableFilter.prepare(numChannels, this->sampleRate, numSections);
-    this->StateVariableFilter.setResponse(Response::Lowpass);
-
-    // Create input and output buffers
-    size_t numSamples = 1024;
-    AudioBuffer<float> input(numChannels, numSamples);
-    for (size_t ch = 0; ch < numChannels; ++ch)
-        input[ch][0] = 1.0f; // Impulse input for testing
-    AudioBuffer<float> output(numChannels, numSamples);
-
-    // Process the block and verify that outputs are not NaN or Inf
-    this->StateVariableFilter.processBlock(input.readPtrs(), output.writePtrs(), numSamples);
-
-    for (size_t ch = 0; ch < numChannels; ++ch) {
-        for (size_t n = 0; n < numSamples; ++n) {
-            EXPECT_FALSE(std::isnan(output[ch][n]));
-            EXPECT_FALSE(std::isinf(output[ch][n]));
-        }
+TYPED_TEST(StateVariableFilterTest, PrepareResetAndChannelIsolation) {
+    using T = TypeParam;
+    StateVariableFilter<T> filter;
+    EXPECT_FALSE(filter.isPrepared());
+    filter.prepare(2, T(48000));
+    EXPECT_TRUE(filter.isPrepared());
+    EXPECT_EQ(filter.getNumChannels(), 2);
+    EXPECT_EQ(filter.getSampleRate(), T(48000));
+    const auto first = filter.processSample(0, T(1), T(1000), T(0.707));
+    for (size_t n = 0; n < 100; ++n) {
+        filter.processSample(0, T(0), T(1000), T(0.707));
+        for (T value : filter.processSample(1, T(0), T(1000), T(0.707)))
+            EXPECT_EQ(value, T(0));
     }
+    filter.reset();
+    EXPECT_EQ(filter.processSample(0, T(1), T(1000), T(0.707)), first);
+    filter.prepare(1, T(48000));
+    EXPECT_EQ(filter.processSample(0, T(1), T(1000), T(0.707)), first);
 }
 
-TYPED_TEST(StateVariableFilterTest, Reset) {
-    // Prepare the StateVariableFilter and set some state
-    this->StateVariableFilter.prepare(2, this->sampleRate, 3);
-
-    // Process some samples to change the state (using dummy input)
-    AudioBuffer<float> input(2, 4);
-    AudioBuffer<float> output(2, 4);
-    this->StateVariableFilter.processBlock(input.readPtrs(), output.writePtrs(), 4);
-
-    // Reset the StateVariableFilter and verify that the state buffers are cleared
-    this->StateVariableFilter.reset();
-    const auto& topology = this->StateVariableFilter.getTopology();
-    size_t numStates = topology.STATE_VARS_PER_SECTION;
-    for (size_t ch = 0; ch < this->StateVariableFilter.getNumChannels(); ++ch) {
-        for (size_t s = 0; s < this->StateVariableFilter.getNumSections(); ++s) {
-            for (size_t i = 0; i < numStates; ++i)
-                EXPECT_EQ(topology.getState(ch, s, i), 0.0f); // x1
-        }
-    }
-}
-
-TYPED_TEST(StateVariableFilterTest, ChannelSectionProxy) {
-    // Prepare the StateVariableFilter
-    float fs = this->sampleRate;
-    this->StateVariableFilter.prepare(2, fs, 3);
-
-    // Get references to design and topology for testing
-    auto& design = this->StateVariableFilter.getDesign();
-
-    // Set frequency with channel-section proxy.
-    this->StateVariableFilter.channel(0).section(1).setFrequency(2000.0_hz);
-
-    // Verify that only the coefficients for channel 0, section 1 were updated.
-    for (size_t ch = 0; ch < this->StateVariableFilter.getNumChannels(); ++ch) {
-        for (size_t s = 0; s < this->StateVariableFilter.getNumSections(); ++s) {
-            if (ch == 0 && s == 1) {
-                // This section should have updated frequency
-                EXPECT_NEAR(2000.0, design.getFrequency(ch, s).toHertz(fs), 1e-6f);
-            } else {
-                // Other sections should not have changed
-                EXPECT_NEAR(1000.0, design.getFrequency(ch, s).toHertz(fs), 1e-6f);
+TYPED_TEST(StateVariableFilterTest, AllFourResponsesMatchTheirTransferFunctions) {
+    using T = TypeParam;
+    constexpr double fs = 48000.0, pi = utils::pi<double>;
+    constexpr size_t length = 16384;
+    const double tolerance = std::is_same<T, float>::value ? 2e-4 : 1e-9;
+    for (double center : {200.0, 1000.0, 8000.0}) {
+        for (double q : {0.5, 2.0}) {
+            StateVariableFilter<T> filter(1, T(fs));
+            std::vector<std::array<T, 4>> impulse(length);
+            for (size_t n = 0; n < length; ++n)
+                impulse[n] = filter.processSample(0, n == 0 ? T(1) : T(0), T(center), T(q));
+            for (double frequency : {0.0, 100.0, center, 5000.0, 20000.0}) {
+                // Analog SVF responses evaluated through the bilinear transform.
+                std::complex<double> s(0.0, std::tan(pi * frequency / fs) / std::tan(pi * center / fs));
+                auto damping = s / q;
+                auto denominator = s * s + damping + 1.0;
+                std::array<std::complex<double>, 4> expected = {
+                    1.0 / denominator, s * s / denominator, s / denominator,
+                    (s * s - damping + 1.0) / denominator};
+                std::array<std::complex<double>, 4> measured{};
+                for (size_t n = 0; n < length; ++n) {
+                    auto phase = std::polar(1.0, -2.0 * pi * frequency * n / fs);
+                    for (size_t response = 0; response < 4; ++response)
+                        measured[response] += double(impulse[n][response]) * phase;
+                }
+                for (size_t response = 0; response < 4; ++response)
+                    EXPECT_LT(std::abs(measured[response] - expected[response]), tolerance)
+                        << "response=" << response << " frequency=" << frequency << " center=" << center << " Q=" << q;
             }
         }
     }
 }
 
-TYPED_TEST(StateVariableFilterTest, SectionProxy) {
-    // Prepare the StateVariableFilter
-    float fs = this->sampleRate;
-    this->StateVariableFilter.prepare(2, fs, 3);
-
-    // Get references to design and topology for testing
-    auto& design = this->StateVariableFilter.getDesign();
-
-    // Set frequency with section proxy.
-    this->StateVariableFilter.section(2).setFrequency(2000.0_hz);
-
-    // Verify that only the frequency of section 2 were updated across all channels.
-    for (size_t ch = 0; ch < this->StateVariableFilter.getNumChannels(); ++ch) {
-        for (size_t s = 0; s < this->StateVariableFilter.getNumSections(); ++s) {
-            if (s == 2) {
-                // This section should have updated frequency
-                EXPECT_NEAR(2000.0, design.getFrequency(ch, s).toHertz(fs), 1e-6f);
-            } else {
-                // Other sections should not have changed
-                EXPECT_NEAR(1000.0, design.getFrequency(ch, s).toHertz(fs), 1e-6f);
-            }
+template <typename T, Routing routing>
+void checkModulatedBlock() {
+    constexpr size_t channels = 2, length = 257;
+    AudioBuffer<T> input(channels, length), frequency(channels, length), q(channels, length);
+    for (size_t ch = 0; ch < channels; ++ch)
+        for (size_t n = 0; n < length; ++n) {
+            input[ch][n] = T(std::sin(double(n) * 0.13 + ch));
+            frequency[ch][n] = T(200 + n * (ch + 1) * 20);
+            q[ch][n] = T(0.5 + double(n) / length * (ch + 1));
         }
+    // Verify each output can alias input; the last iteration uses separate input.
+    for (size_t alias = 0; alias <= 4; ++alias) {
+        StateVariableFilter<T, routing> sampleFilter(channels, T(48000), 3), blockFilter(channels, T(48000), 3);
+        std::array<AudioBuffer<T>, 4> actual;
+        for (auto& output : actual)
+            output.resize(channels, length);
+        if (alias < 4)
+            for (size_t ch = 0; ch < channels; ++ch)
+                for (size_t n = 0; n < length; ++n)
+                    actual[alias][ch][n] = input[ch][n];
+        const auto& source = alias < 4 ? actual[alias] : input;
+        // Split the block to verify persistent state across calls.
+        for (size_t offset = 0; offset < length;) {
+            size_t count = std::min(size_t(37), length - offset);
+            const T* in[] = {source.readChannelPtr(0) + offset, source.readChannelPtr(1) + offset};
+            const T* f[] = {frequency.readChannelPtr(0) + offset, frequency.readChannelPtr(1) + offset};
+            const T* Q[] = {q.readChannelPtr(0) + offset, q.readChannelPtr(1) + offset};
+            T* outputs[4][channels];
+            for (size_t response = 0; response < 4; ++response)
+                for (size_t ch = 0; ch < channels; ++ch)
+                    outputs[response][ch] = actual[response].writeChannelPtr(ch) + offset;
+            blockFilter.processBlock(in, f, Q, outputs[0], outputs[1], outputs[2], outputs[3], count);
+            offset += count;
+        }
+        for (size_t ch = 0; ch < channels; ++ch)
+            for (size_t n = 0; n < length; ++n) {
+                const auto expected = sampleFilter.processSample(ch, input[ch][n], frequency[ch][n], q[ch][n]);
+                for (size_t response = 0; response < 4; ++response)
+                    EXPECT_EQ(actual[response][ch][n], expected[response]);
+            }
     }
 }
 
-TYPED_TEST(StateVariableFilterTest, ChannelProxy) {
-    // Prepare the StateVariableFilter
-    float fs = this->sampleRate;
-    this->StateVariableFilter.prepare(2, fs, 3);
+TYPED_TEST(StateVariableFilterTest, ModulatedSeriesBlockMatchesSamplesForEveryResponseInPlace) {
+    checkModulatedBlock<TypeParam, Routing::Series>();
+}
 
-    // Get references to design and topology for testing
-    auto& design = this->StateVariableFilter.getDesign();
-    auto& topology = this->StateVariableFilter.getTopology();
+TYPED_TEST(StateVariableFilterTest, ModulatedParallelBlockMatchesSamplesForEveryResponseInPlace) {
+    checkModulatedBlock<TypeParam, Routing::Parallel>();
+}
 
-    // Set frequency with channel proxy.
-    this->StateVariableFilter.channel(1).setFrequency(2000.0_hz);
-
-    // Verify that only the frequency of channel 1 were updated across all sections.
-    for (size_t ch = 0; ch < this->StateVariableFilter.getNumChannels(); ++ch) {
-        for (size_t s = 0; s < this->StateVariableFilter.getNumSections(); ++s) {
-            if (ch == 1) {
-                // This channel should have updated frequency
-                EXPECT_NEAR(2000.0, design.getFrequency(ch, s).toHertz(fs), 1e-6f);
-            } else {
-                // Other channels should not have changed
-                EXPECT_NEAR(1000.0, design.getFrequency(ch, s).toHertz(fs), 1e-6f);
+TYPED_TEST(StateVariableFilterTest, RoutingMatchesIndependentSectionsForAllResponses) {
+    using T = TypeParam;
+    constexpr size_t channels = 2, sections = 3;
+    Series<StateVariableFilter<T>> series(channels, T(48000), sections);
+    Parallel<StateVariableFilter<T>> parallel(channels, T(48000), sections);
+    StateVariableFilter<T> single(channels, T(48000));
+    // Each response has its own reference cascade of single-section filters.
+    std::array<std::array<StateVariableFilter<T>, sections>, 4> cascades;
+    for (auto& cascade : cascades)
+        for (auto& section : cascade)
+            section.prepare(channels, T(48000));
+    EXPECT_EQ(series.getNumSections(), sections);
+    EXPECT_EQ(parallel.getNumSections(), sections);
+    for (size_t n = 0; n < 512; ++n) {
+        for (size_t ch = 0; ch < channels; ++ch) {
+            const T input = T(std::sin(double(n) * 0.17 + ch));
+            const T f = T(200 + n * (ch + 1) * 10);
+            const T q = T(0.5 + double(n) / 512);
+            const auto serial = series.processSample(ch, input, f, q);
+            const auto summed = parallel.processSample(ch, input, f, q);
+            const auto singleOutput = single.processSample(ch, input, f, q);
+            for (size_t response = 0; response < 4; ++response) {
+                T expected = input;
+                for (auto& section : cascades[response])
+                    expected = section.processSample(ch, expected, f, q)[response];
+                EXPECT_EQ(serial[response], expected);
+                EXPECT_NEAR(summed[response], T(sections) * singleOutput[response],
+                            T(16) * std::numeric_limits<T>::epsilon() *
+                            std::max(T(1), std::abs(summed[response])));
             }
         }
     }
+    series.reset();
+    parallel.reset();
+    for (size_t ch = 0; ch < channels; ++ch) {
+        EXPECT_EQ(series.processSample(ch, T(0), T(1000), T(0.7)), (std::array<T, 4>{}));
+        EXPECT_EQ(parallel.processSample(ch, T(0), T(1000), T(0.7)), (std::array<T, 4>{}));
+    }
+    series.prepare(channels, T(48000), 0);
+    EXPECT_EQ(series.getNumSections(), 1);
+    parallel.prepare(channels, T(48000), 1000);
+    EXPECT_EQ(parallel.getNumSections(), detail::FilterLimits<T>::MAX_SECTIONS);
+    EXPECT_EQ(parallel.processSample(0, T(0), T(1000), T(0.7)), (std::array<T, 4>{}));
+}
+
+TYPED_TEST(StateVariableFilterTest, FrequencyAndQAreAppliedImmediatelyAndClamped) {
+    using T = TypeParam;
+    StateVariableFilter<T> filter(1, T(48000)), reference(1, T(48000));
+    EXPECT_EQ(filter.processSample(0, T(1), T(-100), T(0)),
+              reference.processSample(0, T(1), T(48000) * detail::FilterLimits<T>::MIN_FREQ_NORM,
+                                      detail::FilterLimits<T>::MIN_Q));
+    filter.reset();
+    reference.reset();
+    EXPECT_EQ(filter.processSample(0, T(1), T(96000), T(100)),
+              reference.processSample(0, T(1), T(48000) * detail::FilterLimits<T>::MAX_FREQ_NORM,
+                                      detail::FilterLimits<T>::MAX_Q));
+    filter.reset();
+    reference.reset();
+    const auto low = filter.processSample(0, T(1), T(100), T(0.5));
+    const auto high = reference.processSample(0, T(1), T(8000), T(2));
+    EXPECT_NE(low, high);
 }

@@ -3,293 +3,158 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include "jonssonic/core/filters/detail/svf_design.h"
-#include "jonssonic/core/filters/detail/tpt_svf_topology.h"
-#include "jonssonic/core/filters/routing.h"
+
+#include "jonssonic/utils/detail/config_utils.h"
+#include <jonssonic/utils/math_utils.h>
+#include <algorithm>
+#include <array>
+#include <cassert>
+#include <cmath>
+#include <jonssonic/core/filters/detail/filter_limits.h>
+#include <jonssonic/core/filters/routing.h>
+#include <vector>
 
 namespace jnsc {
 /**
- * @brief StateVariableFilter class for multi-channel, multi-section state variable filtering.
- * @tparam T Sample data type (e.g., float, double)
- * @tparam Topology Filter topology type (e.g., TPTSVFTopology<T>)
- * @tparam Design Filter design type (e.g., SVFDesign<T>)
- * @tparam RoutingType Filter routing type (Series or Parallel)
+ * @brief Multi-channel TPT state variable filter with sample-by-sample frequency and Q inputs.
+ * Supports multiple second-order sections with series or parallel routing.
+ * Parameter storage and smoothing belong to the caller.
+ * @tparam T Sample data type (e.g., float, double).
+ * @tparam RoutingType Filter routing type (Series or Parallel).
  */
-template <typename T,
-          typename Topology = detail::TPTSVFTopology<T>,
-          typename Design = detail::SVFDesign<T>,
-          Routing RoutingType = Routing::Series>
+template <typename T, Routing RoutingType = Routing::Series>
 class StateVariableFilter {
   public:
-    /// Type alias for response types from the design
-    using Response = typename Design::Response;
-
-    /// Default constructor
+    /// Default constructor.
     StateVariableFilter() = default;
 
-    /**
-     * @brief Parameterized constructor that calls @ref prepare.
-     * @param newNumChannels Number of channels
-     * @param newSampleRate Sample rate in Hz
-     * @param newNumSections Number of second-order sections (default is 1)
-     */
+    /// Parameterized constructor that calls prepare.
     StateVariableFilter(size_t newNumChannels, T newSampleRate, size_t newNumSections = 1) {
         prepare(newNumChannels, newSampleRate, newNumSections);
     }
 
-    /// Default destructor
+    /// Default destructor.
     ~StateVariableFilter() = default;
 
-    /// No copy semantics nor move semantics
+    /// No copy nor move semantics.
     StateVariableFilter(const StateVariableFilter&) = delete;
-    const StateVariableFilter& operator=(const StateVariableFilter&) = delete;
+    StateVariableFilter& operator=(const StateVariableFilter&) = delete;
     StateVariableFilter(StateVariableFilter&&) = delete;
-    const StateVariableFilter& operator=(StateVariableFilter&&) = delete;
+    StateVariableFilter& operator=(StateVariableFilter&&) = delete;
 
-    /// Reset the filter state
-    void reset() { topology.reset(); }
-
-    /**
-     * Prepare the filter engine for processing.
-     * @param newNumChannels Number of channels
-     * @param newSampleRate Sample rate in Hz
-     * @param newNumSections Number of second-order sections (default is 1)
-     * @note Prepares both the topology and design components of the engine.
-     */
+    /// Prepare channels and sections, clearing integrator states. Sample rate is in Hz.
     void prepare(size_t newNumChannels, T newSampleRate, size_t newNumSections = 1) {
-        topology.prepare(newNumChannels, newNumSections);
-        design.prepare(newNumChannels, newSampleRate, newNumSections);
+        numChannels = utils::detail::clampChannels(newNumChannels);
+        sampleRate = utils::detail::clampSampleRate(newSampleRate);
+        numSections = detail::FilterLimits<T>::clampSections(newNumSections);
+        state.assign(numChannels * numSections, {});
+    }
+
+    /// Clear the integrator states for all channels.
+    void reset() {
+        for (auto& sectionState : state)
+            for (auto& responseState : sectionState)
+                responseState.fill(T(0));
     }
 
     /**
-     * @brief Process a single sample for a specific channel through all sections of the filter.
+     * @brief Process one sample, returning {lowpass, highpass, bandpass, allpass}.
      * @param ch Channel index.
      * @param input Input sample.
-     * @return Output sample.
-     * @note Must call @ref prepare before processing.
+     * @param f Frequency in Hz, clamped to the filter's supported range.
+     * @param Q Quality factor, clamped to the filter's supported range.
+     * @note Call prepare before processing. Parameters apply to all sections immediately without smoothing.
+     * Series routing cascades each response independently. Parallel routing sums matching responses.
      */
-    T processSample(size_t ch, T input) {
-        // Init output variables for multi-mode processing
-        T output, hp, bp, lp, ap;
+    std::array<T, 4> processSample(size_t ch, T input, T f, T Q) {
+        f = std::clamp(f,
+                       sampleRate * detail::FilterLimits<T>::MIN_FREQ_NORM,
+                       sampleRate * detail::FilterLimits<T>::MAX_FREQ_NORM);
+        Q = detail::FilterLimits<T>::clampQ(Q);
+        T g = std::tan(utils::pi<T> * f / sampleRate);
+        T twoR = T(1) / Q;
+        T d = T(1) / (T(1) + twoR * g + g * g);
 
-        // SERIES ROUTING
+        std::array<T, 4> output{};
+        const size_t stateBase = ch * numSections;
         if constexpr (RoutingType == Routing::Series) {
-            output = input;
-            for (size_t s = 0; s < topology.getNumSections(); ++s) {
-                // Get current parameters for this channel and section
-                T g = design.getNextG(ch, s);
-                T twoR = design.getNextTwoR(ch, s);
-
-                // Process single sample through the topology for this channel and section.
-                topology.processSample(ch, s, output, g, twoR, hp, bp, lp);
-
-                // Select output based on the design's response mask for this channel and section.
-                const auto& responseMask = design.getResponseMask(ch, s);
-                output = hp * responseMask[static_cast<size_t>(Response::Highpass)] +
-                         bp * responseMask[static_cast<size_t>(Response::Bandpass)] +
-                         lp * responseMask[static_cast<size_t>(Response::Lowpass)];
-            }
+            // The first section shares its integrators across all responses.
+            output = processSection(input, g, twoR, d, state[stateBase][0]);
+            // Later sections need independent state for each response cascade.
+            for (size_t section = 1; section < numSections; ++section)
+                for (size_t response = 0; response < output.size(); ++response)
+                    output[response] = processSection(output[response], g, twoR, d,
+                                                      state[stateBase + section][response])[response];
         }
-
-        // PARALLEL ROUTING
         if constexpr (RoutingType == Routing::Parallel) {
-            for (size_t s = 0; s < topology.getNumSections(); ++s) {
-                // Get current parameters for this channel and section
-                T g = design.getNextG(ch, s);
-                T twoR = design.getNextTwoR(ch, s);
-
-                // Process single sample through the topology for this channel and section.
-                topology.processSample(ch, s, input, g, twoR, hp, bp, lp);
-
-                // Select output based on the design's response mask for this channel and section.
-                const auto& responseMask = design.getResponseMask(ch, s);
-                output += hp * responseMask[static_cast<size_t>(Response::Highpass)] +
-                          bp * responseMask[static_cast<size_t>(Response::Bandpass)] +
-                          lp * responseMask[static_cast<size_t>(Response::Lowpass)];
+            for (size_t section = 0; section < numSections; ++section) {
+                const auto sectionOutput = processSection(input, g, twoR, d, state[stateBase + section][0]);
+                for (size_t response = 0; response < output.size(); ++response)
+                    output[response] += sectionOutput[response];
             }
         }
         return output;
     }
 
     /**
-     * @brief Process a block of samples for all channels.
-     * @param input input pointers for each channel [channel][sample].
-     * @param output output pointers for each channel [channel][sample].
-     * @param numSamples Number of samples in the block.
-     * @note Must call @ref prepare before processing.
+     * @brief Process a block, writing all four responses.
+     * @param input Input pointers [channel][sample].
+     * @param f Frequency pointers in Hz [channel][sample].
+     * @param Q Quality factor pointers [channel][sample].
+     * @param lowpass Lowpass output pointers [channel][sample].
+     * @param highpass Highpass output pointers [channel][sample].
+     * @param bandpass Bandpass output pointers [channel][sample].
+     * @param allpass Allpass output pointers [channel][sample].
+     * @param numSamples Number of samples to process.
+     * @note Output buffers must be distinct. Any one output may alias input.
      */
-    void processBlock(const T* const* input, T* const* output, size_t numSamples) {
-        for (size_t ch = 0; ch < topology.getNumChannels(); ++ch)
-            for (size_t n = 0; n < numSamples; ++n)
-                output[ch][n] = processSample(ch, input[ch][n]);
-    }
-
-    /**
-     * @brief Set the filter response type for all channels and sections.
-     * @param newResponse Desired filter response type.
-     */
-    void setResponse(Response newResponse) {
-        for (size_t ch = 0; ch < topology.getNumChannels(); ++ch) {
-            for (size_t section = 0; section < topology.getNumSections(); ++section) {
-                design.setResponse(ch, section, newResponse);
-            }
-        }
-    }
-
-    /**
-     * @brief Set the filter frequency for all channels and sections.
-     * @param newFreq Frequency struct.
-     */
-    void setFrequency(Frequency<T> newFreq) {
-        for (size_t ch = 0; ch < topology.getNumChannels(); ++ch) {
-            for (size_t section = 0; section < topology.getNumSections(); ++section) {
-                design.setFrequency(ch, section, newFreq);
+    void processBlock(const T* const* input,
+                      const T* const* f,
+                      const T* const* Q,
+                      T* const* lowpass,
+                      T* const* highpass,
+                      T* const* bandpass,
+                      T* const* allpass,
+                      size_t numSamples) {
+        for (size_t ch = 0; ch < numChannels; ++ch) {
+            for (size_t n = 0; n < numSamples; ++n) {
+                const auto outputs = processSample(ch, input[ch][n], f[ch][n], Q[ch][n]);
+                lowpass[ch][n] = outputs[0];
+                highpass[ch][n] = outputs[1];
+                bandpass[ch][n] = outputs[2];
+                allpass[ch][n] = outputs[3];
             }
         }
     }
 
-    /**
-     * @brief Set the quality factor (Q) for all channels and sections.
-     * @param newQ Quality factor.
-     */
-    void setQ(T newQ) {
-        for (size_t ch = 0; ch < topology.getNumChannels(); ++ch) {
-            for (size_t section = 0; section < topology.getNumSections(); ++section) {
-                design.setQ(ch, section, newQ);
-            }
-        }
-    }
-
-    /**
-     * @brief Set the gain for all channels and sections.
-     * @param newGain Gain struct.
-     */
-    void setGain(Gain<T> newGain) {
-        for (size_t ch = 0; ch < topology.getNumChannels(); ++ch) {
-            for (size_t section = 0; section < topology.getNumSections(); ++section) {
-                design.setGain(ch, section, newGain);
-            }
-        }
-    }
-
-    /// Get reference to the topology for direct access (e.g., for testing)
-    const Topology& getTopology() const { return topology; }
-    /// Get reference to the design for direct access (e.g., for testing)
-    const Design& getDesign() const { return design; }
-    /// Check if the filter is prepared
-    bool isPrepared() const { return topology.isPrepared(); }
-    /// Get the number of channels
-    size_t getNumChannels() const { return topology.getNumChannels(); }
-    /// Get the sample rate from the design
-    T getSampleRate() const { return design.getSampleRate(); }
-    /// Get the number of sections
-    size_t getNumSections() const { return topology.getNumSections(); }
-
-    /// Forward declaration of proxy classes for channel and section parameter setting.
-    class ChannelSectionProxy;
-
-    ///  Proxy class for setting parameters on a specific channel across all sections.
-    class ChannelProxy {
-      public:
-        ChannelProxy(StateVariableFilter& bqf, size_t ch) : bqf(bqf), ch(ch) {
-            assert(ch < bqf.topology.getNumChannels() && "Channel index out of bounds");
-        }
-
-        // Access specific section of this channel
-        ChannelSectionProxy section(size_t sectionIdx) { return ChannelSectionProxy(bqf, ch, sectionIdx); }
-
-        void setResponse(Response newResponse) {
-            for (size_t s = 0; s < bqf.topology.getNumSections(); ++s) {
-                bqf.design.setResponse(ch, s, newResponse);
-            }
-        }
-
-        void setFrequency(Frequency<T> newFreq) {
-            for (size_t s = 0; s < bqf.topology.getNumSections(); ++s) {
-                bqf.design.setFrequency(ch, s, newFreq);
-            }
-        }
-
-        void setQ(T newQ) {
-            for (size_t s = 0; s < bqf.topology.getNumSections(); ++s) {
-                bqf.design.setQ(ch, s, newQ);
-            }
-        }
-
-      private:
-        StateVariableFilter& bqf;
-        size_t ch;
-    };
-
-    /// Proxy class for setting parameters on a specific section across all channels.
-    class SectionProxy {
-      public:
-        SectionProxy(StateVariableFilter& bqf, size_t section) : bqf(bqf), section(section) {}
-
-        // Access specific channel of this section
-        ChannelSectionProxy channel(size_t channelIdx) { return ChannelSectionProxy(bqf, channelIdx, section); }
-
-        void setResponse(Response newResponse) {
-            for (size_t ch = 0; ch < bqf.topology.getNumChannels(); ++ch) {
-                bqf.design.setResponse(ch, section, newResponse);
-            }
-        }
-
-        void setFrequency(Frequency<T> newFreq) {
-            for (size_t ch = 0; ch < bqf.topology.getNumChannels(); ++ch) {
-                bqf.design.setFrequency(ch, section, newFreq);
-            }
-        }
-
-        void setQ(T newQ) {
-            for (size_t ch = 0; ch < bqf.topology.getNumChannels(); ++ch) {
-                bqf.design.setQ(ch, section, newQ);
-            }
-        }
-
-      private:
-        StateVariableFilter& bqf;
-        size_t section;
-    };
-
-    /// Proxy class for setting parameters on a specific channel and section.
-    class ChannelSectionProxy {
-      public:
-        ChannelSectionProxy(StateVariableFilter& bqf, size_t ch, size_t section) : bqf(bqf), ch(ch), section(section) {
-            assert(ch < bqf.topology.getNumChannels() && "Channel index out of bounds");
-            assert(section < bqf.topology.getNumSections() && "Section index out of bounds");
-        }
-
-        void setResponse(Response newResponse) { bqf.design.setResponse(ch, section, newResponse); }
-
-        void setFrequency(Frequency<T> newFreq) { bqf.design.setFrequency(ch, section, newFreq); }
-
-        void setQ(T newQ) { bqf.design.setQ(ch, section, newQ); }
-
-      private:
-        StateVariableFilter& bqf;
-        size_t ch;
-        size_t section;
-    };
-
-    /**
-     * @brief Access a specific channel proxy for setting parameters across all sections of that channel.
-     * @param ch Channel index.
-     * @return ChannelProxy instance for the specified channel.
-     */
-    ChannelProxy channel(size_t ch) { return ChannelProxy(*this, ch); }
-
-    /**
-     * @brief Access a specific section proxy for setting parameters across all channels of that section.
-     * @param section Section index.
-     * @return SectionProxy instance for the specified section.
-     */
-    SectionProxy section(size_t section) { return SectionProxy(*this, section); }
+    /// Check if the filter is prepared.
+    bool isPrepared() const { return !state.empty(); }
+    /// Get the number of channels.
+    size_t getNumChannels() const { return numChannels; }
+    /// Get the number of sections per channel.
+    size_t getNumSections() const { return numSections; }
+    /// Get the sample rate in Hz.
+    T getSampleRate() const { return sampleRate; }
 
   private:
-    // Topology and design instances
-    Topology topology;
-    Design design;
+    // Process one section with the selected cascade's integrator state.
+    static std::array<T, 4> processSection(T input, T g, T twoR, T d, std::array<T, 2>& sectionState) {
+        T hp = (input - sectionState[1] - (twoR + g) * sectionState[0]) * d;
+        T v0 = g * hp;
+        T bp = v0 + sectionState[0];
+        T v1 = g * bp;
+        T lp = v1 + sectionState[1];
+        T ap = hp + lp - twoR * bp;
+        sectionState[0] = bp + v0;
+        sectionState[1] = lp + v1;
+        return {lp, hp, bp, ap};
+    }
+
+    size_t numChannels = 0;
+    size_t numSections = 0;
+    T sampleRate = T(44100);
+    // Two integrator states per response cascade, per channel and section.
+    std::vector<std::array<std::array<T, 2>, 4>> state;
 };
 
 } // namespace jnsc

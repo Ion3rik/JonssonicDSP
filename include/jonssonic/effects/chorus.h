@@ -174,7 +174,7 @@ class Chorus {
 
     /**
      * @brief Set the channel spread (phase offset between channels).
-     * @param spread Spread amount 0.0 - 1.0 (0 = all channels in phase, 1 = maximum phase offset)
+     * @param spread Spread amount 0.0 - 1.0 (0 = all channels in phase, 1 = 90-degree stereo phase offset)
      */
     void setSpread(T spread, bool skipSmoothing = false) {
         // Distribute voices
@@ -183,7 +183,7 @@ class Chorus {
         // Spread param offsets channels further apart
         for (size_t ch = 0; ch < numChannels; ++ch) {
             for (size_t tap = 0; tap < NUM_VOICES; ++tap) {
-                T offset = (spread * ch) / static_cast<T>(numChannels) + (tap * voiceSpread);
+                T offset = (spread * T(0.5) * T(ch)) / static_cast<T>(numChannels) + (tap * voiceSpread);
                 lfoPhaseOffset.setTarget(index(ch, tap), offset, skipSmoothing);
             }
         }

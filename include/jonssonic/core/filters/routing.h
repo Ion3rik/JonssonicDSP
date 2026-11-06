@@ -32,6 +32,12 @@ struct RoutingWrapper<Filter<T, Topology, Design, CurrentRouting>, Routing::Para
     using Type = Filter<T, Topology, Design, Routing::Parallel>;
 };
 
+/// Specialization for filters with an integrated topology and design.
+template <template <typename, Routing> class Filter, typename T, Routing CurrentRouting, Routing RoutingType>
+struct RoutingWrapper<Filter<T, CurrentRouting>, RoutingType> {
+    using Type = Filter<T, RoutingType>;
+};
+
 /// Type aliases for Series and Parallel routing
 template <typename Filter>
 using Series = typename RoutingWrapper<Filter, Routing::Series>::Type;
