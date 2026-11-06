@@ -16,7 +16,7 @@ namespace jnsc {
 constexpr size_t JONSSONIC_MAX_CHANNELS = 64;
 /// Supported sample rate range
 constexpr double JONSSONIC_MIN_SAMPLE_RATE = 1000;
-constexpr double JONSSONIC_MAX_SAMPLE_RATE = 192000;
+constexpr double JONSSONIC_MAX_SAMPLE_RATE = 768000;
 // Add other global config options here as needed
 // clang-format on
 } // namespace jnsc

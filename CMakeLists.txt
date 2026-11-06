@@ -10,7 +10,7 @@ project(JonssonicDSP
 # Global config options for header generation
 set(JONSSONIC_MAX_CHANNELS 64)
 set(JONSSONIC_MIN_SAMPLE_RATE 1000)
-set(JONSSONIC_MAX_SAMPLE_RATE 192000)
+set(JONSSONIC_MAX_SAMPLE_RATE 768000)
 
 # Generate jonssonic_config.h from template
 configure_file(
