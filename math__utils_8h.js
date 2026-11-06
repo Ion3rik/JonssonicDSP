@@ -1,0 +1,27 @@
+var math__utils_8h =
+[
+    [ "jnsc::utils::Xorshift32", "structjnsc_1_1utils_1_1Xorshift32.html", "structjnsc_1_1utils_1_1Xorshift32" ],
+    [ "jnsc::utils::complexSpectrum", "namespacejnsc_1_1utils.html#a98ad1bfd91571c4452b7f3997e51363c", null ],
+    [ "jnsc::utils::dB2Mag", "namespacejnsc_1_1utils.html#ac4ec7c2d4d2d12e0ac7762957c02f772", null ],
+    [ "jnsc::utils::mag2dB", "namespacejnsc_1_1utils.html#a6cf4dea4a0c2623acd601f32f17c80ac", null ],
+    [ "jnsc::utils::magnitudeSpectrum", "namespacejnsc_1_1utils.html#ab3381a01bcf089c3fec6bb46b972f656", null ],
+    [ "jnsc::utils::measureLatency", "namespacejnsc_1_1utils.html#a0fc954e63180e670b37c615a5275c8e0", null ],
+    [ "jnsc::utils::msToSamples", "namespacejnsc_1_1utils.html#a005318ba7065350c98a8695b7589f674", null ],
+    [ "jnsc::utils::nextPowerOfTwo", "namespacejnsc_1_1utils.html#a664afcd58bdc1d628a6592faed7bbdc0", null ],
+    [ "jnsc::utils::parity_sign", "namespacejnsc_1_1utils.html#a25c5dcc69d5bd186e252002edc8e1d1b", null ],
+    [ "jnsc::utils::samplesToMs", "namespacejnsc_1_1utils.html#af609240844d629894fa12b6df64e8748", null ],
+    [ "jnsc::utils::xcorr", "namespacejnsc_1_1utils.html#af5b40d7abb4dfda34fcd3ef28d5cf8c0", null ],
+    [ "jnsc::utils::zero_value", "namespacejnsc_1_1utils.html#a6cc7b9dfb06d4b9602da0d6269f6e4d8", null ],
+    [ "jnsc::utils::zero_value", "namespacejnsc_1_1utils.html#ae6044b21d990431f24ac3eb2851ab34d", null ],
+    [ "jnsc::utils::e", "namespacejnsc_1_1utils.html#aad0d9a6060d1ef608e092a07228e3171", null ],
+    [ "jnsc::utils::inv_atan_1", "namespacejnsc_1_1utils.html#a45e25d04d59e0dea36cf737b77603e44", null ],
+    [ "jnsc::utils::inv_pi", "namespacejnsc_1_1utils.html#a222ef140278e07bab7ff0c3ee3edc4ea", null ],
+    [ "jnsc::utils::inv_sqrt2", "namespacejnsc_1_1utils.html#a0a30271f161ffcf4c40d2e06b3c004bb", null ],
+    [ "jnsc::utils::pi", "namespacejnsc_1_1utils.html#ac24b00a003febba5ed31be3bc78e27e6", null ],
+    [ "jnsc::utils::pi_over_2", "namespacejnsc_1_1utils.html#a18082f6e2c23ba910bd25b1a2d66b8cd", null ],
+    [ "jnsc::utils::pi_over_4", "namespacejnsc_1_1utils.html#ac66a9ce43d488648c1214ea9355b3468", null ],
+    [ "jnsc::utils::sqrt2", "namespacejnsc_1_1utils.html#a42b9571ff994444244ec64f14e06c03c", null ],
+    [ "jnsc::utils::sqrtHalf", "namespacejnsc_1_1utils.html#a445f8981d40fa19d1a997d7e8cb11044", null ],
+    [ "jnsc::utils::two_over_pi", "namespacejnsc_1_1utils.html#a1a51da282510b9be7982579016062042", null ],
+    [ "jnsc::utils::two_pi", "namespacejnsc_1_1utils.html#a88ac71683947bafaa6ca5aac7b9cbe29", null ]
+];
