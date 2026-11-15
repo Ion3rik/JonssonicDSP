@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
+#include <type_traits>
 #include "jonssonic/core/filters/detail/bilinear_biquad_design.h"
 #include "jonssonic/core/filters/detail/df1_biquad_topology.h"
 #include "jonssonic/core/filters/detail/df2t_biquad_topology.h"
@@ -64,42 +65,67 @@ class BiquadFilter {
     }
 
     /**
-     * @brief Process a single sample for a specific channel through all sections of the filter.
+     * @brief Process one sample through all sections in series.
      * @param ch Channel index.
      * @param input Input sample.
-     * @return Output sample.
-     * @note Must call @ref prepare before processing.
+     * @return Cascaded output sample.
+     * @note Available for series routing only. Must call @ref prepare first.
      */
-    float processSample(size_t ch, T input) {
-        // SERIES ROUTING
-        if constexpr (RoutingType == Routing::Series) {
-            T output = input;
-            for (size_t s = 0; s < topology.getNumSections(); ++s) {
-                output = topology.processSample(ch, s, output);
-            }
-            return output;
-        }
-        // PARALLEL ROUTING
-        if constexpr (RoutingType == Routing::Parallel) {
-            T output = T(0);
-            for (size_t s = 0; s < topology.getNumSections(); ++s) {
-                output += topology.processSample(ch, s, input);
-            }
-            return output;
-        }
+    template <Routing R = RoutingType, std::enable_if_t<R == RoutingType && R == Routing::Series, int> = 0>
+    T processSample(size_t ch, T input) {
+        T output = input;
+        for (size_t s = 0; s < topology.getNumSections(); ++s)
+            output = topology.processSample(ch, s, output);
+        return output;
     }
 
     /**
-     * @brief Process a block of samples for all channels.
-     * @param input input pointers for each channel [channel][sample].
-     * @param output output pointers for each channel [channel][sample].
-     * @param numSamples Number of samples in the block.
-     * @note Must call @ref prepare before processing.
+     * @brief Process one sample independently through every parallel section.
+     * @param ch Channel index.
+     * @param input Input sample shared by all sections.
+     * @param outputs Caller-provided array of getNumSections() output samples.
+     * @note Available for parallel routing only. Must call @ref prepare first.
+     * No gains, polarity changes, or summing are applied between outputs.
      */
+    template <Routing R = RoutingType, std::enable_if_t<R == RoutingType && R == Routing::Parallel, int> = 0>
+    void processSample(size_t ch, T input, T* outputs) {
+        for (size_t s = 0; s < topology.getNumSections(); ++s)
+            outputs[s] = topology.processSample(ch, s, input);
+    }
+
+    /**
+     * @brief Process a block through all sections in series.
+     * @param input Input pointers [channel][sample].
+     * @param output Output pointers [channel][sample].
+     * @param numSamples Number of samples per channel.
+     * @note Available for series routing only. Must call @ref prepare first.
+     * Input may alias output for the same channel.
+     */
+    template <Routing R = RoutingType, std::enable_if_t<R == RoutingType && R == Routing::Series, int> = 0>
     void processBlock(const T* const* input, T* const* output, size_t numSamples) {
         for (size_t ch = 0; ch < topology.getNumChannels(); ++ch)
             for (size_t n = 0; n < numSamples; ++n)
                 output[ch][n] = processSample(ch, input[ch][n]);
+    }
+
+    /**
+     * @brief Process a block independently through every parallel section.
+     * @param input Input pointers [channel][sample].
+     * @param outputs Output pointers [section][channel][sample].
+     * @param numSamples Number of samples per channel.
+     * @note Available for parallel routing only. Must call @ref prepare first.
+     * Provide distinct buffers for all outputs. Input may alias one section's
+     * output for the same channel. Zero-length blocks may use null pointers.
+     */
+    template <Routing R = RoutingType, std::enable_if_t<R == RoutingType && R == Routing::Parallel, int> = 0>
+    void processBlock(const T* const* input, T* const* const* outputs, size_t numSamples) {
+        for (size_t ch = 0; ch < topology.getNumChannels(); ++ch) {
+            for (size_t n = 0; n < numSamples; ++n) {
+                const T sample = input[ch][n];
+                for (size_t s = 0; s < topology.getNumSections(); ++s)
+                    outputs[s][ch][n] = topology.processSample(ch, s, sample);
+            }
+        }
     }
 
     /**

@@ -126,7 +126,7 @@ struct Frequency {
         case FrequencyUnit::Normalized:
             return value;
         case FrequencyUnit::Radians:
-            return value * sampleRate / utils::two_pi<T>;
+            return value / utils::two_pi<T>;
         default:
             assert(false && "Unknown FrequencyUnit");
             return T(0);
