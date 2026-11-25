@@ -9,7 +9,7 @@
 
 namespace jnsc::detail {
 /**
- * @brief Struct defining limits for filter parameters and utility clamping functions.
+ * @brief Struct defining safety limits for filter parameters and utility clamping functions.
  * @tparam T Sample data type (e.g., float, double)
  */
 template <typename T>
@@ -18,7 +18,7 @@ struct FilterLimits {
     static constexpr size_t MAX_SECTIONS = 64;
 
     // Gain limits
-    static constexpr T MAX_GAIN_DB = T(20.0);
+    static constexpr T MAX_GAIN_DB = T(40.0);
     static constexpr T MIN_GAIN_DB = T(-60.0);
 
     // Frequency limits
